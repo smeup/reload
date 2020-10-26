@@ -59,6 +59,6 @@ For using this library in your Maven projects, add the following dependencies:
   
 ## Additional license info
 
-- Additional JT400 library is distribuited under IBM IPL 1.0 license. See [thi link](https://opensource.org/licenses/ibmpl.php) for license detail.
+- JTOpen library used in this project is distribuited under IBM IPL 1.0 license. See [this link](https://opensource.org/licenses/ibmpl.php) for license detail.
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
