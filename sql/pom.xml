@@ -33,12 +33,12 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.smeup</groupId>
+        <groupId>com.github.smeup</groupId>
         <artifactId>reload</artifactId>
         <version>1.0.0-SNAPSHOT</version>
     </parent>
 
-    <groupId>com.smeup.reload</groupId>
+    <groupId>com.github.smeup.reload</groupId>
     <artifactId>sql</artifactId>
 
     <packaging>jar</packaging>
@@ -47,7 +47,7 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.smeup.reload</groupId>
+            <groupId>com.github.smeup.reload</groupId>
             <artifactId>base</artifactId>
             <version>1.0.0-SNAPSHOT</version>
         </dependency>
