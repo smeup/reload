@@ -50,6 +50,6 @@ Reload has a modular architecture based on a common interface. You can use exiti
   
 ## Additional license info
 
-- Additional JT400 library is distribuited under IBM IPL 1.0 license. See [thi link](https://opensource.org/licenses/ibmpl.php) for license detail.
+- Additional JT400 library is distribuited under IBM IPL 1.0 license. See [this link](https://opensource.org/licenses/ibmpl.php) for license detail.
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
