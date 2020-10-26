@@ -46,19 +46,44 @@ Reload has a modular architecture based on a common interface. You can use exiti
  
 ## How to use this code in your project
 
-### Maven
+At the moment, we use [Jitpack](https://jitpack.io/) to publish the [project](https://jitpack.io/#smeup/reload).
+See more details [here](docs/jitpack.md).
 
-For using this library in your Maven projects, add the following dependencies:
+### Maven
+If you use Maven, add these lines to your pom.xml in order to add the repository
+
+    <repositories>
+        <repository>
+            <id>jitpack.io</id>
+            <url>https://jitpack.io</url>
+        </repository>
+    </repositories>
+	
+Then add the following dependencies for the core library:
 	
     <dependency>
         <groupId>com.github.smeup</groupId>
         <artifactId>reload</artifactId>
-        <version>1.0.0-SNAPSHOT</version>
+        <version>-SNAPSHOT</version>
     </dependency>
 
+### Gradle
+Here are the configurationd to add to your build.gradle:
+```
+allprojects {
+    repositories {
+        ...
+        maven { url 'https://jitpack.io' }
+    }
+}
+dependencies {
+    ...
+    implementation 'com.github.smeup:reload:-SNAPSHOT'
+}
+```
   
 ## Additional license info
 
-- JTOpen library used in this project is distribuited under IBM IPL 1.0 license. See [this link](https://opensource.org/licenses/ibmpl.php) for license detail.
+- Reload project use [JT400Open library](https://sourceforge.net/projects/jt400/) distribuited under IBM IPL 1.0 license. See [this link](https://opensource.org/licenses/ibmpl.php) for license detail.
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
