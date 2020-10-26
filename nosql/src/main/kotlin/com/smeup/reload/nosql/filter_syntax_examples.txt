@@ -1,0 +1,92 @@
+************** EXAMPLE1: UP ORDERING WITH SETLL **************
+
+* FILTER
+{$or:[
+
+{$and:[{ NAZ: { $gte: "IT" } }, { REG: { $gte: "LOM" } }, { PROV: { $gte: "BS" } }, { CITTA: { $gte: "ZONE" } } ] },
+
+{$and:[{ NAZ: { $gte: "IT" } }, { REG: { $gte: "LOM" } }, { PROV: { $gt: "BS" } } ] }, 
+
+{$and:[{ NAZ: { $gte: "IT" } }, { REG: { $gt: "LOM" } } ] }, 
+
+{ NAZ: { $gt: "IT" } }
+
+] }
+
+*ORDERING:
+
+{IT:1, REG:1, PROV:1, CITTA:1}
+
+* ONE ROW
+
+{$or:[{$and:[{ NAZ: { $gte: "IT" } }, { REG: { $gte: "LOM" } }, { PROV: { $gte: "BS" } }, { CITTA: { $gte: "ZONE" } } ] },{$and:[{ NAZ: { $gte: "IT" } }, { REG: { $gte: "LOM" } }, { PROV: { $gt: "BS" } } ] }, {$and:[{ NAZ: { $gte: "IT" } }, { REG: { $gt: "LOM" } } ] }, { NAZ: { $gt: "IT" } }] }
+
+
+************** EXAMPLE2: UP ORDERING WITH SETGT **************
+
+* FILTER
+{$or:[
+
+{$and:[{ NAZ: { $gte: "IT" } }, { REG: { $gte: "LOM" } }, { PROV: { $gte: "BS" } }, { CITTA: { $gt: "ZONE" } } ] },
+
+{$and:[{ NAZ: { $gte: "IT" } }, { REG: { $gte: "LOM" } }, { PROV: { $gt: "BS" } } ] }, 
+
+{$and:[{ NAZ: { $gte: "IT" } }, { REG: { $gt: "LOM" } } ] }, 
+
+{ NAZ: { $gt: "IT" } }
+
+] }
+
+*ORDERING:
+
+{IT:1, REG:1, PROV:1, CITTA:1}
+
+* ONE ROW
+
+{$or:[{$and:[{ NAZ: { $gte: "IT" } }, { REG: { $gte: "LOM" } }, { PROV: { $gte: "BS" } }, { CITTA: { $gt: "ZONE" } } ] },{$and:[{ NAZ: { $gte: "IT" } }, { REG: { $gte: "LOM" } }, { PROV: { $gt: "BS" } } ] }, {$and:[{ NAZ: { $gte: "IT" } }, { REG: { $gt: "LOM" } } ] }, { NAZ: { $gt: "IT" } }] }
+
+
+************** EXAMPLE 3: DOWN ORDERING WITH SETLL **************
+
+* FILTER
+
+{$or:[
+
+{$and:[{ NAZ: { $lte: "IT" } }, { REG: { $lte: "LOM" } }, { PROV: { $lte: "BS" } }, { CITTA: { $lte: "ZONE" } } ] },
+
+{$and:[{ NAZ: { $lte: "IT" } }, { REG: { $lte: "LOM" } }, { PROV: { $lt: "BS" } } ] }, 
+
+{$and:[{ NAZ: { $lte: "IT" } }, { REG: { $lt: "LOM" } } ] }, 
+
+{ NAZ: { $lt: "IT" } }
+
+] }
+
+
+ORDERING: {IT:-1, REG:-1, PROV:-1, CITTA:-1}
+
+
+{$or:[{$and:[{ NAZ: { $lte: "IT" } }, { REG: { $lte: "LOM" } }, { PROV: { $lte: "BS" } }, { CITTA: { $lte: "ZONE" } } ] },{$and:[{ NAZ: { $lte: "IT" } }, { REG: { $lte: "LOM" } }, { PROV: { $lt: "BS" } } ] }, {$and:[{ NAZ: { $lte: "IT" } }, { REG: { $lt: "LOM" } } ] }, { NAZ: { $lt: "IT" } }] }
+
+
+************** EXAMPLE 4: DOWN ORDERING WITH SETGT **************
+
+* FILTER
+
+{$or:[
+
+{$and:[{ NAZ: { $lte: "IT" } }, { REG: { $lte: "LOM" } }, { PROV: { $lte: "BS" } }, { CITTA: { $lt: "ZONE" } } ] },
+
+{$and:[{ NAZ: { $lte: "IT" } }, { REG: { $lte: "LOM" } }, { PROV: { $lt: "BS" } } ] }, 
+
+{$and:[{ NAZ: { $lte: "IT" } }, { REG: { $lt: "LOM" } } ] }, 
+
+{ NAZ: { $lt: "IT" } }
+
+] }
+
+
+ORDERING: {IT:-1, REG:-1, PROV:-1, CITTA:-1}
+
+
+{$or:[{$and:[{ NAZ: { $lte: "IT" } }, { REG: { $lte: "LOM" } }, { PROV: { $lte: "BS" } }, { CITTA: { $lt: "ZONE" } } ] },{$and:[{ NAZ: { $lte: "IT" } }, { REG: { $lte: "LOM" } }, { PROV: { $lt: "BS" } } ] }, {$and:[{ NAZ: { $lte: "IT" } }, { REG: { $lt: "LOM" } } ] }, { NAZ: { $lt: "IT" } }] }

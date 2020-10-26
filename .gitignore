@@ -1,0 +1,10 @@
+target/
+.idea/
+build
+bin/
+.classpath
+.project
+.settings/
+*.iml
+/docker/mongodb/data/
+/base/src/test/resources/dds/properties/out/
