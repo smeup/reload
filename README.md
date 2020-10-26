@@ -44,12 +44,21 @@ Reload is not RDBM specfic and grant sequential access to datas contained in sev
 
 Reload has a modular architecture based on a common interface. You can use exiting modules for sequential access to well knowns DBM or write new module for sequential access to data stored in your own  persistance environment. 
  
+## How to use this code in your project
 
+### Maven
 
+For using this library in your Maven projects, add the following dependencies:
+	
+    <dependency>
+        <groupId>com.github.smeup</groupId>
+        <artifactId>reload</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </dependency>
 
   
 ## Additional license info
 
-- Additional JT400 library is distribuited under IBM IPL 1.0 license. See [this link](https://opensource.org/licenses/ibmpl.php) for license detail.
+- Additional JT400 library is distribuited under IBM IPL 1.0 license. See [thi link](https://opensource.org/licenses/ibmpl.php) for license detail.
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
