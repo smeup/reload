@@ -38,13 +38,13 @@ To compile the entire project and run the tests, you must first activate the sof
 
 1. Go to *docker/mysql* directory and start a docker mysql instance with the command:
 
-    docker-compose up -d
+       docker-compose up -d
     
 2. Go to *docker/rabbitmq* directory and start a docker rabbitmq instance with the command:
 
-    docker-compose up -d
+       docker-compose up -d
 
 3. Compile entire project and execute tests with the command:
 
-     mvn package    
+       mvn package    
 
