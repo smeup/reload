@@ -23,7 +23,7 @@ A tipical search job with record level access is done with this steps:
 
 2. Open the file and lock it
 
-3. Filter the contents of the file with a set of values ​​assigned to the keys. This operation creates a subset of the data that satisfies the search conditions and return a cursor object that point to the first element of the data subset.
+3. Filter file contents with a set of values assigned to the keys. This operation creates a subset of datas that satisfies the search conditions and return a cursor object that point to the first element of the subset.
 
 4. Use the cursor created in the previous step to read the data sequentially. You can read datas forward or backward and you can apply further  filters on previous filtered datas. Every read operation return a single record (file row) that you can manage.
 
