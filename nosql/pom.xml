@@ -32,7 +32,7 @@
     <parent>
         <groupId>com.smeup</groupId>
         <artifactId>reload</artifactId>
-        <version>1.0.0-SNAPSHOT</version>
+        <version>1.0.0</version>
     </parent>
 
     <groupId>com.smeup.reload</groupId>
@@ -46,7 +46,7 @@
         <dependency>
             <groupId>com.smeup.reload</groupId>
             <artifactId>base</artifactId>
-            <version>1.0.0-SNAPSHOT</version>
+            <version>1.0.0</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/org.mongodb/mongo-java-driver -->
         <dependency>
