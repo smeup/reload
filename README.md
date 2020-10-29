@@ -86,4 +86,4 @@ dependencies {
 
 - Reload project use [JT400Open library](https://sourceforge.net/projects/jt400/) distribuited under IBM IPL 1.0 license. See [this link](https://opensource.org/licenses/ibmpl.php) for license detail.
 
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) [![jitpack](https://jitpack.io/v/smeup/reload.svg)](https://jitpack.io/#smeup/reload)
