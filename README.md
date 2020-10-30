@@ -1,8 +1,9 @@
 # Reload: a record level access library for modern databases 
+![reload Logo](/images/logo-reload-small.png)  
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) [![](https://jitpack.io/v/smeup/reload.svg)](https://jitpack.io/#smeup/reload)
 
-![reload Logo](/images/logo-reload.png)  
+
 
 ## A short introduction to Reload
 
