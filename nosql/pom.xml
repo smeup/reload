@@ -30,12 +30,11 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.smeup</groupId>
+        <groupId>com.smeup.reload</groupId>
         <artifactId>reload</artifactId>
         <version>1.1.0-SNAPSHOT</version>
     </parent>
 
-    <groupId>com.smeup.reload</groupId>
     <artifactId>nosql</artifactId>
 
     <packaging>jar</packaging>
