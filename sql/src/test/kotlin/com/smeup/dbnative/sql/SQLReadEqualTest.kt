@@ -59,7 +59,7 @@ class SQLReadEqualTest {
     @Test
     fun doesNotFindRecordsIfChainAndReadENotExistingKey() {
         val dbFile = dbManager.openFile(XEMP2_VIEW_NAME)
-        val chainResult = dbFile.chain(listOf(RecordField("WORKDEPT", "XXX")))
+        val chainResult = dbFile.chain("XXX")
         assertEquals(0, chainResult.record.size)
         assertEquals(0, dbFile.readEqual().record.size)
         dbManager.closeFile(XEMP2_VIEW_NAME)
@@ -68,7 +68,7 @@ class SQLReadEqualTest {
     @Test
     fun findRecordsIfChainAndReadEExistingKey() {
         val dbFile = dbManager.openFile(XEMP2_VIEW_NAME)
-        val chainResult = dbFile.chain(listOf(RecordField("WORKDEPT", "C01")))
+        val chainResult = dbFile.chain( "C01")
         assertEquals("SALLY KWAN", getEmployeeName(chainResult.record))
         assertEquals("DELORES QUINTANA", getEmployeeName(dbFile.readEqual().record))
         assertEquals("HEATHER NICHOLLS", getEmployeeName(dbFile.readEqual().record))

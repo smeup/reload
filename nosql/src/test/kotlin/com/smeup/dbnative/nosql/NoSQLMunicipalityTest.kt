@@ -17,7 +17,6 @@
 
 package com.smeup.dbnative.nosql
 
-import com.smeup.dbnative.file.RecordField
 import com.smeup.dbnative.nosql.utils.MUNICIPALITY_TABLE_NAME
 import com.smeup.dbnative.nosql.utils.createAndPopulateMunicipalityTable
 import com.smeup.dbnative.nosql.utils.dbManagerForTest
@@ -395,15 +394,15 @@ class NoSQLMunicipalityTest {
     }
 
 
-    private fun buildMunicipalityKey(vararg values: String): List<RecordField> {
-        val recordFields = mutableListOf<RecordField>()
+    private fun buildMunicipalityKey(vararg values: String): List<String> {
+        val keyValues = mutableListOf<String>()
         val keys = arrayOf("NAZ", "REG", "PROV", "CITTA")
         for ((index, value) in values.withIndex()) {
             if (keys.size> index) {
-                recordFields.add(RecordField(keys[index], value))
+                keyValues.add(value)
             }
         }
-        return recordFields
+        return keyValues
     }
 
 }

@@ -38,7 +38,7 @@ class DBFileWrapper (private val dbFile: DBFile, private val dbmManager: DBMMana
         return dbFile.setll(key)
     }
 
-    override fun setll(keys: List<RecordField>): Boolean {
+    override fun setll(keys: List<String>): Boolean {
         checkClosed()
         return dbFile.setll(keys)
     }
@@ -48,7 +48,7 @@ class DBFileWrapper (private val dbFile: DBFile, private val dbmManager: DBMMana
         return dbFile.setgt(key)
     }
 
-    override fun setgt(keys: List<RecordField>): Boolean {
+    override fun setgt(keys: List<String>): Boolean {
         checkClosed()
         return dbFile.setgt(keys)
     }
@@ -58,7 +58,7 @@ class DBFileWrapper (private val dbFile: DBFile, private val dbmManager: DBMMana
         return dbFile.chain(key)
     }
 
-    override fun chain(keys: List<RecordField>): Result {
+    override fun chain(keys: List<String>): Result {
         checkClosed()
         return dbFile.chain(keys)
     }
@@ -83,7 +83,7 @@ class DBFileWrapper (private val dbFile: DBFile, private val dbmManager: DBMMana
         return dbFile.readEqual(key)
     }
 
-    override fun readEqual(keys: List<RecordField>): Result {
+    override fun readEqual(keys: List<String>): Result {
         checkClosed()
         return dbFile.readEqual(keys)
     }
@@ -98,7 +98,7 @@ class DBFileWrapper (private val dbFile: DBFile, private val dbmManager: DBMMana
         return dbFile.readPreviousEqual(key)
     }
 
-    override fun readPreviousEqual(keys: List<RecordField>): Result {
+    override fun readPreviousEqual(keys: List<String>): Result {
         checkClosed()
         return dbFile.readPreviousEqual(keys)
     }

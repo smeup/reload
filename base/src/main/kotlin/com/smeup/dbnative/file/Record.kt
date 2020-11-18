@@ -17,7 +17,7 @@
 
 package com.smeup.dbnative.file
 
-class Record(vararg fields: RecordField) : LinkedHashMap<String, Any>() {
+class Record(vararg fields: RecordField) : LinkedHashMap<String, String>() {
     init {
         fields.forEach {
             add(it)

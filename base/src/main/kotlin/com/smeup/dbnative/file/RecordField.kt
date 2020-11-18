@@ -17,4 +17,4 @@
 
 package com.smeup.dbnative.file
 
-data class RecordField(val name: String, val value: Any)
+data class RecordField(val name: String, val value: String)

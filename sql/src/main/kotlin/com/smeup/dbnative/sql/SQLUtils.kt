@@ -114,7 +114,7 @@ fun filePartSQLAndValues(
             comparisons
         )})"
 
-        values.addAll(keys2.map { it.value as String })
+        values.addAll(keys2.map { it.value.toString() })
         queries.add(sql)
         keys2 = keys2.subList(0, keys2.size - 1)
 

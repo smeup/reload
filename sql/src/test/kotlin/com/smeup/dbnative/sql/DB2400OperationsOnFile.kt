@@ -70,8 +70,7 @@ class DB2400OperationsOnFile {
         dbManager!!.registerMetadata(fileMetadata, false)
         var dbFile = dbManager!!.openFile("BRARTI0L")
         val key = "A01            "
-        val keyList = listOf(RecordField("A§ARTI", key))
-        val chainResult = dbFile.chain(keyList)
+        val chainResult = dbFile.chain(key)
         assertEquals(key, chainResult.record["A§ARTI"])
         assertEquals("ART  ", chainResult.record["A§TIAR"])
         assertEquals("1  ", chainResult.record["A§TPAR"])
@@ -85,19 +84,17 @@ class DB2400OperationsOnFile {
         var dbFile = dbManager!!.openFile("BRARTI2L")
 
         val key = "ART  "
-        val keyList = listOf(RecordField("A§TIAR", key))
+        assertTrue(dbFile.setll(key))
 
-        assertTrue(dbFile.setll(keyList))
-
-        var readEResult = dbFile.readEqual(keyList)
+        var readEResult = dbFile.readEqual(key)
         assertEquals("2  ", readEResult.record["A§TPAR"])
         assertEquals("ACCENSIONE PIEZOELETTRICA          ", readEResult.record["A§DEAR"])
 
-        readEResult = dbFile.readEqual(keyList)
+        readEResult = dbFile.readEqual(key)
         assertEquals("1  ", readEResult.record["A§TPAR"])
         assertEquals("ARTICOLO PER PARALLELISMO          ", readEResult.record["A§DEAR"])
 
-        readEResult = dbFile.readEqual(keyList)
+        readEResult = dbFile.readEqual(key)
         assertEquals("1  ", readEResult.record["A§TPAR"])
         assertEquals("BIKE (PROVA                        ", readEResult.record["A§DEAR"])
 
@@ -116,13 +113,11 @@ class DB2400OperationsOnFile {
         dbManager!!.registerMetadata(fileMetadata, false)
         var dbFile = dbManager!!.openFile("BRARTI0L")
 
-        val itemFieldKey = "A02            "
-        val keyList = listOf(RecordField("A§ARTI", itemFieldKey))
-
-        var chainResult = dbFile.chain(keyList)
+        val key = "A02            "
+        var chainResult = dbFile.chain(key)
 
         // Check chain result as expected
-        assertEquals(itemFieldKey, chainResult.record["A§ARTI"])
+        assertEquals(key, chainResult.record["A§ARTI"])
         assertEquals("GRUPPO CAMBIO-PIGNONE              ", chainResult.record["A§DEAR"])
         assertEquals("ART  ", chainResult.record["A§TIAR"])
         assertEquals("2  ", chainResult.record["A§TPAR"])
@@ -133,7 +128,7 @@ class DB2400OperationsOnFile {
         dbFile.update(chainResult.record)
 
         // Chain again (same single key) and check data as expected
-        chainResult = dbFile.chain(keyList)
+        chainResult = dbFile.chain(key)
         assertEquals("TRA  ", chainResult.record["A§TIAR"])
         assertEquals("1  ", chainResult.record["A§TPAR"])
 
@@ -143,7 +138,7 @@ class DB2400OperationsOnFile {
         dbFile.update(chainResult.record)
 
         // Check the initial values restore
-        chainResult = dbFile.chain(keyList)
+        chainResult = dbFile.chain(key)
         assertEquals("ART  ", chainResult.record["A§TIAR"])
         assertEquals("2  ", chainResult.record["A§TPAR"])
 
@@ -162,19 +157,18 @@ class DB2400OperationsOnFile {
         dbManager!!.registerMetadata(fileMetadata, false)
         var dbFile = dbManager!!.openFile("BRARTI0L")
         val key = System.currentTimeMillis().toString() + "  "
-        val keyList = listOf(RecordField("A§ARTI", key))
-        var chainResult = dbFile.chain(keyList)
+        var chainResult = dbFile.chain(key)
         assertEquals(0, chainResult.record.size)
 
         // Set field values and write record
         chainResult.record["A§ARTI"] = key
         chainResult.record["A§DEAR"] = "Kotlin DBNativeAccess Write        "
         chainResult.record["A§TIAR"] = "ART  "
-        chainResult.record["A§DT01"] = 20200918
+        chainResult.record["A§DT01"] = "20200918"
         dbFile.write(chainResult.record)
 
         // Check correct write
-        chainResult = dbFile.chain(keyList)
+        chainResult = dbFile.chain(key)
         assertEquals(key, chainResult.record["A§ARTI"])
         assertEquals("ART  ", chainResult.record["A§TIAR"])
         assertEquals("Kotlin DBNativeAccess Write        ", chainResult.record["A§DEAR"])
@@ -184,7 +178,7 @@ class DB2400OperationsOnFile {
         dbFile.delete(chainResult.record)
 
         // Check record not exists
-        chainResult = dbFile.chain(keyList)
+        chainResult = dbFile.chain(key)
         assertEquals(0, chainResult.record.size)
 
         dbManager!!.closeFile("BRARTI0L")
@@ -202,10 +196,9 @@ class DB2400OperationsOnFile {
         dbManager!!.registerMetadata(fileMetadata, false)
         var dbFile = dbManager!!.openFile("BRARTI0L")
         val key = System.currentTimeMillis().toString() + "  "
-        val keyList = listOf(RecordField("A§ARTI", key))
 
         // Not exists
-        var chainResult = dbFile.chain(keyList)
+        var chainResult = dbFile.chain(key)
         assertEquals(0, chainResult.record.size)
 
         //Set field values and write record
@@ -217,7 +210,7 @@ class DB2400OperationsOnFile {
         dbFile.write(chainResult.record)
 
         //Must exists correct write
-        chainResult = dbFile.chain(keyList)
+        chainResult = dbFile.chain(key)
         assertEquals(key, chainResult.record["A§ARTI"])
         assertEquals("ART  ", chainResult.record["A§TIAR"])
         assertEquals("Kotlin DBNativeAccess Write        ", chainResult.record["A§DEAR"])
@@ -227,7 +220,7 @@ class DB2400OperationsOnFile {
         dbFile.delete(chainResult.record)
 
         //Check delete success
-        chainResult = dbFile.chain(keyList)
+        chainResult = dbFile.chain(key)
         assertEquals(0, chainResult.record.size)
 
         dbManager!!.closeFile("BRARTI0L")
@@ -282,11 +275,11 @@ class DB2400OperationsOnFile {
 
         // READ AND UPDATE
         // Read records with same description (A§DEAR) and update field named 'secondary description' (A§DEA2)
-        var keyList = listOf(RecordField("A§DEAR", dearKey))
-        assertTrue(dbFile.setll(keyList))
+
+        assertTrue(dbFile.setll(dearKey))
         // Update
         repeat(numberOfRecordsToHandle) {
-            var readEResult = dbFile.readEqual(keyList)
+            var readEResult = dbFile.readEqual(dearKey)
             assertEquals(dearKey, readEResult.record["A§DEAR"])
             assertEquals(empty35char, readEResult.record["A§DEA2"])
             readEResult.record["A§DEA2"] = dea2Key
@@ -295,16 +288,16 @@ class DB2400OperationsOnFile {
 
         // READ AND CHECK
         // Check all records are updated as expected
-        assertTrue(dbFile.setll(keyList))
+        assertTrue(dbFile.setll(dearKey))
         repeat(numberOfRecordsToHandle) {
-            var readEResult = dbFile.readEqual(keyList)
+            var readEResult = dbFile.readEqual(dearKey)
             assertEquals(dea2Key, readEResult.record["A§DEA2"])
         }
 
         // DELETE
-        assertTrue(dbFile.setll(keyList))
+        assertTrue(dbFile.setll(dearKey))
         repeat(numberOfRecordsToHandle) {
-            var readEResult = dbFile.readEqual(keyList)
+            var readEResult = dbFile.readEqual(dearKey)
             assertEquals(dea2Key, readEResult.record["A§DEA2"])
             //Delete record
             dbFile.delete(readEResult.record)
@@ -325,8 +318,8 @@ class DB2400OperationsOnFile {
         dbManager!!.registerMetadata(fileMetadata, false)
         var dbFile = dbManager!!.openFile("VERAPG0L")
         val key = System.currentTimeMillis().toString().substring(3)
-        val keyList = listOf(RecordField("V£IDOJ", key))
-        var chainResult = dbFile.chain(keyList)
+
+        var chainResult = dbFile.chain(key)
         assertEquals(0, chainResult.record.size)
 
         // Set field values and write record
@@ -335,7 +328,7 @@ class DB2400OperationsOnFile {
         dbFile.write(chainResult.record)
 
         // Check correct write
-        chainResult = dbFile.chain(keyList)
+        chainResult = dbFile.chain(key)
         assertEquals(key, chainResult.record["V£IDOJ"])
         assertEquals("DBNativeAccess ", chainResult.record["V£NOME"])
 
@@ -343,7 +336,7 @@ class DB2400OperationsOnFile {
         dbFile.delete(chainResult.record)
 
         // Check record not exists
-        chainResult = dbFile.chain(keyList)
+        chainResult = dbFile.chain(key)
         assertEquals(0, chainResult.record.size)
 
         dbManager!!.closeFile("VERAPG0L")
@@ -359,7 +352,7 @@ class DB2400OperationsOnFile {
         val data = "20200901"
         val nome = "BNUNCA         "
         val idoj = "0002003070"
-        val keyList = listOf(RecordField("V£DATA", data), RecordField("V£NOME", nome), RecordField("V£IDOJ", idoj))
+        val keyList = listOf(data, nome, idoj)
         assertTrue(dbFile.setll(keyList))
 
         var readResult = dbFile.read()
@@ -387,9 +380,9 @@ class DB2400OperationsOnFile {
         var dbFile = dbManager!!.openFile("BRARTI0L")
 
         val key = "A01            "
-        val keyList = listOf(RecordField("A§ARTI", key))
+
         // Fill ResultSet
-        assertTrue(dbFile.setll(keyList))
+        assertTrue(dbFile.setll(key))
 
         var resultSet = dbFile.getResultSet()
 
@@ -411,10 +404,9 @@ class DB2400OperationsOnFile {
         var dbFile = dbManager!!.openFile("BRARTI0L")
 
         val key = "A01            "
-        val keyList = listOf(RecordField("A§ARTI", key))
 
         // Fill ResultSet
-        assertTrue(dbFile.setll(keyList))
+        assertTrue(dbFile.setll(key))
 
         var resultSet = dbFile.getResultSet()
 
