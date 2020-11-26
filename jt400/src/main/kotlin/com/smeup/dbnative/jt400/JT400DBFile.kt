@@ -16,12 +16,12 @@ class JT400DBFile(override var name: String, override var fileMetadata: FileMeta
     override fun setll(key: String): Boolean {
 
         try {
-            file.positionCursor(arrayOf(key), KeyedFile.KEY_GE);
-            return true;
+            file.positionCursor(arrayOf(key), KeyedFile.KEY_GE)
+            return true
         } catch (e: AS400Exception) {
             if (e.aS400Message != null && "CPF5006".equals(e.aS400Message.id, true)) {
                 //record not found
-                return false;
+                return false
             }
             TODO( reason = "throw error")
         }
@@ -37,7 +37,16 @@ class JT400DBFile(override var name: String, override var fileMetadata: FileMeta
      */
     override fun setgt(key: String): Boolean {
 
-        file.positionCursor(arrayOf(key), KeyedFile.KEY_GT);
+        try {
+            file.positionCursor(arrayOf(key), KeyedFile.KEY_GT)
+            return true
+        } catch (e: AS400Exception) {
+            if (e.aS400Message != null && "CPF5006".equals(e.aS400Message.id, true)) {
+                //record not found
+                return false
+            }
+            TODO( reason = "throw error")
+        }
 
     }
 
@@ -49,8 +58,9 @@ class JT400DBFile(override var name: String, override var fileMetadata: FileMeta
      * The CHAIN operation retrieves a record from a full procedural file, sets a record identifying indicator on (if specified on the input specifications), and places the data from the record into the input fields.
      */
     override fun chain(key: String): Result {
-        TODO("Not yet implemented")
-        TODO("Attenzione alla gestione del lock")
+        //TODO("Attenzione alla gestione del lock")
+        setll(key)
+        return read()
     }
 
     override fun chain(keys: List<RecordField>): Result {
@@ -61,31 +71,25 @@ class JT400DBFile(override var name: String, override var fileMetadata: FileMeta
      * The READ operation reads the record, currently pointed to, from a full procedural file.
      */
     override fun read(): Result {
-
-        file.read();
-
+        return Result(currentRecordToValues(file.read()))
     }
 
     /** READP (Read Prior Record)
      * The READP operation reads the prior record from a full procedural file.
      */
     override fun readPrevious(): Result {
-
-        file.read();
-
+        return Result(currentRecordToValues(file.readPrevious()))
     }
 
     /** READE (Read Equal Key)
      * The READE operation retrieves the next sequential record from a full procedural file if the key of the record matches the search argument.
      */
     override fun readEqual(): Result {
-
-        file.readNextEqual();
-
+        return Result(currentRecordToValues(file.readNextEqual()))
     }
 
     override fun readEqual(key: String): Result {
-        TODO("Not yet implemented")
+        return Result(currentRecordToValues(file.readNextEqual(arrayOf(key))))
     }
 
     override fun readEqual(keys: List<RecordField>): Result {
@@ -96,13 +100,11 @@ class JT400DBFile(override var name: String, override var fileMetadata: FileMeta
      * The READPE operation retrieves the next prior sequential record from a full procedural file if the key of the record matches the search argument.
      */
     override fun readPreviousEqual(): Result {
-
-        file.readPreviousEqual();
-
+        return Result(currentRecordToValues(file.readPreviousEqual()))
     }
 
     override fun readPreviousEqual(key: String): Result {
-        TODO("Not yet implemented")
+        return Result(currentRecordToValues(file.readPreviousEqual(arrayOf(key))))
     }
 
     override fun readPreviousEqual(keys: List<RecordField>): Result {
@@ -129,4 +131,23 @@ class JT400DBFile(override var name: String, override var fileMetadata: FileMeta
     override fun delete(record: Record): Result {
         TODO("Not yet implemented")
     }
+
+    /**
+     * --- UTILS ---
+     */
+    //fun com.ibm.as400.access.Record?.currentRecordToValues(): Record {
+    private fun currentRecordToValues(r: com.ibm.as400.access.Record?): Record {
+        // TODO create a unit test for the isAfterLast condition
+        if (r == null) { //TODO || this.isAfterLast
+            return Record()
+        }
+        val result = Record()
+        val fields = file.recordFormat.fieldNames
+        for (name in fields) {
+            val value = r.getField(name)
+            result.add(RecordField(name, value))
+        }
+        return result
+    }
+
 }
