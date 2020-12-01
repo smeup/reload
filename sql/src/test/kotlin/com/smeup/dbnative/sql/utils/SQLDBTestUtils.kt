@@ -179,7 +179,7 @@ fun createAndPopulateXemp2View(dbManager: SQLDBMManager?) {
     )
 
     val metadata = FileMetadata("$XEMP2_VIEW_NAME", "EMPLOYEE", fields, keys, false)
-    dbManager!!.registerMetadata(metadata, false)
+    dbManager!!.registerMetadata(metadata, true)
     dbManager.execute(listOf(createXEMP2(), createXEMP2Index()))
 }
 
