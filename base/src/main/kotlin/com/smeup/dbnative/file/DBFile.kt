@@ -27,6 +27,10 @@ interface DBFile: AutoCloseable {
     var name: String
     var fileMetadata: FileMetadata
 
+    // Control functions
+    fun eof(): Boolean
+    fun equal(): Boolean
+
     // Pointing functions
     fun setll(key: String): Boolean
     fun setll(keys: List<String>): Boolean

@@ -37,6 +37,27 @@ class NoSQLDBFile(override var name: String, override var fileMetadata: FileMeta
     private var up_direction: Boolean = true
     private var last_set_keys: List<RecordField> = emptyList()
     private var IncludeFirst: Boolean = true
+    private var lastSetOperation: Boolean = false
+
+    override fun eof(): Boolean {
+        if (globalCursor == null) {
+            return false
+        } else {
+            return globalCursor!!.hasNext()
+        }
+    }
+
+    override fun equal(): Boolean {
+        if (lastSetOperation == false || globalCursor == null) {
+            return false
+        } else {
+            if (matchKeys(globalCursor!!.next(), last_set_keys)) {
+                return true
+            } else {
+                return false
+            }
+        }
+    }
 
 
     override fun setll(key: String): Boolean {

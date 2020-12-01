@@ -32,6 +32,8 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
     private var lastKeys: List<RecordField> = emptyList()
     private var actualRecord: Record? = null
     private var actualRecordToPop: Record? = null
+    private var eof: Boolean = false
+    private var lastOperationSet: Boolean = false
 
     private val thisFileKeys: List<String> by lazy {
         // TODO: think about a right way (local file maybe?) to retrieve keylist
@@ -47,6 +49,7 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
     }
 
     override fun setll(keys: List<String>): Boolean {
+        lastOperationSet = true
 
         var keyAsRecordField = keys.mapIndexed { index, value ->
             val keyname = thisFileKeys.get(index)
@@ -59,10 +62,12 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
     }
 
     override fun setgt(key: String): Boolean {
+
         return setgt(mutableListOf(key))
     }
 
     override fun setgt(keys: List<String>): Boolean {
+        lastOperationSet = true
 
         var keyAsRecordField = keys.mapIndexed { index, value ->
             val keyname = thisFileKeys.get(index)
@@ -80,6 +85,8 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
 
     override fun chain(keys: List<String>): Result {
 
+        lastOperationSet = false
+
         var keyAsRecordField = keys.mapIndexed { index, value ->
             val keyname = thisFileKeys.get(index)
             RecordField(keyname, value)
@@ -92,6 +99,9 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
     }
 
     override fun read(): Result {
+        lastOperationSet = false
+
+
         if (resultSet == null) {
             pointAtUpperLL()
         }
@@ -103,6 +113,8 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
     }
 
     override fun readPrevious(): Result {
+        lastOperationSet = false
+
         if (resultSet == null) {
             pointAtUpperLL()
         }
@@ -124,10 +136,13 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
 
     override fun readEqual(key: String): Result {
 
+
         return readEqual(mutableListOf(key))
     }
 
     override fun readEqual(keys: List<String>): Result {
+
+        lastOperationSet = false
 
         var keysAsRecordField = keys.mapIndexed { index, value ->
             val keyname = thisFileKeys.get(index)
@@ -160,6 +175,8 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
 
     override fun readPreviousEqual(keys: List<String>): Result {
 
+        lastOperationSet = false
+
         var keyAsRecordField = keys.mapIndexed { index, value ->
             val keyname = thisFileKeys.get(index)
             RecordField(keyname, value)
@@ -180,6 +197,8 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
     }
 
     override fun write(record: Record): Result {
+        lastOperationSet = false
+
         // TODO: manage errors
         val sql = name.insertSQL(record)
         connection.prepareStatement(sql).use { it ->
@@ -190,6 +209,8 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
     }
 
     override fun update(record: Record): Result {
+        lastOperationSet = false
+
         // record before update is "actualRecord"
         // record post update will be "record"
         var atLeastOneFieldChanged = false
@@ -207,6 +228,8 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
     }
 
     override fun delete(record: Record): Result {
+        lastOperationSet = false
+
         this.getResultSet()?.deleteRow()
         return Result(record)
     }
@@ -307,7 +330,22 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
         resultSet?.next()
     }
 
-    private fun eof(): Boolean = resultSet?.isAfterLast ?: true
+    override fun eof(): Boolean = resultSet?.isAfterLast ?: true
+
+
+    override fun equal(): Boolean {
+        if (lastOperationSet == false) {
+            return false
+        } else {
+            if (getResultSet() != null) {
+                val result = getResultSet().toValues()?.matches(lastKeys)
+                getResultSet()?.previous()
+                return result
+            } else {
+                return false
+            }
+        }
+    }
 
     fun getResultSet(): ResultSet? {
         return this.resultSet
