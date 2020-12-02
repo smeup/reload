@@ -1,0 +1,1 @@
+Ricordati di controllare il file update-jitpack.yml
