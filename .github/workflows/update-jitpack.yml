@@ -1,5 +1,5 @@
 on:
-  commit:
+  push:
     branches:
       - development
     types: [closed]
