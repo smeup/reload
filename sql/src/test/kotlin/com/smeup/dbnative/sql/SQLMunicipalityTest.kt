@@ -409,7 +409,7 @@ class SQLMunicipalityTest {
         assertTrue(dbFile.setll(key3A))
         var count = 0
         while (dbFile.eof() == false) {
-            var readed = dbFile.readEqual(key3A)
+            dbFile.readEqual(key3A)
             count++
         }
         assertEquals(32, count)

@@ -338,7 +338,7 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
             return false
         } else {
             if (getResultSet() != null) {
-                val result = getResultSet().toValues()?.matches(lastKeys)
+                val result = getResultSet().toValues().matches(lastKeys)
                 getResultSet()?.previous()
                 return result
             } else {

@@ -165,9 +165,9 @@ fun calculateMarkerValue(
         }
         // NOTE: calculate max length of marker using primary fields max length (temp 100 but incorrect)
         if (withEquals) {
-            keys.joinToString("") { it.value as String}.padEnd(100, padChar)
+            keys.joinToString("") { it.value }.padEnd(100, padChar)
         } else {
-            keys.joinToString("") { it.value as String}
+            keys.joinToString("") { it.value }
 
         }
     }
