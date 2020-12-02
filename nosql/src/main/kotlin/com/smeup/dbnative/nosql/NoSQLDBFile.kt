@@ -38,13 +38,10 @@ class NoSQLDBFile(override var name: String, override var fileMetadata: FileMeta
     private var last_set_keys: List<RecordField> = emptyList()
     private var IncludeFirst: Boolean = true
     private var lastSetOperation: Boolean = false
+    private var eof: Boolean = false
 
     override fun eof(): Boolean {
-        if (globalCursor == null) {
-            return false
-        } else {
-            return globalCursor!!.hasNext()
-        }
+        return eof
     }
 
     override fun equal(): Boolean {
@@ -68,6 +65,7 @@ class NoSQLDBFile(override var name: String, override var fileMetadata: FileMeta
     Create cursor on first occourence of passed keys (up sorted list)
      */
     override fun setll(keys: List<String>): Boolean {
+        eof = false
 
         var keyAsRecordField = keys.mapIndexed { index, value ->
             val keyname = fileMetadata.fileKeys.get(index)
@@ -163,6 +161,7 @@ class NoSQLDBFile(override var name: String, override var fileMetadata: FileMeta
     Create cursor on first occourence of passed keys (up sorted list)
      */
     override fun setgt(keys: List<String>): Boolean {
+        eof = false
 
         var keyAsRecordField = keys.mapIndexed { index, value ->
             val keyname = fileMetadata.fileKeys.get(index)
@@ -263,6 +262,7 @@ class NoSQLDBFile(override var name: String, override var fileMetadata: FileMeta
     }
 
     override fun chain(keys: List<String>): Result {
+        eof = false
 
         var keyAsRecordField = keys.mapIndexed { index, value ->
             val keyname = fileMetadata.fileKeys.get(index)
@@ -286,10 +286,10 @@ class NoSQLDBFile(override var name: String, override var fileMetadata: FileMeta
         val document = globalCursor!!.tryNext() ?: return Result(Record())
 
         if (matchKeys(document, keyAsRecordField)) {
-                val record = documentToRecord(document)
-                updateLastKeys(record)
-                return Result(record)
-            } else {
+            val record = documentToRecord(document)
+            updateLastKeys(record)
+            return Result(record)
+        } else {
             return Result(Record())
         }
     }
@@ -323,7 +323,8 @@ class NoSQLDBFile(override var name: String, override var fileMetadata: FileMeta
                 if (globalCursor!!.hasNext()) {
                     updateLastKeys(record)
                     return Result(record = record)
-                    } else {
+                } else {
+                    eof = true
                     return Result(record = record, indicatorEQ = true)
                 }
             } else {
@@ -378,7 +379,6 @@ class NoSQLDBFile(override var name: String, override var fileMetadata: FileMeta
 
         IncludeFirst = true
 
-
         while (true) {
             if (globalCursor!!.hasNext()) {
 
@@ -388,21 +388,13 @@ class NoSQLDBFile(override var name: String, override var fileMetadata: FileMeta
                 updateLastKeys(record)
 
                 if (matchKeys(document, keyAsRecordField)) {
-                    // Match found, return result and stop search
-
-                    if (globalCursor!!.hasNext()) {
-                        return Result(record = record)
-                    } else {
-                        /*
-                        Return record and set EOF on response.
-                        Reset cursor.
-                         */
-                        return Result(record = record, indicatorEQ = true)
-                    }
-
+                    return Result(record = record)
+                } else {
+                    eof = true
+                    return Result(indicatorHI = true)
                 }
-
             } else {
+                eof = true
                 // End of data and no match found, reset cursor
                 return Result(indicatorLO = true, errorMsg = "READ called on EOF cursor")
             }
@@ -435,6 +427,7 @@ class NoSQLDBFile(override var name: String, override var fileMetadata: FileMeta
                     updateLastKeys(record)
                     return Result(record = record)
                 } else {
+                    eof = true
                     return Result(record = record, indicatorEQ = true)
                 }
             } else {
@@ -459,7 +452,6 @@ class NoSQLDBFile(override var name: String, override var fileMetadata: FileMeta
             val keyname = fileMetadata.fileKeys.get(index)
             RecordField(keyname, value)
         }
-
 
         if (globalCursor == null) {
             return Result(
@@ -496,23 +488,15 @@ class NoSQLDBFile(override var name: String, override var fileMetadata: FileMeta
                 updateLastKeys(record)
 
                 if (matchKeys(document, keyAsRecordField)) {
-                    // Match found, return result and stop search
-
-                    if (globalCursor!!.hasNext()) {
-                        return Result(record = record)
-                    } else {
-                        /*
-                        Return record and set EOF on response.
-                        Reset cursor.
-                         */
-                        return Result(record = record, indicatorEQ = true)
-                    }
-
+                    return Result(record = record)
+                } else {
+                    eof = true
+                    return Result(indicatorHI = true)
                 }
-
             } else {
+                eof = true
                 // End of data and no match found, reset cursor
-                return Result(indicatorLO = true, errorMsg = "READ called on BOF cursor")
+                return Result(indicatorLO = true, errorMsg = "READ called on EOF cursor")
             }
         }
     }
