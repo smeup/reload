@@ -1,5 +1,5 @@
 on:
-  pull_request:
+  commit:
     branches:
       - development
     types: [closed]
