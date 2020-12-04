@@ -34,7 +34,7 @@ import java.util.concurrent.atomic.AtomicInteger
 const val EMPLOYEE_TABLE_NAME = "EMPLOYEE"
 const val XEMP2_VIEW_NAME = "XEMP2"
 const val TSTTAB_TABLE_NAME = "TSTTAB"
-const val TST2TAB_TABLE_NAME = "TSTTAB"
+const val TST2TAB_TABLE_NAME = "TST2TAB"
 const val MUNICIPALITY_TABLE_NAME = "MUNICIPALITY"
 const val TEST_LOG = false
 //do not change defaultValue

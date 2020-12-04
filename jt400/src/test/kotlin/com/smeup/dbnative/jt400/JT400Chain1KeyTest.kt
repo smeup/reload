@@ -24,6 +24,7 @@ import com.smeup.dbnative.jt400.utils.destroyDatabase
 import org.junit.AfterClass
 import org.junit.BeforeClass
 import org.junit.Test
+import java.math.BigDecimal
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -53,7 +54,7 @@ class JT400Chain1KeyTest {
         val dbFile = dbManager!!.openFile(TSTTAB_TABLE_NAME)
         val chainResult = dbFile.chain("XXX")
         assertEquals("XXX", chainResult.record["TSTFLDCHR"])
-        assertEquals("123.45", chainResult.record["TSTFLDNBR"])
+        assertEquals(BigDecimal("123.45"), chainResult.record["TSTFLDNBR"])
         dbManager!!.closeFile(TSTTAB_TABLE_NAME)
     }
 

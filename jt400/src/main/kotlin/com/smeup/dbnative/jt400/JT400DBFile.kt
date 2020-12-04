@@ -6,7 +6,12 @@ import com.smeup.dbnative.file.DBFile
 import com.smeup.dbnative.file.Record
 import com.smeup.dbnative.file.RecordField
 import com.smeup.dbnative.file.Result
+import com.smeup.dbnative.model.Field
+import com.smeup.dbnative.model.FieldType
 import com.smeup.dbnative.model.FileMetadata
+import com.smeup.dbnative.model.Type
+import com.smeup.dbnative.utils.getField
+import java.math.BigDecimal
 
 class JT400DBFile(override var name: String, override var fileMetadata: FileMetadata, var file: KeyedFile) : DBFile {
 
@@ -282,10 +287,17 @@ class JT400DBFile(override var name: String, override var fileMetadata: FileMeta
         val result = com.ibm.as400.access.Record()
         result.recordFormat = file.recordFormat
         for ((name, value) in r) {
+            //val dataType = file.recordFormat.getFieldDescription(name).dataType.javaType
             if (value is Int) {
                 result.setField(name, value.toBigDecimal())
             } else {
-                result.setField(name, value)
+                val field : Field? = this.fileMetadata.getField(name)
+                val type : FieldType? =  field?.type ?: null
+                when (type?.type ?: null) {
+                    Type.BIGINT, Type.BIGINT, Type.DECIMAL, Type.DOUBLE, Type.FLOAT, Type.INTEGER, Type.SMALLINT ->
+                    result.setField(name, BigDecimal(value.toString()))
+                else -> result.setField(name, value)
+                }
             }
         }
         /*
