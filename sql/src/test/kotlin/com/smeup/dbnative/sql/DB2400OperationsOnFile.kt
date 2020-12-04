@@ -31,7 +31,7 @@ import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-@Ignore
+//@Ignore
 class DB2400OperationsOnFile {
 
     companion object {

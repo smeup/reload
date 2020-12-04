@@ -11,22 +11,24 @@ import com.smeup.dbnative.model.FileMetadata
 class JT400DBFile(override var name: String, override var fileMetadata: FileMetadata, var file: KeyedFile) : DBFile {
 
     //TODO rivedere
+    /*
     fun positionCursorBefore(keys: List<RecordField>): Boolean {
         try {
-            file.positionCursorBefore(keys2Array(keys))
+            file.positionCursorBefore(keys2Array(keys)) // KeyedFile.KEY_LT
             return true
         } catch (e: AS400Exception) {
             handleAS400Error(e);
             return false;
         }
     }
+    */
 
     /** SETLL (Set Lower Limit)
      * The SETLL operation positions a file at the next record that has a key or relative record number that is greater than or equal to the search argument (key or relative record number)
      */
     override fun setll(key: String): Boolean {
         try {
-            file.positionCursor(arrayOf(key), KeyedFile.KEY_GE)
+            file.positionCursor(arrayOf(key), KeyedFile.KEY_LT)
             return true
         } catch (e: AS400Exception) {
             handleAS400Error(e);
@@ -36,7 +38,9 @@ class JT400DBFile(override var name: String, override var fileMetadata: FileMeta
 
     override fun setll(keys: List<RecordField>): Boolean {
         try {
-            file.positionCursor(keys2Array(keys), KeyedFile.KEY_GE)
+            //file.positionCursorBefore(keys2Array(keys))
+            file.positionCursor(keys2Array(keys), KeyedFile.KEY_LT)
+            //file.positionCursor(keys2Array(keys), KeyedFile.KEY_LT)
             return true
         } catch (e: AS400Exception) {
             handleAS400Error(e);
@@ -73,8 +77,13 @@ class JT400DBFile(override var name: String, override var fileMetadata: FileMeta
     override fun chain(key: String): Result {
         //TODO("Attenzione alla gestione del lock")
         try {
+            /*
             file.positionCursor(arrayOf(key), KeyedFile.KEY_EQ)
-            return read()
+            var r : Result? = Result(as400RecordToSmeUPRecord(file.read()))
+            //file.positionCursorToNext();
+            return r ?: fail("Read failed");
+            */
+            return Result(as400RecordToSmeUPRecord(file.read(arrayOf(key))))
         } catch (e: AS400Exception) {
             handleAS400Error(e);
             return Result(Record())
@@ -84,8 +93,13 @@ class JT400DBFile(override var name: String, override var fileMetadata: FileMeta
     override fun chain(keys: List<RecordField>): Result {
         //TODO("Attenzione alla gestione del lock")
         try {
+            /*
             file.positionCursor(keys2Array(keys), KeyedFile.KEY_EQ)
-            return read()
+            var r : Result? = Result(as400RecordToSmeUPRecord(file.read()))
+            //file.positionCursorToNext();
+            return r ?: fail("Read failed");
+            */
+            return Result(as400RecordToSmeUPRecord(file.read(keys2Array(keys))))
         } catch (e: AS400Exception) {
             handleAS400Error(e);
             return Result(Record())
@@ -99,8 +113,8 @@ class JT400DBFile(override var name: String, override var fileMetadata: FileMeta
         //https://www.ibm.com/support/knowledgecenter/ssw_ibm_i_74/rzasd/zzread.htm
         var r : Result? = null
         try {
-            r =  Result(as400RecordToSmeUPRecord(file.read()))
             file.positionCursorToNext();
+            r =  Result(as400RecordToSmeUPRecord(file.read()))
         } catch (e: AS400Exception) {
             handleAS400Error(e);
         }
@@ -130,11 +144,31 @@ class JT400DBFile(override var name: String, override var fileMetadata: FileMeta
 
     override fun readEqual(key: String): Result {
         return Result(as400RecordToSmeUPRecord(file.readNextEqual(arrayOf(key))))
+        /*
+        var r : Result? = null
+        try {
+            r =  Result(as400RecordToSmeUPRecord(file.read(arrayOf(key))))
+            file.positionCursorToNext();
+        } catch (e: AS400Exception) {
+            handleAS400Error(e);
+        }
+        return r ?: fail("Read failed");
+         */
     }
 
     override fun readEqual(keys: List<RecordField>): Result {
         //https://code400.com/forum/forum/iseries-programming-languages/java/8386-noobie-question
         return Result(as400RecordToSmeUPRecord(file.readNextEqual(keys2Array(keys))))
+        /*
+        var r : Result? = null
+        try {
+            r =  Result(as400RecordToSmeUPRecord(file.read(keys2Array(keys))))
+            file.positionCursorToNext();
+        } catch (e: AS400Exception) {
+            handleAS400Error(e);
+        }
+        return r ?: fail("Read failed");
+         */
     }
 
     /** READPE (Read Prior Equal)

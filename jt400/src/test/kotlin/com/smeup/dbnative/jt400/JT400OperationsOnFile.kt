@@ -88,7 +88,7 @@ class JT400OperationsOnFile {
         val key = "ART  "
         val keyList = listOf(RecordField("A§TIAR", key))
 
-        //~~~assertTrue(dbFile.setll(keyList))
+        assertTrue(dbFile.setll(keyList))
 
         var readEResult = dbFile.readEqual(keyList)
         assertEquals("2  ", readEResult.record["A§TPAR"])
@@ -284,8 +284,8 @@ class JT400OperationsOnFile {
         // READ AND UPDATE
         // Read records with same description (A§DEAR) and update field named 'secondary description' (A§DEA2)
         var keyList = listOf(RecordField("A§DEAR", dearKey))
-        //assertTrue(dbFile.setll(keyList))
-        dbFile.positionCursorBefore(keyList) //TODO rivedere
+        assertTrue(dbFile.setll(keyList))
+        //dbFile.positionCursorBefore(keyList) //TODO rivedere
         // Update
         repeat(numberOfRecordsToHandle) {
             var readEResult = dbFile.readEqual(keyList)
@@ -297,8 +297,8 @@ class JT400OperationsOnFile {
 
         // READ AND CHECK
         // Check all records are updated as expected
-        //assertTrue(dbFile.setll(keyList))
-        dbFile.positionCursorBefore(keyList)  //TODO rivedere
+        assertTrue(dbFile.setll(keyList))
+        //dbFile.positionCursorBefore(keyList)  //TODO rivedere
         repeat(numberOfRecordsToHandle) {
             var readEResult = dbFile.readEqual(keyList)
             println("[READ AND CHECK]: " + readEResult.record["A§ARTI"])
@@ -306,8 +306,8 @@ class JT400OperationsOnFile {
         }
 
         // DELETE
-        //assertTrue(dbFile.setll(keyList))
-        dbFile.positionCursorBefore(keyList)  //TODO rivedere
+        assertTrue(dbFile.setll(keyList))
+        //dbFile.positionCursorBefore(keyList)  //TODO rivedere
         repeat(numberOfRecordsToHandle) {
             var readEResult = dbFile.readEqual(keyList)
             assertEquals(dea2Key, readEResult.record["A§DEA2"])

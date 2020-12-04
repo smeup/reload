@@ -75,8 +75,8 @@ enum class TestSQLDBType(
             fileName= "*",
             driver = "com.ibm.as400.access.AS400JDBCDriver",
             url = "jdbc:as400://$DB2_400_HOST/$DB2_400_LIBRARY_NAME;",
-            user = "PARFRA",
-            password = ""),
+            user = "SCAARM",
+            password = "Penrose75"),
         //force no create connection for dba operations
         dbaConnectionConfig = null
     )

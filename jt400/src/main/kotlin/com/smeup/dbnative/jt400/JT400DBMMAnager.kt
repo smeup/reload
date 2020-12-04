@@ -14,9 +14,7 @@ open class JT400DBMMAnager(override val connectionConfig: ConnectionConfig) : DB
     private val host : String by lazy {
         match!!.destructured.component1()
     }
-//    private val port : Int by lazy {
-//        match!!.destructured.component2().toInt()
-//    }
+
     private val library : String by lazy {
         match!!.destructured.component2()
     }
@@ -41,7 +39,7 @@ open class JT400DBMMAnager(override val connectionConfig: ConnectionConfig) : DB
         val file = KeyedFile(connection, path)
         //val rf = AS400FileRecordDescription(system, path).retrieveRecordFormat()
         //file.recordFormat = rf[0]
-        file. setRecordFormat() // Loads the record format directly from the server.
+        file.setRecordFormat() // Loads the record format directly from the server.
         //TODO("non sempre deve essere read-only")
         file.open(AS400File.READ_WRITE, 0, AS400File.COMMIT_LOCK_LEVEL_NONE)
         return JT400DBFile(name, metadataOf(name), file)

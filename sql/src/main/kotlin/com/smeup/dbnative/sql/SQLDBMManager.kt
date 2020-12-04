@@ -83,7 +83,11 @@ open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBMa
 
     fun execute(sqlStatements: List<String>) {
         connection.createStatement().use { statement ->
-            sqlStatements.forEach { sql -> statement.addBatch(sql) }
+            sqlStatements.forEach {
+                    sql ->
+                println(sql)
+                statement.addBatch(sql)
+            }
             statement.executeBatch()
         }
     }
