@@ -123,6 +123,7 @@ private fun getImplByUrl(config: ConnectionConfig) : String {
         config.impl != null && config.impl!!.trim().isEmpty() -> config.impl!!
         config.url.startsWith("jdbc:") -> "com.smeup.dbnative.sql.SQLDBMManager"
         config.url.startsWith("mongodb:") -> "com.smeup.dbnative.nosql.NoSQLDBMManager"
+        config.url.startsWith("as400:") -> "com.smeup.dbnative.jt400.JT400DBMMAnager"
         else -> throw IllegalArgumentException("${config.url} not handled")
     }
 }

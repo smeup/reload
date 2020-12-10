@@ -54,7 +54,6 @@ open class JT400DBMMAnager(override val connectionConfig: ConnectionConfig) : DB
     }
 
     override fun validateConfig() {
-        TODO("Not yet implemented")
     }
 
     override fun close() {
