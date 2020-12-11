@@ -402,6 +402,20 @@ class SQLMunicipalityTest {
         dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
 
+    @Test
+    fun t15_eof() {
+        val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
+        val key3A = buildMunicipalityKey("IT", "BAS", "MT")
+        assertTrue(dbFile.setll(key3A))
+        var count = 0
+        while (dbFile.eof() == false) {
+            dbFile.readEqual(key3A)
+            count++
+        }
+        assertEquals(32, count)
+        dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
+    }
+
 
 }
 

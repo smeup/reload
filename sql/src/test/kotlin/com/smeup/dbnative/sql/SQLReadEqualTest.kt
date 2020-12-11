@@ -21,6 +21,7 @@ import com.smeup.dbnative.file.RecordField
 import com.smeup.dbnative.sql.utils.*
 import org.junit.AfterClass
 import org.junit.BeforeClass
+import org.junit.Ignore
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -59,7 +60,7 @@ class SQLReadEqualTest {
     @Test
     fun doesNotFindRecordsIfChainAndReadENotExistingKey() {
         val dbFile = dbManager.openFile(XEMP2_VIEW_NAME)
-        val chainResult = dbFile.chain(listOf(RecordField("WORKDEPT", "XXX")))
+        val chainResult = dbFile.chain("XXX")
         assertEquals(0, chainResult.record.size)
         assertEquals(0, dbFile.readEqual().record.size)
         dbManager.closeFile(XEMP2_VIEW_NAME)
@@ -68,7 +69,7 @@ class SQLReadEqualTest {
     @Test
     fun findRecordsIfChainAndReadEExistingKey() {
         val dbFile = dbManager.openFile(XEMP2_VIEW_NAME)
-        val chainResult = dbFile.chain(listOf(RecordField("WORKDEPT", "C01")))
+        val chainResult = dbFile.chain( "C01")
         assertEquals("SALLY KWAN", getEmployeeName(chainResult.record))
         assertEquals("DELORES QUINTANA", getEmployeeName(dbFile.readEqual().record))
         assertEquals("HEATHER NICHOLLS", getEmployeeName(dbFile.readEqual().record))
@@ -78,7 +79,28 @@ class SQLReadEqualTest {
     }
 
     @Test
+    fun readUntilEof() {
+        val dbFile = dbManager.openFile(XEMP2_VIEW_NAME)
+        val chainResult = dbFile.chain( "C01")
+        var readed = 0;
+        while (dbFile.eof() == false) {
+            var readResult = dbFile.readEqual("C01")
+            readed++
+        }
+        assertEquals(4, readed)
+        dbManager.closeFile(XEMP2_VIEW_NAME)
+    }
 
+    @Test
+    fun equals() {
+        val dbFile = dbManager.openFile(XEMP2_VIEW_NAME)
+        val chainResult = dbFile.setll( "C01")
+        assertTrue (dbFile.equal())
+        dbManager.closeFile(XEMP2_VIEW_NAME)
+    }
+
+
+    @Test
     fun findRecordsIfReadEWithKeyExistingKey() {
         val dbFile = dbManager.openFile(XEMP2_VIEW_NAME)
         assertEquals("CHRISTINE HAAS", getEmployeeName(dbFile.readEqual("A00").record))

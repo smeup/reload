@@ -27,27 +27,31 @@ interface DBFile: AutoCloseable {
     var name: String
     var fileMetadata: FileMetadata
 
+    // Control functions
+    fun eof(): Boolean
+    fun equal(): Boolean
+
     // Pointing functions
     fun setll(key: String): Boolean
-    fun setll(keys: List<RecordField>): Boolean
+    fun setll(keys: List<String>): Boolean
     fun setgt(key: String): Boolean
-    fun setgt(keys: List<RecordField>): Boolean
+    fun setgt(keys: List<String>): Boolean
 
 
     // Read functions
     fun chain(key: String): Result
-    fun chain(keys: List<RecordField>): Result
+    fun chain(keys: List<String>): Result
 
     fun read(): Result
     fun readPrevious(): Result
 
     fun readEqual(): Result
     fun readEqual(key: String): Result
-    fun readEqual(keys: List<RecordField>): Result
+    fun readEqual(keys: List<String>): Result
 
     fun readPreviousEqual(): Result
     fun readPreviousEqual(key: String): Result
-    fun readPreviousEqual(keys: List<RecordField>): Result
+    fun readPreviousEqual(keys: List<String>): Result
 
     // Write functions
     fun write(record: Record): Result

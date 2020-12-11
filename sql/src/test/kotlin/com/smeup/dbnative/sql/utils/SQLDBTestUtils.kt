@@ -179,7 +179,7 @@ fun createAndPopulateXemp2View(dbManager: SQLDBMManager?) {
     )
 
     val metadata = FileMetadata("$XEMP2_VIEW_NAME", "EMPLOYEE", fields, keys, false)
-    dbManager!!.registerMetadata(metadata, false)
+    dbManager!!.registerMetadata(metadata, true)
     dbManager.execute(listOf(createXEMP2(), createXEMP2Index()))
 }
 
@@ -258,15 +258,15 @@ private fun createAndPopulateTable(
     dbManager.closeFile(tableName)
 }
 
-fun buildMunicipalityKey(vararg values: String): List<RecordField> {
-    val recordFields = mutableListOf<RecordField>()
+fun buildMunicipalityKey(vararg values: String): List<String> {
+    val keyValues = mutableListOf<String>()
     val keys = arrayOf("NAZ", "REG", "PROV", "CITTA")
     for ((index, value) in values.withIndex()) {
         if (keys.size> index) {
-            recordFields.add(RecordField(keys[index], value))
+            keyValues.add(value)
         }
     }
-    return recordFields
+    return keyValues
 }
 
 
