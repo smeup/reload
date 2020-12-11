@@ -37,22 +37,45 @@ class NoSQLDBFile(override var name: String, override var fileMetadata: FileMeta
     private var up_direction: Boolean = true
     private var last_set_keys: List<RecordField> = emptyList()
     private var IncludeFirst: Boolean = true
+    private var lastSetOperation: Boolean = false
+    private var eof: Boolean = false
+
+    override fun eof(): Boolean {
+        return eof
+    }
+
+    override fun equal(): Boolean {
+        if (lastSetOperation == false || globalCursor == null) {
+            return false
+        } else {
+            if (matchKeys(globalCursor!!.next(), last_set_keys)) {
+                return true
+            } else {
+                return false
+            }
+        }
+    }
 
 
     override fun setll(key: String): Boolean {
-        val first = fileMetadata.fileKeys.first()
-        return setll(listOf<RecordField>(RecordField(first, key)))
+        return setll(mutableListOf(key))
     }
 
     /*
     Create cursor on first occourence of passed keys (up sorted list)
      */
-    override fun setll(keys: List<RecordField>): Boolean {
+    override fun setll(keys: List<String>): Boolean {
+        eof = false
+
+        var keyAsRecordField = keys.mapIndexed { index, value ->
+            val keyname = fileMetadata.fileKeys.get(index)
+            RecordField(keyname, value)
+        }
 
         /*
         Passed keys are not primary key for DBFile
          */
-        if (fileMetadata.matchFileKeys(keys) == false) {
+        if (fileMetadata.matchFileKeys(keyAsRecordField) == false) {
             return false
         }
 
@@ -116,7 +139,7 @@ class NoSQLDBFile(override var name: String, override var fileMetadata: FileMeta
 
         */
 
-        val cursor = calculateCursor(keys, true, true)
+        val cursor = calculateCursor(keyAsRecordField, true, true)
         var result = false
         if (cursor.iterator().hasNext()) {
             globalCursor = cursor.iterator()
@@ -124,26 +147,31 @@ class NoSQLDBFile(override var name: String, override var fileMetadata: FileMeta
         }
 
         up_direction = true
-        last_set_keys = keys
+        last_set_keys = keyAsRecordField
         IncludeFirst = true
 
         return result
     }
 
     override fun setgt(key: String): Boolean {
-        val first = fileMetadata.fileKeys.first()
-        return setgt(listOf<RecordField>(RecordField(first, key)))
+        return setgt(mutableListOf(key))
     }
 
     /*
     Create cursor on first occourence of passed keys (up sorted list)
      */
-    override fun setgt(keys: List<RecordField>): Boolean {
+    override fun setgt(keys: List<String>): Boolean {
+        eof = false
+
+        var keyAsRecordField = keys.mapIndexed { index, value ->
+            val keyname = fileMetadata.fileKeys.get(index)
+            RecordField(keyname, value)
+        }
 
         /*
         Passed keys are not primary key for DBFile
          */
-        if (fileMetadata.matchFileKeys(keys) == false) {
+        if (fileMetadata.matchFileKeys(keyAsRecordField) == false) {
             return false
         }
 
@@ -212,7 +240,7 @@ class NoSQLDBFile(override var name: String, override var fileMetadata: FileMeta
         cursor = setSorting(cursor, true)
          */
 
-        val cursor = calculateCursor(keys, true, includeFirst = false)
+        val cursor = calculateCursor(keyAsRecordField, true, includeFirst = false)
 
         var result = false
 
@@ -222,7 +250,7 @@ class NoSQLDBFile(override var name: String, override var fileMetadata: FileMeta
         }
 
         up_direction = true
-        last_set_keys = keys
+        last_set_keys = keyAsRecordField
         IncludeFirst = false
 
         return result
@@ -230,33 +258,38 @@ class NoSQLDBFile(override var name: String, override var fileMetadata: FileMeta
 
     override fun chain(key: String): Result {
 
-        val first = fileMetadata.fileKeys.first()
-        return chain(listOf<RecordField>(RecordField(first, key)))
+        return chain(mutableListOf(key))
     }
 
-    override fun chain(keys: List<RecordField>): Result {
+    override fun chain(keys: List<String>): Result {
+        eof = false
+
+        var keyAsRecordField = keys.mapIndexed { index, value ->
+            val keyname = fileMetadata.fileKeys.get(index)
+            RecordField(keyname, value)
+        }
 
         /*
         Passed keys are not primary key for DBFile
          */
-        if (fileMetadata.matchFileKeys(keys) == false) {
+        if (fileMetadata.matchFileKeys(keyAsRecordField) == false) {
             return Result(record = Record(), indicatorLO = true)
         }
 
-        val cursor = calculateCursor(keys, true, true)
+        val cursor = calculateCursor(keyAsRecordField, true, true)
 
         globalCursor = cursor.iterator()
         up_direction = true
-        last_set_keys = keys
+        last_set_keys = keyAsRecordField
 
         //when globalCursor is empty return result empty
         val document = globalCursor!!.tryNext() ?: return Result(Record())
 
-        if (matchKeys(document, keys)) {
-                val record = documentToRecord(document)
-                updateLastKeys(record)
-                return Result(record)
-            } else {
+        if (matchKeys(document, keyAsRecordField)) {
+            val record = documentToRecord(document)
+            updateLastKeys(record)
+            return Result(record)
+        } else {
             return Result(Record())
         }
     }
@@ -290,7 +323,8 @@ class NoSQLDBFile(override var name: String, override var fileMetadata: FileMeta
                 if (globalCursor!!.hasNext()) {
                     updateLastKeys(record)
                     return Result(record = record)
-                    } else {
+                } else {
+                    eof = true
                     return Result(record = record, indicatorEQ = true)
                 }
             } else {
@@ -309,8 +343,7 @@ class NoSQLDBFile(override var name: String, override var fileMetadata: FileMeta
     }
 
     override fun readEqual(key: String): Result {
-        val first = fileMetadata.fileKeys.first()
-        return readEqual(listOf<RecordField>(RecordField(first, key)))
+        return readEqual(mutableListOf(key))
     }
 
     /*
@@ -318,15 +351,21 @@ class NoSQLDBFile(override var name: String, override var fileMetadata: FileMeta
 
     https://www.ibm.com/support/knowledgecenter/ssw_ibm_i_71/rzasd/sc092508987.htm
      */
-    override fun readEqual(keys: List<RecordField>): Result {
+    override fun readEqual(keys: List<String>): Result {
+
+        var keyAsRecordField = keys.mapIndexed { index, value ->
+            val keyname = fileMetadata.fileKeys.get(index)
+            RecordField(keyname, value)
+        }
+
         if (globalCursor == null) {
-            globalCursor = calculateCursor(keys, true, true).iterator()
+            globalCursor = calculateCursor(keyAsRecordField, true, true).iterator()
         }
 
         /*
         Passed keys are not primary key for DBFile
          */
-        if (fileMetadata.matchFileKeys(keys) == false) {
+        if (fileMetadata.matchFileKeys(keyAsRecordField) == false) {
             return Result(indicatorLO = true, errorMsg = "READE keys not matching file primary keys")
         }
 
@@ -340,7 +379,6 @@ class NoSQLDBFile(override var name: String, override var fileMetadata: FileMeta
 
         IncludeFirst = true
 
-
         while (true) {
             if (globalCursor!!.hasNext()) {
 
@@ -349,22 +387,14 @@ class NoSQLDBFile(override var name: String, override var fileMetadata: FileMeta
 
                 updateLastKeys(record)
 
-                if (matchKeys(document, keys)) {
-                    // Match found, return result and stop search
-
-                    if (globalCursor!!.hasNext()) {
-                        return Result(record = record)
-                    } else {
-                        /*
-                        Return record and set EOF on response.
-                        Reset cursor.
-                         */
-                        return Result(record = record, indicatorEQ = true)
-                    }
-
+                if (matchKeys(document, keyAsRecordField)) {
+                    return Result(record = record)
+                } else {
+                    eof = true
+                    return Result(indicatorHI = true)
                 }
-
             } else {
+                eof = true
                 // End of data and no match found, reset cursor
                 return Result(indicatorLO = true, errorMsg = "READ called on EOF cursor")
             }
@@ -397,6 +427,7 @@ class NoSQLDBFile(override var name: String, override var fileMetadata: FileMeta
                     updateLastKeys(record)
                     return Result(record = record)
                 } else {
+                    eof = true
                     return Result(record = record, indicatorEQ = true)
                 }
             } else {
@@ -412,11 +443,16 @@ class NoSQLDBFile(override var name: String, override var fileMetadata: FileMeta
     }
 
     override fun readPreviousEqual(key: String): Result {
-        val first = fileMetadata.fileKeys.first()
-        return readPreviousEqual(listOf<RecordField>(RecordField(first, key)))
+        return readPreviousEqual(mutableListOf(key))
     }
 
-    override fun readPreviousEqual(keys: List<RecordField>): Result {
+    override fun readPreviousEqual(keys: List<String>): Result {
+
+        var keyAsRecordField = keys.mapIndexed { index, value ->
+            val keyname = fileMetadata.fileKeys.get(index)
+            RecordField(keyname, value)
+        }
+
         if (globalCursor == null) {
             return Result(
                 indicatorLO = true,
@@ -427,7 +463,7 @@ class NoSQLDBFile(override var name: String, override var fileMetadata: FileMeta
         /*
         Passed keys are not primary key for DBFile
          */
-        if (fileMetadata.matchFileKeys(keys) == false) {
+        if (fileMetadata.matchFileKeys(keyAsRecordField) == false) {
             return Result(indicatorLO = true, errorMsg = "READE keys not matching file primary keys")
         }
 
@@ -451,24 +487,16 @@ class NoSQLDBFile(override var name: String, override var fileMetadata: FileMeta
 
                 updateLastKeys(record)
 
-                if (matchKeys(document, keys)) {
-                    // Match found, return result and stop search
-
-                    if (globalCursor!!.hasNext()) {
-                        return Result(record = record)
-                    } else {
-                        /*
-                        Return record and set EOF on response.
-                        Reset cursor.
-                         */
-                        return Result(record = record, indicatorEQ = true)
-                    }
-
+                if (matchKeys(document, keyAsRecordField)) {
+                    return Result(record = record)
+                } else {
+                    eof = true
+                    return Result(indicatorHI = true)
                 }
-
             } else {
+                eof = true
                 // End of data and no match found, reset cursor
-                return Result(indicatorLO = true, errorMsg = "READ called on BOF cursor")
+                return Result(indicatorLO = true, errorMsg = "READ called on EOF cursor")
             }
         }
     }

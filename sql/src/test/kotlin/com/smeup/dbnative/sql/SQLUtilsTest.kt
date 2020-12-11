@@ -82,6 +82,4 @@ class SQLUtilsTest {
         assertEquals("ORDER BY Field1, Field2, Field3", orderBySQL(fields))
         assertEquals("ORDER BY Field1 DESC, Field2 DESC, Field3 DESC", orderBySQL(fields, true))
     }
-
-
 }

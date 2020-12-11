@@ -114,7 +114,7 @@ fun filePartSQLAndValues(
             comparisons
         )})"
 
-        values.addAll(keys2.map { it.value as String })
+        values.addAll(keys2.map { it.value.toString() })
         queries.add(sql)
         keys2 = keys2.subList(0, keys2.size - 1)
 
@@ -165,9 +165,9 @@ fun calculateMarkerValue(
         }
         // NOTE: calculate max length of marker using primary fields max length (temp 100 but incorrect)
         if (withEquals) {
-            keys.joinToString("") { it.value as String}.padEnd(100, padChar)
+            keys.joinToString("") { it.value }.padEnd(100, padChar)
         } else {
-            keys.joinToString("") { it.value as String}
+            keys.joinToString("") { it.value }
 
         }
     }
