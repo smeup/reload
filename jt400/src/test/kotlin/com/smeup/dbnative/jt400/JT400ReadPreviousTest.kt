@@ -15,33 +15,31 @@
  *
  */
 
-package com.smeup.dbnative.jt400
+package com.smeup.dbnative.sql
 
+import com.smeup.dbnative.jt400.JT400DBMMAnager
 import com.smeup.dbnative.jt400.utils.*
-import org.junit.AfterClass
-import org.junit.BeforeClass
-import org.junit.Test
+import org.junit.*
+import org.junit.runners.MethodSorters
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class JT400ReadPreviousTest {
 
-    companion object {
+    private lateinit var dbManager: JT400DBMMAnager
 
-        private lateinit var dbManager: JT400DBMMAnager
-        
-        @BeforeClass
-        @JvmStatic
-        fun setUp() {
-            dbManager = dbManagerForTest()
-            createAndPopulateEmployeeTable(dbManager)
-        }
+    @Before
+    fun setUp() {
+        println("setup")
+        dbManager = dbManagerForTest()
+        createAndPopulateMunicipalityTable(dbManager)
+    }
 
-        @AfterClass
-        @JvmStatic
-        fun tearDown() {
-            destroyDatabase()
-        }
+    @After
+    fun tearDown() {
+        println("tearDown")
+        destroyDatabase()
+        dbManager.close()
     }
 
     @Test
@@ -62,5 +60,26 @@ class JT400ReadPreviousTest {
         assertEquals("MICHELLE SPRINGER", getEmployeeName(dbFile.readPrevious().record))
         dbManager.closeFile(EMPLOYEE_TABLE_NAME)
     }
+
+    @Test
+    fun findRecordsIfSetllFromFirstRecord() {
+        val dbFile = dbManager.openFile(EMPLOYEE_TABLE_NAME)
+        assertTrue(dbFile.setll("000010"))
+        assertEquals("CHRISTINE HAAS", getEmployeeName(dbFile.read().record))
+        assertEquals("MICHAEL THOMPSON", getEmployeeName(dbFile.read().record))
+        assertEquals("SALLY KWAN", getEmployeeName(dbFile.read().record))
+        dbManager.closeFile(EMPLOYEE_TABLE_NAME)
+    }
+
+    @Test
+    fun findRecordsIfSetGtFromFirstRecord() {
+        val dbFile = dbManager.openFile(EMPLOYEE_TABLE_NAME)
+        assertTrue(dbFile.setgt("000000"))
+        assertEquals("CHRISTINE HAAS", getEmployeeName(dbFile.read().record))
+        assertEquals("MICHAEL THOMPSON", getEmployeeName(dbFile.read().record))
+        assertEquals("SALLY KWAN", getEmployeeName(dbFile.read().record))
+        dbManager.closeFile(EMPLOYEE_TABLE_NAME)
+    }
+
 
 }

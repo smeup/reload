@@ -18,6 +18,7 @@
 package com.smeup.dbnative.jt400.utils
 
 import com.github.doyaaaaaken.kotlincsv.dsl.csvReader
+import com.ibm.as400.access.AS400
 import com.smeup.dbnative.ConnectionConfig
 import com.smeup.dbnative.file.Record
 import com.smeup.dbnative.file.RecordField
@@ -28,14 +29,16 @@ import com.smeup.dbnative.model.*
 import com.smeup.dbnative.utils.fieldByType
 import org.junit.Assert
 import java.io.File
+import java.lang.Exception
 import java.sql.Connection
+import java.sql.DriverManager
 import java.util.concurrent.atomic.AtomicInteger
 
 const val EMPLOYEE_TABLE_NAME = "EMPLOYEE"
 const val XEMP2_VIEW_NAME = "XEMP2"
 const val TSTTAB_TABLE_NAME = "TSTTAB"
 const val TST2TAB_TABLE_NAME = "TST2TAB"
-const val MUNICIPALITY_TABLE_NAME = "MUNICIPALITY"
+const val MUNICIPALITY_TABLE_NAME = "MUNIC0000B"
 const val TEST_LOG = false
 //do not change defaultValue
 //if you want to create sqlconnection against another db use function: dbManagerForTest(testSQLDBType: TestSQLDBType)
@@ -49,14 +52,14 @@ const val CONVENTIONAL_INDEX_SUFFIX = "_INDEX"
 enum class TestSQLDBType(
     val connectionConfig: ConnectionConfig,
     val dbaConnectionConfig: ConnectionConfig? = connectionConfig,
-    val createDatabase : (dbaConnection: Connection) -> Unit = {},
-    val destroyDatabase: (dbaConnection: Connection) -> Unit = {}) {
+    val createDatabase : (dbaConnection: AS400) -> Unit = {},
+    val destroyDatabase: (dbaConnection: AS400) -> Unit = {}) {
     DB2_400(ConnectionConfig(
             fileName= "*",
             driver = "com.ibm.as400.access.AS400JDBCDriver",
             url = "jdbc:as400://$DB2_400_HOST/$DB2_400_LIBRARY_NAME;",
             user = "SCAARM",
-            password = "Penrose75"),
+            password = "**********"),
         //force no create connection for dba operations
         dbaConnectionConfig = null
     )
@@ -136,12 +139,14 @@ fun createAndPopulateEmployeeTable(dbManager: JT400DBMMAnager?) {
         "EMPNO"
     )
 
-    createAndPopulateTable(dbManager, EMPLOYEE_TABLE_NAME, "TSTREC", fields, keys, false,"src/test/resources/csv/Employee.csv")
+    //createAndPopulateTable(
+    registerTable(
+        dbManager, EMPLOYEE_TABLE_NAME, "TSTREC", fields, keys, false,"src/test/resources/csv/Employee.csv")
 }
 
 fun createAndPopulateXemp2View(dbManager: JT400DBMMAnager?) {
     // create view executing sql -> TODO: insert a createView method in DBMManager and use it
-    fun createXEMP2() = "CREATE VIEW $XEMP2_VIEW_NAME AS SELECT * FROM EMPLOYEE ORDER BY WORKDEPT, EMPNO"
+    fun createXEMP2() = "CREATE VIEW $XEMP2_VIEW_NAME AS SELECT * FROM (SELECT * FROM EMPLOYEE ORDER BY WORKDEPT, EMPNO)"
 
     fun createXEMP2Index() =
         "CREATE INDEX $XEMP2_VIEW_NAME$CONVENTIONAL_INDEX_SUFFIX ON EMPLOYEE (WORKDEPT ASC, EMPNO ASC)"
@@ -159,8 +164,8 @@ fun createAndPopulateXemp2View(dbManager: JT400DBMMAnager?) {
     )
 
     val metadata = FileMetadata("$XEMP2_VIEW_NAME", "EMPLOYEE", fields, keys, false)
-    dbManager!!.registerMetadata(metadata, false)
-    //TODO dbManager.execute(listOf(createXEMP2(), createXEMP2Index()))
+    dbManager!!.registerMetadata(metadata, true)
+    execute(listOf(createXEMP2(), createXEMP2Index()))
 }
 
 fun createAndPopulateMunicipalityTable(dbManager: JT400DBMMAnager?) {
@@ -183,7 +188,8 @@ fun createAndPopulateMunicipalityTable(dbManager: JT400DBMMAnager?) {
     )
 
 
-    createAndPopulateTable(
+    //createAndPopulateTable( /* ci mette tantissimo >20min, la teniamo fissa già creata */
+    registerTable(
         dbManager,
         MUNICIPALITY_TABLE_NAME,
         "TSTREC",
@@ -192,6 +198,7 @@ fun createAndPopulateMunicipalityTable(dbManager: JT400DBMMAnager?) {
         false,
         "src/test/resources/csv/Municipality.csv"
     )
+     /**/
 }
 
 fun getEmployeeName(record: Record): String {
@@ -206,6 +213,21 @@ fun testLog(message: String) {
     if (TEST_LOG) {
         println(message)
     }
+}
+
+private fun registerTable(
+    dbManager: JT400DBMMAnager?,
+    tableName: String,
+    formatName: String,
+    fields: List<Field>,
+    keys: List<String>,
+    unique: Boolean,
+    dataFilePath: String
+) {
+    val metadata = FileMetadata(tableName, formatName, fields, keys, unique)
+    dbManager!!.createFile(metadata)
+    Assert.assertTrue(dbManager.existFile(tableName))
+    dbManager.registerMetadata(metadata, true)
 }
 
 private fun createAndPopulateTable(
@@ -227,26 +249,52 @@ private fun createAndPopulateTable(
     val dataFile = File(dataFilePath)
     val dataRows: List<Map<String, String>> = csvReader().readAllWithHeader(dataFile)
 
-    dataRows.forEach {
-        val recordFields = emptyList<RecordField>().toMutableList()
-        it.map { (key, value) ->
-            recordFields.add(RecordField(key, value))
+    try {
+        dataRows.forEach {
+            val recordFields = emptyList<RecordField>().toMutableList()
+            it.map { (key, value) ->
+                recordFields.add(RecordField(key, value))
+            }
+            dbFile.write(Record(*recordFields.toTypedArray()))
         }
-        dbFile.write(Record(*recordFields.toTypedArray()))
+    } catch (e : Exception) {
+        println(e.message)
     }
 
     dbManager.closeFile(tableName)
 }
 
-fun buildMunicipalityKey(vararg values: String): List<RecordField> {
-    val recordFields = mutableListOf<RecordField>()
+fun buildMunicipalityKey(vararg values: String): List<String> {
+    val recordFields = mutableListOf<String>()
     val keys = arrayOf("NAZ", "REG", "PROV", "CITTA")
     for ((index, value) in values.withIndex()) {
         if (keys.size> index) {
-            recordFields.add(RecordField(keys[index], value))
+            recordFields.add(value)
         }
     }
     return recordFields
+}
+
+fun execute(sqlStatements: List<String>) {
+    val connection = connectJDBC();
+    connection.createStatement().use { statement ->
+        sqlStatements.forEach {
+                sql ->
+            println(sql)
+            statement.addBatch(sql)
+        }
+        statement.executeBatch()
+    }
+    connection.close();
+}
+
+fun connectJDBC() : Connection {
+    val connectionConfig = TestSQLDBType.DB2_400.connectionConfig;
+
+    connectionConfig.driver?.let {
+        Class.forName(connectionConfig.driver)
+    }
+    return DriverManager.getConnection(connectionConfig.url, connectionConfig.user, connectionConfig.password)
 }
 
 

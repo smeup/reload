@@ -3,6 +3,7 @@ package com.smeup.dbnative.jt400
 import com.ibm.as400.access.*
 import com.smeup.dbnative.ConnectionConfig
 import com.smeup.dbnative.DBManagerBaseImpl
+import com.smeup.dbnative.file.DBFile
 import com.smeup.dbnative.model.FileMetadata
 
 open class JT400DBMMAnager(override val connectionConfig: ConnectionConfig) : DBManagerBaseImpl()  {
@@ -27,10 +28,13 @@ open class JT400DBMMAnager(override val connectionConfig: ConnectionConfig) : DB
         as400
     }
 
-    override fun openFile(name: kotlin.String) = openedFile.getOrPut(name) {
-            //: com.smeup.dbnative.file.DBFile {
+    override fun openFile(name: kotlin.String) : DBFile {
         require(existFile(name)) {
             "Cannot open unregistered file $name"
+        }
+        //
+        if (openedFile.containsKey(name)) {
+            return openedFile.getValue(name)
         }
         //
         val fileName = QSYSObjectPathName(library, name, "*FILE", "MBR")
@@ -40,9 +44,11 @@ open class JT400DBMMAnager(override val connectionConfig: ConnectionConfig) : DB
         //val rf = AS400FileRecordDescription(system, path).retrieveRecordFormat()
         //file.recordFormat = rf[0]
         file.setRecordFormat() // Loads the record format directly from the server.
-        //TODO("non sempre deve essere read-only")
         file.open(AS400File.READ_WRITE, 0, AS400File.COMMIT_LOCK_LEVEL_NONE)
-        return JT400DBFile(name, metadataOf(name), file)
+        val jt400File = JT400DBFile(name, metadataOf(name), file)
+        openedFile.putIfAbsent(name, jt400File)
+        return jt400File
+
     }
 
     override fun closeFile(name: String) {
@@ -59,4 +65,5 @@ open class JT400DBMMAnager(override val connectionConfig: ConnectionConfig) : DB
     override fun close() {
         connection.disconnectAllServices()
     }
+
 }

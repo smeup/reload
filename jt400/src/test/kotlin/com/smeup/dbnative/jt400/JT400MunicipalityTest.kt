@@ -15,35 +15,31 @@
  *
  */
 
-package com.smeup.dbnative.jt400
+package com.smeup.dbnative.sql
 
+import com.smeup.dbnative.jt400.JT400DBMMAnager
 import com.smeup.dbnative.jt400.utils.*
-import org.junit.AfterClass
-import org.junit.BeforeClass
-import org.junit.Ignore
-import org.junit.Test
+import org.junit.*
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 
 class JT400MunicipalityTest {
 
-    companion object {
+    private lateinit var dbManager: JT400DBMMAnager
 
-        private lateinit var dbManager: JT400DBMMAnager
+    @Before
+    fun setUp() {
+        println("setup")
+        dbManager = dbManagerForTest()
+        createAndPopulateMunicipalityTable(dbManager)
+    }
 
-        @BeforeClass
-        @JvmStatic
-        fun setUp() {
-            dbManager = dbManagerForTest()
-            createAndPopulateMunicipalityTable(dbManager)
-        }
-
-        @AfterClass
-        @JvmStatic
-        fun tearDown() {
-            destroyDatabase()
-        }
+    @After
+    fun tearDown() {
+        println("tearDown")
+        destroyDatabase()
+        dbManager.close()
     }
 
     @Test
@@ -399,6 +395,21 @@ class JT400MunicipalityTest {
         assertEquals("ADRO", getMunicipalityName(dbFile.readPreviousEqual(key3B).record))
         assertEquals("ACQUAFREDDA", getMunicipalityName(dbFile.readPreviousEqual(key3B).record))
         assertEquals("ADRO", getMunicipalityName(dbFile.readEqual(key3B).record))
+        dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
+    }
+
+    @Test
+    fun t15_eof() {
+        val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
+        val key3A = buildMunicipalityKey("IT", "BAS", "MT")
+        //val key3A = buildMunicipalityKey("IT", "LOM", "PV", "PALESTRO")
+        assertTrue(dbFile.setll(key3A))
+        var count = 0
+        while (dbFile.eof() == false) {
+            val x = dbFile.readEqual(key3A)
+            count++
+        }
+        assertEquals(32, count)
         dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
 

@@ -13,35 +13,70 @@ import com.smeup.dbnative.model.Type
 import com.smeup.dbnative.utils.getField
 import java.math.BigDecimal
 
+private enum class CursorAction {
+    NONE, SETLL, SETGT
+}
+
 class JT400DBFile(override var name: String, override var fileMetadata: FileMetadata, var file: KeyedFile) : DBFile {
 
-    //TODO rivedere
-    /*
-    fun positionCursorBefore(keys: List<RecordField>): Boolean {
-        try {
-            file.positionCursorBefore(keys2Array(keys)) // KeyedFile.KEY_LT
-            return true
-        } catch (e: AS400Exception) {
-            handleAS400Error(e);
-            return false;
-        }
+    private var equalFlag: Boolean = false
+    private var eofReached: Boolean = false
+    private var previousAction: CursorAction = CursorAction.NONE
+
+    private fun resetStatus() {
+        this.equalFlag = false
+        this.eofReached = false
     }
-    */
+
+    override fun eof(): Boolean {
+        /*
+        try {
+            file.positionCursorToNext()
+            file.positionCursorToPrevious()
+        } catch (e: AS400Exception) {
+            val id = as400ErrorID(e);
+            //CPF5001 	End of file reached
+            if (as400ErrorID(e).startsWith("CPF5001", ignoreCase = true)) {
+                return true
+            }
+        }
+        return false
+         */
+        return eofReached;
+    }
+
+    override fun equal(): Boolean {
+        /*
+        E' una cosa più complessa: vuol dire che quando fai una SETLL con più chiavi EQUAL vale true se il puntatore
+        si posizione prima dell'elemento che soddisfa esattamente le chiavi, false se no.
+        Esempio: certo nella tabella comuni il comune di Erbusco con chiavi ITALIA-LOMBARDIA-ERBUSCO
+        Se il record viene trovato il puntatore viene posto prima del record e EQUAL viene posto a true.
+        Se invece Il record non viene trovato, il puntatore viene posto al primo record successivo a quello che si cercava
+        (ad esempio, ITALIA-LOMBARDIA-ESINE) ma con il flag EQUAL spento.
+        Praticamente ll DB ti torna comunque il puntatore al record ma con diverso significato a seconda del flag EQUAL
+        Vale solo per SETLL e SETGT, per il CHAIN c'è una cosa simile ma si chiama found()
+        Si, che si accende o meno a seconda di come è andata la setll o la setgt precedente
+        Per me nel tuo caso è una informazione tornata in qualche modo dai comandi del JTOpen
+        Mi aspetterei che quando fai un callSetLL la libreria ti torna il flag
+         */
+        return equalFlag
+    }
 
     /** SETLL (Set Lower Limit)
      * The SETLL operation positions a file at the next record that has a key or relative record number that is greater than or equal to the search argument (key or relative record number)
      */
     override fun setll(key: String): Boolean {
-        try {
-            file.positionCursor(arrayOf(key), KeyedFile.KEY_LT)
-            return true
-        } catch (e: AS400Exception) {
-            handleAS400Error(e);
-            return false;
-        }
+        return setll(listOf(key))
     }
 
-    override fun setll(keys: List<RecordField>): Boolean {
+    override fun setll(keys: List<String>): Boolean {
+        this.previousAction = CursorAction.SETLL
+        resetStatus()
+        try {
+            file.positionCursor(keys2Array(keys), KeyedFile.KEY_EQ)
+            this.equalFlag = true
+        } catch (e: AS400Exception) {
+        }
         try {
             //file.positionCursorBefore(keys2Array(keys))
             file.positionCursor(keys2Array(keys), KeyedFile.KEY_LT)
@@ -49,7 +84,8 @@ class JT400DBFile(override var name: String, override var fileMetadata: FileMeta
             return true
         } catch (e: AS400Exception) {
             handleAS400Error(e);
-            return false;
+            file.positionCursorBeforeFirst()
+            return true;
         }
     }
 
@@ -57,22 +93,24 @@ class JT400DBFile(override var name: String, override var fileMetadata: FileMeta
      * The SETGT operation positions a file at the next record with a key or relative record number that is greater than the key or relative record number specified
      */
     override fun setgt(key: String): Boolean {
-        try {
-            file.positionCursor(arrayOf(key), KeyedFile.KEY_GT)
-            return true
-        } catch (e: AS400Exception) {
-            handleAS400Error(e);
-            return false;
-        }
+        return setgt(listOf(key))
     }
 
-    override fun setgt(keys: List<RecordField>): Boolean {
+    override fun setgt(keys: List<String>): Boolean {
+        this.previousAction = CursorAction.SETGT
+        resetStatus()
+        try {
+            file.positionCursor(keys2Array(keys), KeyedFile.KEY_EQ)
+            this.equalFlag = true
+        } catch (e: AS400Exception) {
+        }
         try {
             file.positionCursor(keys2Array(keys), KeyedFile.KEY_GT)
             return true
         } catch (e: AS400Exception) {
             handleAS400Error(e);
-            return false;
+            file.positionCursorAfterLast()
+            return true;
         }
     }
 
@@ -80,22 +118,12 @@ class JT400DBFile(override var name: String, override var fileMetadata: FileMeta
      * The CHAIN operation retrieves a record from a full procedural file, sets a record identifying indicator on (if specified on the input specifications), and places the data from the record into the input fields.
      */
     override fun chain(key: String): Result {
-        //TODO("Attenzione alla gestione del lock")
-        try {
-            /*
-            file.positionCursor(arrayOf(key), KeyedFile.KEY_EQ)
-            var r : Result? = Result(as400RecordToSmeUPRecord(file.read()))
-            //file.positionCursorToNext();
-            return r ?: fail("Read failed");
-            */
-            return Result(as400RecordToSmeUPRecord(file.read(arrayOf(key))))
-        } catch (e: AS400Exception) {
-            handleAS400Error(e);
-            return Result(Record())
-        }
+        return chain(listOf(key))
     }
 
-    override fun chain(keys: List<RecordField>): Result {
+    override fun chain(keys: List<String>): Result {
+        this.previousAction = CursorAction.NONE
+        resetStatus()
         //TODO("Attenzione alla gestione del lock")
         try {
             /*
@@ -116,13 +144,22 @@ class JT400DBFile(override var name: String, override var fileMetadata: FileMeta
      */
     override fun read(): Result {
         //https://www.ibm.com/support/knowledgecenter/ssw_ibm_i_74/rzasd/zzread.htm
-        var r : Result? = null
+        var r : Result
         try {
-            file.positionCursorToNext();
+            if (this.previousAction==CursorAction.SETLL) {
+                file.positionCursorToNext()
+            }
             r =  Result(as400RecordToSmeUPRecord(file.read()))
         } catch (e: AS400Exception) {
             handleAS400Error(e);
+            r = Result(Record())
         }
+        try {
+            file.positionCursorToNext();
+        } catch (e: AS400Exception) {
+            handleAS400Error(e);
+        }
+        this.previousAction = CursorAction.NONE
         return r ?: fail("Read failed");
     }
 
@@ -130,40 +167,59 @@ class JT400DBFile(override var name: String, override var fileMetadata: FileMeta
      * The READP operation reads the prior record from a full procedural file.
      */
     override fun readPrevious(): Result {
-        var r : Result? = null
+        resetStatus()
+        var r : Result
         try {
+            if (this.previousAction!=CursorAction.SETLL) {
+                file.positionCursorToPrevious()
+            }
             r =  Result(as400RecordToSmeUPRecord(file.read()))
-            file.positionCursorToPrevious();
         } catch (e: AS400Exception) {
-            handleAS400Error(e);
+            handleAS400Error(e)
+            r = Result(Record())
         }
-        return r ?: fail("Read failed");
+        this.previousAction = CursorAction.NONE
+        return r
     }
 
     /** READE (Read Equal Key)
      * The READE operation retrieves the next sequential record from a full procedural file if the key of the record matches the search argument.
      */
     override fun readEqual(): Result {
-        return Result(as400RecordToSmeUPRecord(file.readNextEqual()))
+        resetStatus()
+        return try {
+            val r = file.readNextEqual()
+            this.eofReached = r == null
+            Result(as400RecordToSmeUPRecord(r))
+        } catch (e: AS400Exception) {
+            handleAS400Error(e);
+            Result(Record())
+        } finally {
+            this.previousAction = CursorAction.NONE
+        }
     }
 
     override fun readEqual(key: String): Result {
-        return Result(as400RecordToSmeUPRecord(file.readNextEqual(arrayOf(key))))
-        /*
-        var r : Result? = null
-        try {
-            r =  Result(as400RecordToSmeUPRecord(file.read(arrayOf(key))))
-            file.positionCursorToNext();
-        } catch (e: AS400Exception) {
-            handleAS400Error(e);
-        }
-        return r ?: fail("Read failed");
-         */
+        return readEqual(listOf(key))
     }
 
-    override fun readEqual(keys: List<RecordField>): Result {
+    override fun readEqual(keys: List<String>): Result {
+        resetStatus()
         //https://code400.com/forum/forum/iseries-programming-languages/java/8386-noobie-question
-        return Result(as400RecordToSmeUPRecord(file.readNextEqual(keys2Array(keys))))
+        return try {
+            //val r = if (this.previousAction==CursorAction.SETGT)  file.read(keys2Array(keys)) else file.readNextEqual(keys2Array(keys))
+            if (this.previousAction==CursorAction.SETGT) {
+                file.positionCursorToPrevious()
+            }
+            val r = file.readNextEqual(keys2Array(keys))
+            this.eofReached = r == null
+            Result(as400RecordToSmeUPRecord(r))
+        } catch (e: AS400Exception) {
+            handleAS400Error(e);
+            Result(Record())
+        } finally {
+            this.previousAction = CursorAction.NONE
+        }
         /*
         var r : Result? = null
         try {
@@ -180,15 +236,38 @@ class JT400DBFile(override var name: String, override var fileMetadata: FileMeta
      * The READPE operation retrieves the next prior sequential record from a full procedural file if the key of the record matches the search argument.
      */
     override fun readPreviousEqual(): Result {
-        return Result(as400RecordToSmeUPRecord(file.readPreviousEqual()))
+        resetStatus()
+        return try {
+            val r = file.readPreviousEqual()
+            this.eofReached = r == null
+            Result(as400RecordToSmeUPRecord(r))
+        } catch (e: AS400Exception) {
+            handleAS400Error(e);
+            Result(Record())
+        } finally {
+            this.previousAction = CursorAction.NONE
+        }
     }
 
     override fun readPreviousEqual(key: String): Result {
-        return Result(as400RecordToSmeUPRecord(file.readPreviousEqual(arrayOf(key))))
+        return readPreviousEqual(listOf(key))
     }
 
-    override fun readPreviousEqual(keys: List<RecordField>): Result {
-        return Result(as400RecordToSmeUPRecord(file.readPreviousEqual(keys2Array(keys))))
+    override fun readPreviousEqual(keys: List<String>): Result {
+        resetStatus()
+        return try {
+            if (this.previousAction==CursorAction.SETLL) {
+                file.positionCursorToNext()
+            }
+            val r = file.readPreviousEqual(keys2Array(keys))
+            this.eofReached = r == null
+            Result(as400RecordToSmeUPRecord(r))
+        } catch (e: AS400Exception) {
+            handleAS400Error(e);
+            Result(Record())
+        } finally {
+            this.previousAction = CursorAction.NONE
+        }
     }
 
     /** WRITE (Create New Records)
@@ -229,31 +308,56 @@ class JT400DBFile(override var name: String, override var fileMetadata: FileMeta
     private fun handleAS400Error(e: AS400Exception) {
         //CPF5001 	End of file reached
         //CPF5006 	Record not found
-        if (e.aS400Message != null
-            //&& "CPF5006".equals(e.aS400Message.id, true)) {
-            && e.aS400Message.id != null
-            && e.aS400Message.id.startsWith("CPF", ignoreCase = true)) {
+        val eid = as400ErrorID(e).toUpperCase();
+        if (eid.startsWith("CPF5001")) {
+            this.eofReached = true;
+            return;
+        } else if (eid.startsWith("CPF")) {
             return;
         }
         throw RuntimeException()
+    }
+    private fun as400ErrorID(e: AS400Exception) : String {
+        //CPF5001 	End of file reached
+        //CPF5006 	Record not found
+        if (e.aS400Message != null
+            && e.aS400Message.id != null) {
+            return e.aS400Message.id
+        }
+        return ""
     }
 
     private fun fail(message: String): Nothing {
         throw RuntimeException(message)
     }
 
-    private fun keys2Array(keys: List<RecordField>): Array<Any> {
-        val keysValues = keys.map { it.value }.toTypedArray()
-        /*
-        val keysValues = keys.map { it.value } //.toTypedArray()
-        val keysAsObj : Array<Any?> = Array(keysValues.size) {}
-        for (i in 0 until keysValues.size) {
-            keysValues.get(i).also { keysAsObj[i] = it }
+    private fun key2Array(key: String): Array<Any> {
+        var keysValues = mutableListOf<Any>()
+        val keyName = fileMetadata.fileKeys[0]
+        if (numericField(keyName)) {
+           keysValues.add(BigDecimal(key))
+        } else {
+           keysValues.add(key)
         }
-        //java.lang.Object y = Object
-        */
-        return keysValues;
+        return keysValues.toTypedArray()
     }
+
+    private fun keys2Array(keys: List<String>): Array<Any> {
+        //return keys.map { it.value }.toTypedArray()
+        var keysValues = mutableListOf<Any>()
+        //for (key in fileMetadata.fileKeys) {
+        for (i in keys.indices) {
+            val keyName = fileMetadata.fileKeys[i]
+            val keyValue = keys.get(i)
+            if (numericField(keyName)) {
+                keysValues.add(BigDecimal(keyValue))
+            } else {
+                keysValues.add(keyValue)
+            }
+        }
+        return keysValues.toTypedArray()
+    }
+
     private fun recordKeys(record: Record): Array<Any> {
         var keysValues = mutableListOf<Any>()
         for (key in fileMetadata.fileKeys) {
@@ -264,7 +368,6 @@ class JT400DBFile(override var name: String, override var fileMetadata: FileMeta
         return keysValues.toTypedArray()
     }
 
-    //fun com.ibm.as400.access.Record?.currentRecordToValues(): Record {
     private fun as400RecordToSmeUPRecord(r: com.ibm.as400.access.Record?): Record {
         // TODO create a unit test for the isAfterLast condition
         if (r == null) { //TODO || this.isAfterLast
@@ -274,7 +377,7 @@ class JT400DBFile(override var name: String, override var fileMetadata: FileMeta
         val fields = file.recordFormat.fieldNames
         for (name in fields) {
             val value = r.getField(name)
-            result.add(RecordField(name, value))
+            result.add(RecordField(name, value.toString()))
         }
         return result
     }
@@ -287,27 +390,29 @@ class JT400DBFile(override var name: String, override var fileMetadata: FileMeta
         val result = com.ibm.as400.access.Record()
         result.recordFormat = file.recordFormat
         for ((name, value) in r) {
-            //val dataType = file.recordFormat.getFieldDescription(name).dataType.javaType
-            if (value is Int) {
-                result.setField(name, value.toBigDecimal())
+            if (numericField(name)) {
+                result.setField(name, BigDecimal(value))
             } else {
-                val field : Field? = this.fileMetadata.getField(name)
-                val type : FieldType? =  field?.type ?: null
-                when (type?.type ?: null) {
-                    Type.BIGINT, Type.BIGINT, Type.DECIMAL, Type.DOUBLE, Type.FLOAT, Type.INTEGER, Type.SMALLINT ->
-                    result.setField(name, BigDecimal(value.toString()))
-                else -> result.setField(name, value)
-                }
+                //try {
+                    result.setField(name, value.trimEnd())
+                //} catch (ex : Exception) {
+                //    println(ex.message)
+                //}
             }
         }
-        /*
-        val fields = file.recordFormat.fieldNames
-        for (name in fields) {
-            result.setField(name, r.getValue(name))
-        }
-         */
         return result
     }
 
+    private fun numericField(name : String) : Boolean {
+        //val dataType = file.recordFormat.getFieldDescription(name).dataType.javaType
+        val field : Field? = this.fileMetadata.getField(name)
+        val type : FieldType? =  field?.type ?: null
+        return when (type?.type) {
+            Type.BIGINT, Type.BIGINT, Type.DECIMAL, Type.DOUBLE, Type.FLOAT, Type.INTEGER, Type.SMALLINT ->
+                true
+            else ->
+                false
+        }
+    }
 
 }

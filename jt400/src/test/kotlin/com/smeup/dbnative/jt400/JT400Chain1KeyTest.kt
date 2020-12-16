@@ -15,38 +15,30 @@
  *
  */
 
-package com.smeup.dbnative.jt400
+package com.smeup.dbnative.sql
 
-import com.smeup.dbnative.jt400.utils.TSTTAB_TABLE_NAME
-import com.smeup.dbnative.jt400.utils.createAndPopulateTstTable
-import com.smeup.dbnative.jt400.utils.dbManagerForTest
-import com.smeup.dbnative.jt400.utils.destroyDatabase
-import org.junit.AfterClass
-import org.junit.BeforeClass
-import org.junit.Test
-import java.math.BigDecimal
+import com.smeup.dbnative.jt400.JT400DBMMAnager
+import com.smeup.dbnative.jt400.utils.*
+import org.junit.*
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class JT400Chain1KeyTest {
 
-    companion object {
+    private lateinit var dbManager: JT400DBMMAnager
 
-        private var dbManager: JT400DBMMAnager? = null
-        private var libName: String? = null
+    @Before
+    fun setUp() {
+        println("setup")
+        dbManager = dbManagerForTest()
+        createAndPopulateMunicipalityTable(dbManager)
+    }
 
-        @BeforeClass
-        @JvmStatic
-        fun setUp() {
-            dbManager = dbManagerForTest()
-            createAndPopulateTstTable(dbManager)
-        }
-
-        @AfterClass
-        @JvmStatic
-        fun tearDown() {
-            destroyDatabase()
-        }
+    @After
+    fun tearDown() {
+        println("tearDown")
+        destroyDatabase()
+        dbManager.close()
     }
 
     @Test
@@ -54,7 +46,7 @@ class JT400Chain1KeyTest {
         val dbFile = dbManager!!.openFile(TSTTAB_TABLE_NAME)
         val chainResult = dbFile.chain("XXX")
         assertEquals("XXX", chainResult.record["TSTFLDCHR"])
-        assertEquals(BigDecimal("123.45"), chainResult.record["TSTFLDNBR"])
+        assertEquals("123.45", chainResult.record["TSTFLDNBR"])
         dbManager!!.closeFile(TSTTAB_TABLE_NAME)
     }
 

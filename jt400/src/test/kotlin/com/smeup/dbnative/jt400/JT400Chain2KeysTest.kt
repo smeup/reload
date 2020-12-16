@@ -15,51 +15,43 @@
  *
  */
 
-package com.smeup.dbnative.jt400
+package com.smeup.dbnative.sql
 
 import com.smeup.dbnative.file.RecordField
-import com.smeup.dbnative.jt400.utils.TST2TAB_TABLE_NAME
-import com.smeup.dbnative.jt400.utils.createAndPopulateTst2Table
-import com.smeup.dbnative.jt400.utils.dbManagerForTest
-import com.smeup.dbnative.jt400.utils.destroyDatabase
-import org.junit.AfterClass
-import org.junit.BeforeClass
-import org.junit.Test
-import java.math.BigDecimal
+import com.smeup.dbnative.jt400.JT400DBMMAnager
+import com.smeup.dbnative.jt400.utils.*
+import org.junit.*
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class JT400Chain2KeysTest {
 
-    companion object {
+    private lateinit var dbManager: JT400DBMMAnager
 
-        private lateinit var dbManager: JT400DBMMAnager
+    @Before
+    fun setUp() {
+        println("setup")
+        dbManager = dbManagerForTest()
+        createAndPopulateMunicipalityTable(dbManager)
+    }
 
-
-        @BeforeClass
-        @JvmStatic
-        fun setUp() {
-            dbManager = dbManagerForTest()
-            createAndPopulateTst2Table(dbManager)
-        }
-
-        @AfterClass
-        @JvmStatic
-        fun tearDown() {
-            destroyDatabase()
-        }
+    @After
+    fun tearDown() {
+        println("tearDown")
+        destroyDatabase()
+        dbManager.close()
     }
 
     @Test
     fun findRecordsIfChainWithExistingKey() {
         val dbFile = dbManager.openFile(TST2TAB_TABLE_NAME)
         val key2 = listOf(
-            RecordField("TSTFLDCHR", "ABC"),
-            RecordField("TSTFLDNBR", 12.toBigDecimal())
+            "ABC",
+            "12.00"
         )
         val chainResult = dbFile.chain(key2)
         assertEquals("ABC", chainResult.record["TSTFLDCHR"])
-        assertEquals(BigDecimal("12.00"), chainResult.record["TSTFLDNBR"])
+        assertEquals("12.00", chainResult.record["TSTFLDNBR"])
         assertEquals("ABC12", chainResult.record["DESTST"])
         dbManager.closeFile(TST2TAB_TABLE_NAME)
     }
@@ -68,8 +60,8 @@ class JT400Chain2KeysTest {
     fun doesNotFindRecordsIfChainWithNotExistingKey() {
         val dbFile = dbManager.openFile(TST2TAB_TABLE_NAME)
         val key2 = listOf(
-            RecordField("TSTFLDCHR", "ZZZ"),
-            RecordField("TSTFLDNBR", 12.toBigDecimal())
+             "ZZZ",
+             "12"
         )
         assertTrue(dbFile.chain(key2).record.isEmpty())
         dbManager.closeFile(TST2TAB_TABLE_NAME)
