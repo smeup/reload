@@ -15,7 +15,7 @@
  *
  */
 
-package com.smeup.dbnative.sql
+package com.smeup.dbnative.jt400
 
 import com.smeup.dbnative.jt400.JT400DBMMAnager
 import com.smeup.dbnative.jt400.utils.*
@@ -43,18 +43,18 @@ class JT400Chain1KeyTest {
 
     @Test
     fun findRecordsIfChainWithExistingKey() {
-        val dbFile = dbManager!!.openFile(TSTTAB_TABLE_NAME)
+        val dbFile = dbManager.openFile(TSTTAB_TABLE_NAME)
         val chainResult = dbFile.chain("XXX")
         assertEquals("XXX", chainResult.record["TSTFLDCHR"])
         assertEquals("123.45", chainResult.record["TSTFLDNBR"])
-        dbManager!!.closeFile(TSTTAB_TABLE_NAME)
+        dbManager.closeFile(TSTTAB_TABLE_NAME)
     }
 
     @Test
     fun doesNotFindRecordsIfChainWithNotExistingKey() {
-        val dbFile = dbManager!!.openFile(TSTTAB_TABLE_NAME)
+        val dbFile = dbManager.openFile(TSTTAB_TABLE_NAME)
         assertTrue(dbFile.chain("XYZ").record.isEmpty())
-        dbManager!!.closeFile(TSTTAB_TABLE_NAME)
+        dbManager.closeFile(TSTTAB_TABLE_NAME)
     }
 
 }

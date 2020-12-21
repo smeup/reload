@@ -15,10 +15,8 @@
  *
  */
 
-package com.smeup.dbnative.sql
+package com.smeup.dbnative.jt400
 
-import com.smeup.dbnative.file.RecordField
-import com.smeup.dbnative.jt400.JT400DBMMAnager
 import com.smeup.dbnative.jt400.utils.*
 import org.junit.*
 import kotlin.test.assertEquals

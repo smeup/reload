@@ -24,15 +24,12 @@ import com.smeup.dbnative.file.Record
 import com.smeup.dbnative.file.RecordField
 import com.smeup.dbnative.jt400.JT400DBMMAnager
 import com.smeup.dbnative.model.*
-//import com.smeup.dbnative.jt400.CONVENTIONAL_INDEX_SUFFIX
-//import com.smeup.dbnative.jt400.JT400DBMMAnager
 import com.smeup.dbnative.utils.fieldByType
 import org.junit.Assert
 import java.io.File
 import java.lang.Exception
 import java.sql.Connection
 import java.sql.DriverManager
-import java.util.concurrent.atomic.AtomicInteger
 
 const val EMPLOYEE_TABLE_NAME = "EMPLOYEE"
 const val XEMP2_VIEW_NAME = "XEMP2"
@@ -43,7 +40,6 @@ const val TEST_LOG = false
 //do not change defaultValue
 //if you want to create sqlconnection against another db use function: dbManagerForTest(testSQLDBType: TestSQLDBType)
 private var defaultDbType = TestSQLDBType.DB2_400
-const val DATABASE_NAME = "TEST"
 const val DB2_400_HOST = "SRVLAB01.SMEUP.COM"
 const val DB2_400_LIBRARY_NAME = "W_PARFRA"
 
@@ -58,16 +54,12 @@ enum class TestSQLDBType(
             fileName= "*",
             driver = "com.ibm.as400.access.AS400JDBCDriver",
             url = "jdbc:as400://$DB2_400_HOST/$DB2_400_LIBRARY_NAME;",
-            user = "SCAARM",
-            password = "**********"),
+            user = "AAABBB",
+            password = "*******"),
         //force no create connection for dba operations
         dbaConnectionConfig = null
     )
 
-}
-
-object DatabaseNameFactory {
-    var COUNTER = AtomicInteger()
 }
 
 fun dbManagerForTest() = dbManagerForTest(defaultDbType)
@@ -95,77 +87,6 @@ fun destroyDatabase(testSQLDBType: TestSQLDBType) {
         //    testSQLDBType.destroyDatabase(it)
         //}
     }
-}
-
-fun createAndPopulateTstTable(dbManager: JT400DBMMAnager?) {
-    val fields = listOf(
-        "TSTFLDCHR" fieldByType CharacterType(3),
-        "TSTFLDNBR" fieldByType DecimalType(5, 2)
-    )
-
-    val keys = listOf(
-        "TSTFLDCHR"
-    )
-
-
-    createAndPopulateTable(dbManager, TSTTAB_TABLE_NAME, "TSTREC", fields, keys, false, "src/test/resources/csv/TstTab.csv")
-}
-
-fun createAndPopulateTst2Table(dbManager: JT400DBMMAnager?) {
-    val fields = listOf(
-        "TSTFLDCHR" fieldByType VarcharType(3),
-        "TSTFLDNBR" fieldByType DecimalType(5, 2),
-        "DESTST" fieldByType VarcharType(40)
-    )
-
-    val keys = listOf(
-        "TSTFLDCHR",
-        "TSTFLDNBR"
-    )
-
-    createAndPopulateTable(dbManager, TST2TAB_TABLE_NAME, "TSTREC", fields, keys, false,"src/test/resources/csv/Tst2Tab.csv")
-}
-
-fun createAndPopulateEmployeeTable(dbManager: JT400DBMMAnager?) {
-    val fields = listOf(
-        "EMPNO"     fieldByType CharacterType(6),
-        "FIRSTNME"  fieldByType VarcharType(12),
-        "MIDINIT"   fieldByType VarcharType(1),
-        "LASTNAME"  fieldByType VarcharType(15),
-        "WORKDEPT"  fieldByType CharacterType(3)
-    )
-
-    val keys = listOf(
-        "EMPNO"
-    )
-
-    //createAndPopulateTable(
-    registerTable(
-        dbManager, EMPLOYEE_TABLE_NAME, "TSTREC", fields, keys, false,"src/test/resources/csv/Employee.csv")
-}
-
-fun createAndPopulateXemp2View(dbManager: JT400DBMMAnager?) {
-    // create view executing sql -> TODO: insert a createView method in DBMManager and use it
-    fun createXEMP2() = "CREATE VIEW $XEMP2_VIEW_NAME AS SELECT * FROM (SELECT * FROM EMPLOYEE ORDER BY WORKDEPT, EMPNO)"
-
-    fun createXEMP2Index() =
-        "CREATE INDEX $XEMP2_VIEW_NAME$CONVENTIONAL_INDEX_SUFFIX ON EMPLOYEE (WORKDEPT ASC, EMPNO ASC)"
-
-    val fields = listOf(
-        "EMPNO"     fieldByType CharacterType(6),
-        "FIRSTNME"  fieldByType VarcharType(12),
-        "MIDINIT"   fieldByType VarcharType(1),
-        "LASTNAME"  fieldByType VarcharType(15),
-        "WORKDEPT"  fieldByType CharacterType(3)
-    )
-
-    val keys = listOf(
-        "WORKDEPT"
-    )
-
-    val metadata = FileMetadata("$XEMP2_VIEW_NAME", "EMPLOYEE", fields, keys, false)
-    dbManager!!.registerMetadata(metadata, true)
-    execute(listOf(createXEMP2(), createXEMP2Index()))
 }
 
 fun createAndPopulateMunicipalityTable(dbManager: JT400DBMMAnager?) {
@@ -230,6 +151,7 @@ private fun registerTable(
     dbManager.registerMetadata(metadata, true)
 }
 
+/*
 private fun createAndPopulateTable(
     dbManager: JT400DBMMAnager?,
     tableName: String,
@@ -263,6 +185,7 @@ private fun createAndPopulateTable(
 
     dbManager.closeFile(tableName)
 }
+*/
 
 fun buildMunicipalityKey(vararg values: String): List<String> {
     val recordFields = mutableListOf<String>()
@@ -274,7 +197,7 @@ fun buildMunicipalityKey(vararg values: String): List<String> {
     }
     return recordFields
 }
-
+/*
 fun execute(sqlStatements: List<String>) {
     val connection = connectJDBC();
     connection.createStatement().use { statement ->
@@ -296,5 +219,6 @@ fun connectJDBC() : Connection {
     }
     return DriverManager.getConnection(connectionConfig.url, connectionConfig.user, connectionConfig.password)
 }
+ */
 
 

@@ -21,9 +21,8 @@ import com.ibm.as400.access.*
 import com.smeup.dbnative.ConnectionConfig
 import com.smeup.dbnative.DBManagerBaseImpl
 import com.smeup.dbnative.file.DBFile
-import com.smeup.dbnative.model.FileMetadata
 
-open class JT400DBMMAnager(override val connectionConfig: ConnectionConfig) : DBManagerBaseImpl()  {
+open class JT400DBMMAnager(final override val connectionConfig: ConnectionConfig) : DBManagerBaseImpl()  {
 
     private var openedFile = mutableMapOf<String, JT400DBFile>()
 
@@ -37,7 +36,7 @@ open class JT400DBMMAnager(override val connectionConfig: ConnectionConfig) : DB
         match!!.destructured.component2()
     }
 
-    val connection : AS400 by lazy {
+    private val connection : AS400 by lazy {
         val as400 = AS400(host, connectionConfig.user, connectionConfig.password)
         as400.isGuiAvailable = false
         //as400.addConnectionListener
@@ -45,7 +44,7 @@ open class JT400DBMMAnager(override val connectionConfig: ConnectionConfig) : DB
         as400
     }
 
-    override fun openFile(name: kotlin.String) : DBFile {
+    override fun openFile(name: String) : DBFile {
         require(existFile(name)) {
             "Cannot open unregistered file $name"
         }
@@ -56,7 +55,7 @@ open class JT400DBMMAnager(override val connectionConfig: ConnectionConfig) : DB
         //
         val fileName = QSYSObjectPathName(library, name, "*FILE", "MBR")
         val path = fileName.path
-        println("Path: " + path)
+        //println("Path: $path")
         val file = KeyedFile(connection, path)
         //val rf = AS400FileRecordDescription(system, path).retrieveRecordFormat()
         //file.recordFormat = rf[0]

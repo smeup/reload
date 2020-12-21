@@ -15,9 +15,8 @@
  *
  */
 
-package com.smeup.dbnative.sql
+package com.smeup.dbnative.jt400
 
-import com.smeup.dbnative.jt400.JT400DBMMAnager
 import com.smeup.dbnative.jt400.utils.*
 import org.junit.*
 import kotlin.test.assertEquals
@@ -405,8 +404,8 @@ class JT400MunicipalityTest {
         //val key3A = buildMunicipalityKey("IT", "LOM", "PV", "PALESTRO")
         assertTrue(dbFile.setll(key3A))
         var count = 0
-        while (dbFile.eof() == false) {
-            val x = dbFile.readEqual(key3A)
+        while (!dbFile.eof()) {
+            dbFile.readEqual(key3A)
             count++
         }
         assertEquals(32, count)

@@ -59,7 +59,7 @@ class JT400DBFile(override var name: String, override var fileMetadata: FileMeta
         }
         return false
          */
-        return eofReached;
+        return eofReached
     }
 
     override fun equal(): Boolean {
@@ -100,9 +100,9 @@ class JT400DBFile(override var name: String, override var fileMetadata: FileMeta
             //file.positionCursor(keys2Array(keys), KeyedFile.KEY_LT)
             return true
         } catch (e: AS400Exception) {
-            handleAS400Error(e);
+            handleAS400Error(e)
             file.positionCursorBeforeFirst()
-            return true;
+            return true
         }
     }
 
@@ -125,9 +125,9 @@ class JT400DBFile(override var name: String, override var fileMetadata: FileMeta
             file.positionCursor(keys2Array(keys), KeyedFile.KEY_GT)
             return true
         } catch (e: AS400Exception) {
-            handleAS400Error(e);
+            handleAS400Error(e)
             file.positionCursorAfterLast()
-            return true;
+            return true
         }
     }
 
@@ -151,7 +151,7 @@ class JT400DBFile(override var name: String, override var fileMetadata: FileMeta
             */
             return Result(as400RecordToSmeUPRecord(file.read(keys2Array(keys))))
         } catch (e: AS400Exception) {
-            handleAS400Error(e);
+            handleAS400Error(e)
             return Result(Record())
         }
     }
@@ -168,16 +168,16 @@ class JT400DBFile(override var name: String, override var fileMetadata: FileMeta
             }
             r =  Result(as400RecordToSmeUPRecord(file.read()))
         } catch (e: AS400Exception) {
-            handleAS400Error(e);
+            handleAS400Error(e)
             r = Result(Record())
         }
         try {
-            file.positionCursorToNext();
+            file.positionCursorToNext()
         } catch (e: AS400Exception) {
-            handleAS400Error(e);
+            handleAS400Error(e)
         }
         this.previousAction = CursorAction.NONE
-        return r ?: fail("Read failed");
+        return r
     }
 
     /** READP (Read Prior Record)
@@ -209,7 +209,7 @@ class JT400DBFile(override var name: String, override var fileMetadata: FileMeta
             this.eofReached = r == null
             Result(as400RecordToSmeUPRecord(r))
         } catch (e: AS400Exception) {
-            handleAS400Error(e);
+            handleAS400Error(e)
             Result(Record())
         } finally {
             this.previousAction = CursorAction.NONE
@@ -232,7 +232,7 @@ class JT400DBFile(override var name: String, override var fileMetadata: FileMeta
             this.eofReached = r == null
             Result(as400RecordToSmeUPRecord(r))
         } catch (e: AS400Exception) {
-            handleAS400Error(e);
+            handleAS400Error(e)
             Result(Record())
         } finally {
             this.previousAction = CursorAction.NONE
@@ -259,7 +259,7 @@ class JT400DBFile(override var name: String, override var fileMetadata: FileMeta
             this.eofReached = r == null
             Result(as400RecordToSmeUPRecord(r))
         } catch (e: AS400Exception) {
-            handleAS400Error(e);
+            handleAS400Error(e)
             Result(Record())
         } finally {
             this.previousAction = CursorAction.NONE
@@ -280,7 +280,7 @@ class JT400DBFile(override var name: String, override var fileMetadata: FileMeta
             this.eofReached = r == null
             Result(as400RecordToSmeUPRecord(r))
         } catch (e: AS400Exception) {
-            handleAS400Error(e);
+            handleAS400Error(e)
             Result(Record())
         } finally {
             this.previousAction = CursorAction.NONE
@@ -325,12 +325,12 @@ class JT400DBFile(override var name: String, override var fileMetadata: FileMeta
     private fun handleAS400Error(e: AS400Exception) {
         //CPF5001 	End of file reached
         //CPF5006 	Record not found
-        val eid = as400ErrorID(e).toUpperCase();
+        val eid = as400ErrorID(e).toUpperCase()
         if (eid.startsWith("CPF5001")) {
-            this.eofReached = true;
-            return;
+            this.eofReached = true
+            return
         } else if (eid.startsWith("CPF")) {
-            return;
+            return
         }
         throw RuntimeException()
     }
@@ -344,24 +344,9 @@ class JT400DBFile(override var name: String, override var fileMetadata: FileMeta
         return ""
     }
 
-    private fun fail(message: String): Nothing {
-        throw RuntimeException(message)
-    }
-
-    private fun key2Array(key: String): Array<Any> {
-        var keysValues = mutableListOf<Any>()
-        val keyName = fileMetadata.fileKeys[0]
-        if (numericField(keyName)) {
-           keysValues.add(BigDecimal(key))
-        } else {
-           keysValues.add(key)
-        }
-        return keysValues.toTypedArray()
-    }
-
     private fun keys2Array(keys: List<String>): Array<Any> {
         //return keys.map { it.value }.toTypedArray()
-        var keysValues = mutableListOf<Any>()
+        val keysValues = mutableListOf<Any>()
         //for (key in fileMetadata.fileKeys) {
         for (i in keys.indices) {
             val keyName = fileMetadata.fileKeys[i]
@@ -376,7 +361,7 @@ class JT400DBFile(override var name: String, override var fileMetadata: FileMeta
     }
 
     private fun recordKeys(record: Record): Array<Any> {
-        var keysValues = mutableListOf<Any>()
+        val keysValues = mutableListOf<Any>()
         for (key in fileMetadata.fileKeys) {
             if (record[key] != null) {
                 keysValues.add(record[key]!!)
@@ -423,9 +408,9 @@ class JT400DBFile(override var name: String, override var fileMetadata: FileMeta
     private fun numericField(name : String) : Boolean {
         //val dataType = file.recordFormat.getFieldDescription(name).dataType.javaType
         val field : Field? = this.fileMetadata.getField(name)
-        val type : FieldType? =  field?.type ?: null
+        val type : FieldType? =  field?.type
         return when (type?.type) {
-            Type.BIGINT, Type.BIGINT, Type.DECIMAL, Type.DOUBLE, Type.FLOAT, Type.INTEGER, Type.SMALLINT ->
+            Type.BIGINT, Type.DECIMAL, Type.DOUBLE, Type.FLOAT, Type.INTEGER, Type.SMALLINT ->
                 true
             else ->
                 false
