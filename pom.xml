@@ -37,6 +37,7 @@
         <module>sql</module>
         <module>nosql</module>
         <module>manager</module>
+        <module>jt400</module>
     </modules>
 
     <packaging>pom</packaging>
