@@ -51,11 +51,16 @@ enum class TestSQLDBType(
     val createDatabase : (dbaConnection: AS400) -> Unit = {},
     val destroyDatabase: (dbaConnection: AS400) -> Unit = {}) {
     DB2_400(ConnectionConfig(
-            fileName= "*",
-            driver = "com.ibm.as400.access.AS400JDBCDriver",
-            url = "jdbc:as400://$DB2_400_HOST/$DB2_400_LIBRARY_NAME;",
-            user = "AAABBB",
-            password = "*******"),
+                fileName= "*",
+                //driver = "com.ibm.as400.access.AS400JDBCDriver",
+                //url = "jdbc:as400://$DB2_400_HOST/$DB2_400_LIBRARY_NAME;",
+                //user = "AAABBB",
+                //password = "*******"
+                driver = System.getenv("JRK_TEST_DB_DRIVER"),
+                url = System.getenv("JRK_TEST_DB_URL"),
+                user = System.getenv("JRK_TEST_DB_USR"),
+                password = System.getenv("JRK_TEST_DB_PWD")
+            ),
         //force no create connection for dba operations
         dbaConnectionConfig = null
     )

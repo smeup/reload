@@ -26,6 +26,7 @@ import com.smeup.dbnative.jt400.utils.dbManagerForTest
 import com.smeup.dbnative.jt400.utils.destroyDatabase
 import com.smeup.dbnative.utils.getField
 import org.junit.*
+import java.math.BigDecimal
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -38,6 +39,12 @@ class JT400OperationsOnFile {
         println("setup")
         dbManager = dbManagerForTest()
         createAndPopulateMunicipalityTable(dbManager)
+        println("DB variables")
+        println(">FILENAME = " + dbManager.connectionConfig.fileName)
+        println(">DRIVER = " + dbManager.connectionConfig.driver)
+        println(">URL = " + dbManager.connectionConfig.url)
+        println(">USR = " + dbManager.connectionConfig.user)
+        println(">PWD = ㋡")
     }
 
     @After
@@ -49,42 +56,64 @@ class JT400OperationsOnFile {
 
     @Test
     fun open() {
-        var fileMetadata = PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", "BRARTI0F")
-        dbManager.registerMetadata(fileMetadata, false)
-        val dbFile = dbManager.openFile("BRARTI0F")
-        assertEquals(115, dbFile.fileMetadata.fields.size)
-        dbManager.closeFile("BRARTI0F")
+        println("Running an OPEN/CLOSE test")
+        var tableName = "BRARTI0F"
+        var nrFields = 115
+        var fileMetadata = PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", tableName)
+        dbManager.registerMetadata(fileMetadata, true)
+        println(">Open table $tableName")
+        val dbFile = dbManager.openFile(tableName)
+        println(">Assert $nrFields fields")
+        assertEquals(nrFields, dbFile.fileMetadata.fields.size)
+        println(">Close table $tableName")
+        dbManager.closeFile(tableName)
 
-        fileMetadata = PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", "VERAPG0L")
-        dbManager.registerMetadata(fileMetadata, false)
-        val dbFile2 = dbManager.openFile("VERAPG0L")
-        assertEquals(68, dbFile2.fileMetadata.fields.size)
-        dbManager.closeFile("VERAPG0L")
+        tableName = "VERAPG0L"
+        nrFields = 68
+        fileMetadata = PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", tableName)
+        dbManager.registerMetadata(fileMetadata, true)
+        println(">Open table $tableName")
+        val dbFile2 = dbManager.openFile(tableName)
+        println(">Assert $nrFields fields")
+        assertEquals(nrFields, dbFile2.fileMetadata.fields.size)
+        println(">Close table $tableName")
+        dbManager.closeFile(tableName)
     }
 
     @Test
     fun findRecordsIfSetllAndReadEWithKeyExistingKey() {
-        val fileMetadata = PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", "BRARTI2L")
-        dbManager.registerMetadata(fileMetadata, false)
-        val dbFile = dbManager.openFile("BRARTI2L")
+        println("Running a SETLL/READE test")
+        var tableName = "BRARTI2L"
+        val fileMetadata = PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", tableName)
+        dbManager.registerMetadata(fileMetadata, true)
+        println(">Open table $tableName")
+        val dbFile = dbManager.openFile(tableName)
 
-        val key = "ART  "
+        val key = "AR   "
         val keyList = listOf(key)
 
+        println(">SETLL with Keylist $keyList")
         assertTrue(dbFile.setll(keyList))
 
+        println(">READE with Keylist $keyList")
         var readEResult = dbFile.readEqual(keyList)
-        assertEquals("2  ", readEResult.record["A§TPAR"])
-        assertEquals("ACCENSIONE PIEZOELETTRICA          ", readEResult.record["A§DEAR"])
+        assertEquals("3  ", readEResult.record["A§TPAR"])
+        assertEquals("CARTUCCIA INCH.TRI-COLOUR N.344    ", readEResult.record["A§DEAR"])
+        assertEquals("SVALUI    ", readEResult.record["A§USIN"])
 
+        println(">READE with Keylist $keyList")
         readEResult = dbFile.readEqual(keyList)
-        assertEquals("1  ", readEResult.record["A§TPAR"])
-        assertEquals("ARTICOLO PER PARALLELISMO          ", readEResult.record["A§DEAR"])
+        assertEquals("3  ", readEResult.record["A§TPAR"])
+        assertEquals("NETGEAR ROUTER ADSL2 CON MODEM     ", readEResult.record["A§DEAR"])
+        assertEquals("POIMAR    ", readEResult.record["A§USIN"])
 
+        println(">READE with Keylist $keyList")
         readEResult = dbFile.readEqual(keyList)
-        assertEquals("1  ", readEResult.record["A§TPAR"])
-        assertEquals("BIKE (PROVA                        ", readEResult.record["A§DEAR"])
+        assertEquals("3  ", readEResult.record["A§TPAR"])
+        assertEquals("6710B T8100 15.4 2GB 160GB         ", readEResult.record["A§DEAR"])
+        assertEquals("BONVIT    ", readEResult.record["A§USIN"])
 
+        println(">Close table $tableName")
         dbManager.closeFile("BRARTI2L")
     }
 
@@ -96,41 +125,51 @@ class JT400OperationsOnFile {
         // Step3: check record is updated
         // Step4: restore previous field value and update
         // Step5: check record is updated (value must be as initial)
-        val fileMetadata = PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", "BRARTI0L")
-        dbManager.registerMetadata(fileMetadata, false)
-        val dbFile = dbManager.openFile("BRARTI0L")
+        println("Running a CHAIN/UPDATE test")
+        var tableName = "BRARTI0L"
+        val fileMetadata = PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", tableName)
+        dbManager.registerMetadata(fileMetadata, true)
 
-        val itemFieldKey = "A02            "
+        println(">Open table $tableName")
+        val dbFile = dbManager.openFile(tableName)
+
+        val itemFieldKey = "dp-301pplus    "
         val keyList = listOf(itemFieldKey)
 
+        println(">CHAIN with keyList $keyList")
         var chainResult = dbFile.chain(keyList)
 
         // Check chain result as expected
         assertEquals(itemFieldKey, chainResult.record["A§ARTI"])
-        assertEquals("GRUPPO CAMBIO-PIGNONE              ", chainResult.record["A§DEAR"])
-        assertEquals("ART  ", chainResult.record["A§TIAR"])
-        assertEquals("2  ", chainResult.record["A§TPAR"])
+        assertEquals("PRINT SERVER CENTRONICS-10/100 MBPS", chainResult.record["A§DEAR"])
+        assertEquals("ICS  ", chainResult.record["A§TIAR"])
+        assertEquals("4  ", chainResult.record["A§TPAR"])
 
         // Change some current recordfields values (NOT the key), then update
-        chainResult.record["A§TIAR"] = "TRA  "
-        chainResult.record["A§TPAR"] = "1  "
+        chainResult.record["A§TIAR"] = "SCI  "
+        chainResult.record["A§TPAR"] = "5  "
+        println(">UPDATE 'A§TIAR' from 'ICS  ' to 'SCI  ' and 'A§TPAR' from '4  ' to '5  '")
         dbFile.update(chainResult.record)
 
         // Chain again (same single key) and check data as expected
+        println(">CHAIN with keyList $keyList")
         chainResult = dbFile.chain(keyList)
-        assertEquals("TRA  ", chainResult.record["A§TIAR"])
-        assertEquals("1  ", chainResult.record["A§TPAR"])
+        assertEquals("SCI  ", chainResult.record["A§TIAR"])
+        assertEquals("5  ", chainResult.record["A§TPAR"])
 
         // Restore initial values (chain not required)
-        chainResult.record["A§TIAR"] = "ART  "
-        chainResult.record["A§TPAR"] = "2  "
+        chainResult.record["A§TIAR"] = "ICS  "
+        chainResult.record["A§TPAR"] = "4  "
+        println(">UPDATE 'A§TIAR' from 'SCI  ' to 'ICS  ' and 'A§TPAR' from '5  ' to '4  '")
         dbFile.update(chainResult.record)
 
         // Check the initial values restore
+        println(">CHAIN with keyList $keyList")
         chainResult = dbFile.chain(keyList)
-        assertEquals("ART  ", chainResult.record["A§TIAR"])
-        assertEquals("2  ", chainResult.record["A§TPAR"])
+        assertEquals("ICS  ", chainResult.record["A§TIAR"])
+        assertEquals("4  ", chainResult.record["A§TPAR"])
 
+        println(">Close table $tableName")
         dbManager.closeFile("BRARTI0L")
     }
 
@@ -142,11 +181,15 @@ class JT400OperationsOnFile {
         // Step3: check the new record exists
         // Step4: delete written record
         // Step5: check record not exists (DB must be as initial)
-        val fileMetadata = PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", "BRARTI0L")
-        dbManager.registerMetadata(fileMetadata, false)
-        val dbFile = dbManager.openFile("BRARTI0L")
+        println("Running a WRITE (of non-existing record) test")
+        var tableName = "BRARTI0L"
+        val fileMetadata = PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", tableName)
+        dbManager.registerMetadata(fileMetadata, true)
+        println(">Open table $tableName")
+        val dbFile = dbManager.openFile(tableName)
         val key = System.currentTimeMillis().toString() + "  "
         val keyList = listOf(key)
+        println(">CHAIN a non-existing record with keyList $keyList")
         var chainResult = dbFile.chain(keyList)
         assertEquals(0, chainResult.record.size)
 
@@ -154,24 +197,29 @@ class JT400OperationsOnFile {
         chainResult.record["A§ARTI"] = key
         chainResult.record["A§DEAR"] = "Kotlin DBNativeAccess Write        "
         chainResult.record["A§TIAR"] = "ART  "
-        chainResult.record["A§DT01"] = "20200918"
+        chainResult.record["A§DT01"] = "20991231"
+        println(">WRITE record ${chainResult.record}")
         dbFile.write(chainResult.record)
 
         // Check correct write
+        println(">CHAIN added record ${chainResult.record}")
         chainResult = dbFile.chain(keyList)
         assertEquals(key, chainResult.record["A§ARTI"])
         assertEquals("ART  ", chainResult.record["A§TIAR"])
         assertEquals("Kotlin DBNativeAccess Write        ", chainResult.record["A§DEAR"])
-        assertEquals("20200918", chainResult.record["A§DT01"])
+        assertEquals("20991231", chainResult.record["A§DT01"])
 
         // Delete record
+        println(">DELETE record ${chainResult.record}")
         dbFile.delete(chainResult.record)
 
         // Check record not exists
+        println(">CHAIN deleted record with keyList $keyList")
         chainResult = dbFile.chain(keyList)
         assertEquals(0, chainResult.record.size)
 
-        dbManager.closeFile("BRARTI0L")
+        println(">Close table $tableName")
+        dbManager.closeFile(tableName)
     }
 
     @Test
@@ -182,13 +230,17 @@ class JT400OperationsOnFile {
         // Step3: check the new record exists
         // Step4: delete written record
         // Step5: check record not exists (DB must be as initial)
-        val fileMetadata = PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", "BRARTI0L")
-        dbManager.registerMetadata(fileMetadata, false)
-        val dbFile = dbManager.openFile("BRARTI0L")
+        println("Running a DELETE (of existing record) test")
+        var tableName = "BRARTI0L"
+        val fileMetadata = PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", tableName)
+        dbManager.registerMetadata(fileMetadata, true)
+        println(">Open table $tableName")
+        val dbFile = dbManager.openFile(tableName)
         val key = System.currentTimeMillis().toString() + "  "
         val keyList = listOf(key)
 
         // Not exists
+        println(">CHAIN a non-existing record with keyList $keyList")
         var chainResult = dbFile.chain(keyList)
         assertEquals(0, chainResult.record.size)
 
@@ -197,10 +249,11 @@ class JT400OperationsOnFile {
         chainResult.record["A§DEAR"] = "Kotlin DBNativeAccess Write        "
         chainResult.record["A§TIAR"] = "ART  "
         chainResult.record["A§TPAR"] = "0  "
-
+        println(">WRITE record ${chainResult.record}")
         dbFile.write(chainResult.record)
 
         //Must exists correct write
+        println(">CHAIN added record ${chainResult.record}")
         chainResult = dbFile.chain(keyList)
         assertEquals(key, chainResult.record["A§ARTI"])
         assertEquals("ART  ", chainResult.record["A§TIAR"])
@@ -208,13 +261,16 @@ class JT400OperationsOnFile {
         assertEquals("0  ", chainResult.record["A§TPAR"])
 
         //Delete record
+        println(">DELETE record ${chainResult.record}")
         dbFile.delete(chainResult.record)
 
         //Check delete success
+        println(">CHAIN deleted record with keyList $keyList")
         chainResult = dbFile.chain(keyList)
         assertEquals(0, chainResult.record.size)
 
-        dbManager.closeFile("BRARTI0L")
+        println(">Close table $tableName")
+        dbManager.closeFile(tableName)
     }
 
     @Test
@@ -224,9 +280,12 @@ class JT400OperationsOnFile {
         // Step2: read above written records and update A§DEA2 field
         // Step3: check and check for correct update
         // Step4: delete written record.
-        val fileMetadata = PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", "BRARTI1L")
-        dbManager.registerMetadata(fileMetadata, false)
-        val dbFile = dbManager.openFile("BRARTI1L")
+        println("Running a multiple UPDATE on READE test")
+        var tableName = "BRARTI1L"
+        val fileMetadata = PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", tableName)
+        dbManager.registerMetadata(fileMetadata, true)
+        println(">Open table $tableName")
+        val dbFile = dbManager.openFile(tableName)
 
         // Number of record this test work with (write, update and delete)
         val numberOfRecordsToHandle = 10
@@ -244,6 +303,7 @@ class JT400OperationsOnFile {
         val dea2Key = "Kotlin DBNativeAccess TEST-UPDATED "
 
         // WRITE
+        println(">Write $numberOfRecordsToHandle records to work with")
         repeat(numberOfRecordsToHandle){
             val record = Record()
             repeat(fieldsNumber){ index ->
@@ -264,40 +324,50 @@ class JT400OperationsOnFile {
             dbFile.write(record)
         }
 
-        // READ AND UPDATE
+        // READE AND UPDATE
         // Read records with same description (A§DEAR) and update field named 'secondary description' (A§DEA2)
         val keyList = listOf(dearKey)
+        println(">SETLL with keyList $keyList")
         assertTrue(dbFile.setll(keyList))
         //dbFile.positionCursorBefore(keyList) //TODO rivedere
         // Update
         repeat(numberOfRecordsToHandle) {
             val readEResult = dbFile.readEqual(keyList)
+            println(">READE with keyList $keyList")
             assertEquals(dearKey, readEResult.record["A§DEAR"])
             assertEquals(empty35char, readEResult.record["A§DEA2"])
+            println(">record: ${readEResult.record}")
             readEResult.record["A§DEA2"] = dea2Key
+            println(">UPDATE with keyList $keyList")
             dbFile.update(readEResult.record)
+            println(">updated record: ${readEResult.record}")
         }
 
         // READ AND CHECK
         // Check all records are updated as expected
+        println(">SETLL with keyList $keyList")
         assertTrue(dbFile.setll(keyList))
         //dbFile.positionCursorBefore(keyList)  //TODO rivedere
         repeat(numberOfRecordsToHandle) {
             val readEResult = dbFile.readEqual(keyList)
-            println("[READ AND CHECK]: " + readEResult.record["A§ARTI"])
+            println(">READ AND CHECK " + readEResult.record["A§ARTI"])
             assertEquals(dea2Key, readEResult.record["A§DEA2"])
         }
 
         // DELETE
+        println(">SETLL with keyList $keyList")
         assertTrue(dbFile.setll(keyList))
         //dbFile.positionCursorBefore(keyList)  //TODO rivedere
         repeat(numberOfRecordsToHandle) {
             val readEResult = dbFile.readEqual(keyList)
             assertEquals(dea2Key, readEResult.record["A§DEA2"])
             //Delete record
+            println(">DELETE " + readEResult.record["A§ARTI"])
             dbFile.delete(readEResult.record)
         }
 
+        println(">Close table $tableName")
+        dbManager.closeFile(tableName)
     }
 
     @Test
@@ -308,78 +378,165 @@ class JT400OperationsOnFile {
         // Step3: check the new record exists
         // Step4: delete written record
         // Step5: check record not exists (DB must be as initial)
-
-        val fileMetadata = PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", "VERAPG0L")
-        dbManager.registerMetadata(fileMetadata, false)
-        val dbFile = dbManager.openFile("VERAPG0L")
+        println("Running a WRITE (non-existing records) on a huge table")
+        var tableName = "VERAPG0L"
+        val fileMetadata = PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", tableName)
+        dbManager.registerMetadata(fileMetadata, true)
+        println(">Open table $tableName")
+        val dbFile = dbManager.openFile(tableName)
         val key = System.currentTimeMillis().toString().substring(3)
         val keyList = listOf(key)
+        println(">CHAIN (non-existing record) with keyList $keyList")
         var chainResult = dbFile.chain(keyList)
         assertEquals(0, chainResult.record.size)
 
         // Set field values and write record
         chainResult.record["V£IDOJ"] = key
         chainResult.record["V£NOME"] = "DBNativeAccess "
+        println(">WRITE record $chainResult.record")
         dbFile.write(chainResult.record)
 
         // Check correct write
+        println(">CHAIN added record with keyList $keyList")
         chainResult = dbFile.chain(keyList)
         assertEquals(key, chainResult.record["V£IDOJ"])
         assertEquals("DBNativeAccess ", chainResult.record["V£NOME"])
 
         // Delete record
+        println(">DELETE " + chainResult.record)
         dbFile.delete(chainResult.record)
 
         // Check record not exists
+        println(">CHAIN (non-existing record) with keyList $keyList")
         chainResult = dbFile.chain(keyList)
         assertEquals(0, chainResult.record.size)
 
-        dbManager.closeFile("VERAPG0L")
+        println(">Close table $tableName")
+        dbManager.closeFile(tableName)
     }
 
     @Test
     fun findRecordsIfSetllAndReadWithKeyExistingKey() {
-        val fileMetadata = PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", "VERAPG1L")
-        dbManager.registerMetadata(fileMetadata, false)
-        val dbFile = dbManager.openFile("VERAPG1L")
+        println("Running a SETLL and READ on a huge table")
+        var tableName = "VERAPG1L"
+        val fileMetadata = PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", tableName)
+        dbManager.registerMetadata(fileMetadata, true)
+        println(">Open table $tableName")
+        val dbFile = dbManager.openFile(tableName)
 
         //keys: V£DATA, V£NOME, V£IDOJ
         val data = "20200901"
         val nome = "BNUNCA         "
         val idoj = "0002003070"
         val keyList = listOf(data, nome, idoj)
+        println(">SETLL with keyList $keyList")
         assertTrue(dbFile.setll(keyList))
 
+        println(">READ (no keylist)")
         var readResult = dbFile.read()
+        println(">result ${readResult.record}")
         assertEquals("20200901", readResult.record["V£DATA"])
         assertEquals("BOLPIE         ", readResult.record["V£NOME"])
         assertEquals("0002003070", readResult.record["V£IDOJ"])
 
+        println(">READ (no keylist)")
         readResult = dbFile.read()
+        println(">result ${readResult.record}")
         assertEquals("20200901", readResult.record["V£DATA"])
         assertEquals("BOLPIE         ", readResult.record["V£NOME"])
         assertEquals("0002003106", readResult.record["V£IDOJ"])
 
+        println(">READ (no keylist)")
         readResult = dbFile.read()
+        println(">result ${readResult.record}")
         assertEquals("20200901", readResult.record["V£DATA"])
         assertEquals("BOLPIE         ", readResult.record["V£NOME"])
         assertEquals("0002003108", readResult.record["V£IDOJ"])
 
-        dbManager.closeFile("VERAPG1L")
+        println(">Close table $tableName")
+        dbManager.closeFile(tableName)
     }
 
     @Test
     fun findRecordsIfChainWithExistingKey() {
-        val fileMetadata = PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", "BRARTI0L")
-        dbManager.registerMetadata(fileMetadata, false)
-        val dbFile = dbManager.openFile("BRARTI0L")
-        val key = "A01            "
+        println("Running a CHAIN on a huge table")
+        var tableName = "BRARTI0L"
+        val fileMetadata = PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", tableName)
+        dbManager.registerMetadata(fileMetadata, true)
+        println(">Open table $tableName")
+        val dbFile = dbManager.openFile(tableName)
+        val key = "dp-301pplus    "
         val keyList = listOf(key)
+        println(">CHAIN record with keyList $keyList")
         val chainResult = dbFile.chain(keyList)
+        println(">result ${chainResult.record}")
         assertEquals(key, chainResult.record["A§ARTI"])
-        assertEquals("ART  ", chainResult.record["A§TIAR"])
-        assertEquals("1  ", chainResult.record["A§TPAR"])
-        dbManager.closeFile("BRARTI0L")
+        assertEquals("ICS  ", chainResult.record["A§TIAR"])
+        assertEquals("4  ", chainResult.record["A§TPAR"])
+        println(">Close table $tableName")
+        dbManager.closeFile(tableName)
+    }
+
+    @Test
+    fun `simulate data access logic of rpgle X1_X21_06N`() {
+        var tableName = "VERAPG9L"
+        val fileMetadata = PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", tableName)
+        dbManager.registerMetadata(fileMetadata, true)
+        println(">Open table $tableName")
+        val dbFile = dbManager.openFile(tableName)
+
+        //keys: V£DATA, V£CDC
+        val data = "20190215"
+        val cdc = "RDSSVI         "
+        val keyList = listOf(data, cdc)
+        println(">SETLL with keyList $keyList")
+        assertTrue(dbFile.setll(keyList))
+
+        var readedRecord = 0
+        while(true){
+            println(">READE with keyList $keyList")
+            var readEResult = dbFile.readEqual(keyList)
+            if (readEResult.record.isEmpty()) {
+                break
+            }
+            println(">readed record ${readEResult.record}")
+            readedRecord ++
+        }
+        println(">Readed $readedRecord records")
+        println(">Close table $tableName")
+        dbManager.closeFile(tableName)
+        assertEquals(6, readedRecord)
+    }
+
+    @Test
+    fun `setll and readequal by key V£CDC V£DATA`() {
+        var tableName = "VERAPG3L"
+        val fileMetadata = PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", tableName)
+        dbManager.registerMetadata(fileMetadata, true)
+        println(">Open table $tableName")
+        val dbFile = dbManager.openFile(tableName)
+
+        //keys: V£CDC, V£DATA
+        val cdc = "RDSSVI         "
+        val data = "20190215"
+        val keyList = listOf(cdc, data)
+        println(">SETLL with keyList $keyList")
+        assertTrue(dbFile.setll(keyList))
+
+        var readedRecord = 0
+        while(true){
+            println(">READE with keyList $keyList")
+            var readEResult = dbFile.readEqual(keyList)
+            if (readEResult.record.isEmpty()) {
+                break
+            }
+            println(">readed record ${readEResult.record}")
+            readedRecord ++
+        }
+        println(">Readed $readedRecord records")
+        println(">Close table $tableName")
+        dbManager.closeFile(tableName)
+        assertEquals(6, readedRecord)
     }
 
     /*
