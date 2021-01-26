@@ -67,6 +67,26 @@ class SQLMunicipalityTest {
     }
 
     @Test
+    fun t02_findtwoAfterErbuscWithSetll4AndReadE1() {
+        val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
+        assertTrue(dbFile.setll(buildMunicipalityKey("IT", "LOM", "BS", "ERBUSCO")))
+        assertEquals("ERBUSCO", getMunicipalityName(dbFile.readEqual(buildMunicipalityKey("IT")).record))
+        assertEquals("ESINE", getMunicipalityName(dbFile.readEqual(buildMunicipalityKey("IT")).record))
+        assertEquals("FIESSE", getMunicipalityName(dbFile.readEqual(buildMunicipalityKey("IT")).record))
+        dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
+    }
+
+    @Test
+    fun t02_findAfterZoneWithSetll4AndReadWithDegradingKey() {
+        val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
+        assertTrue(dbFile.setll(buildMunicipalityKey("IT", "LOM", "BS", "ZZZ")))
+        assertEquals("ALBAVILLA", getMunicipalityName(dbFile.readEqual(buildMunicipalityKey("IT", "LOM", "CO")).record))
+        assertEquals("ALBESE CON CASSANO", getMunicipalityName(dbFile.readEqual(buildMunicipalityKey("IT", "LOM")).record))
+        assertEquals("ALBIOLO", getMunicipalityName(dbFile.readEqual(buildMunicipalityKey("IT")).record))
+        dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
+    }
+
+    @Test
     fun t02B_findTwoAfterErbuscoWithSetll4AndRead() {
         val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
         assertTrue(dbFile.setll(buildMunicipalityKey("IT", "LOM", "BS", "ERBUSCO")))

@@ -17,19 +17,13 @@
 
 package com.smeup.dbnative.jt400.utils
 
-import com.github.doyaaaaaken.kotlincsv.dsl.csvReader
 import com.ibm.as400.access.AS400
 import com.smeup.dbnative.ConnectionConfig
 import com.smeup.dbnative.file.Record
-import com.smeup.dbnative.file.RecordField
-import com.smeup.dbnative.jt400.JT400DBMMAnager
+import com.smeup.dbnative.jt400.JT400DBMManager
 import com.smeup.dbnative.model.*
 import com.smeup.dbnative.utils.fieldByType
 import org.junit.Assert
-import java.io.File
-import java.lang.Exception
-import java.sql.Connection
-import java.sql.DriverManager
 
 const val EMPLOYEE_TABLE_NAME = "EMPLOYEE"
 const val XEMP2_VIEW_NAME = "XEMP2"
@@ -54,7 +48,7 @@ enum class TestSQLDBType(
             fileName= "*",
             driver = "com.ibm.as400.access.AS400JDBCDriver",
             url = "jdbc:as400://$DB2_400_HOST/$DB2_400_LIBRARY_NAME;",
-            user = "AAABBB",
+            user = "*******",
             password = "*******"),
         //force no create connection for dba operations
         dbaConnectionConfig = null
@@ -64,10 +58,10 @@ enum class TestSQLDBType(
 
 fun dbManagerForTest() = dbManagerForTest(defaultDbType)
 
-fun dbManagerForTest(testSQLDBType: TestSQLDBType) : JT400DBMMAnager {
+fun dbManagerForTest(testSQLDBType: TestSQLDBType) : JT400DBMManager {
     testLog("Creating SQLDBManager with db type = $testSQLDBType")
 
-    val dbManager = JT400DBMMAnager(testSQLDBType.connectionConfig)
+    val dbManager = JT400DBMManager(testSQLDBType.connectionConfig)
     if (testSQLDBType.dbaConnectionConfig != null) {
         //JT400DBMMAnager(testSQLDBType.dbaConnectionConfig).connection.use {
         //    testSQLDBType.createDatabase(it)
@@ -89,7 +83,7 @@ fun destroyDatabase(testSQLDBType: TestSQLDBType) {
     }
 }
 
-fun createAndPopulateMunicipalityTable(dbManager: JT400DBMMAnager?) {
+fun createAndPopulateMunicipalityTable(dbManager: JT400DBMManager?) {
     val fields = listOf(
         "NAZ"   fieldByType CharacterType(2),
         "REG"   fieldByType CharacterType(3),
@@ -127,7 +121,7 @@ fun getEmployeeName(record: Record): String {
 }
 
 fun getMunicipalityName(record: Record): String {
-    return (record["CITTA"]?.toString()?.trim() ?: "")
+    return (record["CITTA"]?.trim() ?: "")
 }
 
 fun testLog(message: String) {
@@ -137,7 +131,7 @@ fun testLog(message: String) {
 }
 
 private fun registerTable(
-    dbManager: JT400DBMMAnager?,
+    dbManager: JT400DBMManager?,
     tableName: String,
     formatName: String,
     fields: List<Field>,

@@ -17,13 +17,13 @@
 
 package com.smeup.dbnative.sql
 
-import com.smeup.dbnative.file.RecordField
 import com.smeup.dbnative.sql.utils.*
 import org.junit.AfterClass
 import org.junit.BeforeClass
-import org.junit.Ignore
 import org.junit.Test
+import org.junit.Ignore
 import kotlin.test.assertEquals
+import kotlin.test.assertFails
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
@@ -47,6 +47,27 @@ class SQLReadEqualTest {
             destroyDatabase()
         }
     }
+
+    @Test
+    fun SetllAndRead() {
+        val dbFile = dbManager.openFile(EMPLOYEE_TABLE_NAME)
+        assertTrue(dbFile.setll("000010"))
+        assertEquals("CHRISTINE HAAS", getEmployeeName(dbFile.readEqual().record))
+        dbManager.closeFile(EMPLOYEE_TABLE_NAME)
+    }
+
+    @Test
+    fun lovalSetllAndRead() {
+        val dbFile = dbManager.openFile(EMPLOYEE_TABLE_NAME)
+        assertTrue(dbFile.setll("000000"))
+        if (dbFile.equal()) {
+            assertFails("SetLL found a not existent record", { null })
+        } else {
+            assertEquals("CHRISTINE HAAS", getEmployeeName(dbFile.read().record))
+        }
+        dbManager.closeFile(EMPLOYEE_TABLE_NAME)
+    }
+
 
     @Test
     fun throwsExceptionIfImmediatelyReadE() {

@@ -63,19 +63,6 @@ class JT400DBFile(override var name: String, override var fileMetadata: FileMeta
     }
 
     override fun equal(): Boolean {
-        /*
-        E' una cosa più complessa: vuol dire che quando fai una SETLL con più chiavi EQUAL vale true se il puntatore
-        si posizione prima dell'elemento che soddisfa esattamente le chiavi, false se no.
-        Esempio: certo nella tabella comuni il comune di Erbusco con chiavi ITALIA-LOMBARDIA-ERBUSCO
-        Se il record viene trovato il puntatore viene posto prima del record e EQUAL viene posto a true.
-        Se invece Il record non viene trovato, il puntatore viene posto al primo record successivo a quello che si cercava
-        (ad esempio, ITALIA-LOMBARDIA-ESINE) ma con il flag EQUAL spento.
-        Praticamente ll DB ti torna comunque il puntatore al record ma con diverso significato a seconda del flag EQUAL
-        Vale solo per SETLL e SETGT, per il CHAIN c'è una cosa simile ma si chiama found()
-        Si, che si accende o meno a seconda di come è andata la setll o la setgt precedente
-        Per me nel tuo caso è una informazione tornata in qualche modo dai comandi del JTOpen
-        Mi aspetterei che quando fai un callSetLL la libreria ti torna il flag
-         */
         return equalFlag
     }
 
@@ -94,15 +81,15 @@ class JT400DBFile(override var name: String, override var fileMetadata: FileMeta
             this.equalFlag = true
         } catch (e: AS400Exception) {
         }
-        try {
+        return try {
             //file.positionCursorBefore(keys2Array(keys))
             file.positionCursor(keys2Array(keys), KeyedFile.KEY_LT)
             //file.positionCursor(keys2Array(keys), KeyedFile.KEY_LT)
-            return true
+            true
         } catch (e: AS400Exception) {
             handleAS400Error(e)
             file.positionCursorBeforeFirst()
-            return true
+            true
         }
     }
 
@@ -121,13 +108,13 @@ class JT400DBFile(override var name: String, override var fileMetadata: FileMeta
             this.equalFlag = true
         } catch (e: AS400Exception) {
         }
-        try {
+        return try {
             file.positionCursor(keys2Array(keys), KeyedFile.KEY_GT)
-            return true
+            true
         } catch (e: AS400Exception) {
             handleAS400Error(e)
             file.positionCursorAfterLast()
-            return true
+            true
         }
     }
 
@@ -142,17 +129,17 @@ class JT400DBFile(override var name: String, override var fileMetadata: FileMeta
         this.previousAction = CursorAction.NONE
         resetStatus()
         //TODO("Attenzione alla gestione del lock")
-        try {
+        return try {
             /*
-            file.positionCursor(keys2Array(keys), KeyedFile.KEY_EQ)
-            var r : Result? = Result(as400RecordToSmeUPRecord(file.read()))
-            //file.positionCursorToNext();
-            return r ?: fail("Read failed");
-            */
-            return Result(as400RecordToSmeUPRecord(file.read(keys2Array(keys))))
+                file.positionCursor(keys2Array(keys), KeyedFile.KEY_EQ)
+                var r : Result? = Result(as400RecordToSmeUPRecord(file.read()))
+                //file.positionCursorToNext();
+                return r ?: fail("Read failed");
+                */
+            Result(as400RecordToSmeUPRecord(file.read(keys2Array(keys))))
         } catch (e: AS400Exception) {
             handleAS400Error(e)
-            return Result(Record())
+            Result(Record())
         }
     }
 
@@ -161,15 +148,14 @@ class JT400DBFile(override var name: String, override var fileMetadata: FileMeta
      */
     override fun read(): Result {
         //https://www.ibm.com/support/knowledgecenter/ssw_ibm_i_74/rzasd/zzread.htm
-        var r : Result
-        try {
+        val r : Result = try {
             if (this.previousAction==CursorAction.SETLL) {
                 file.positionCursorToNext()
             }
-            r =  Result(as400RecordToSmeUPRecord(file.read()))
+            Result(as400RecordToSmeUPRecord(file.read()))
         } catch (e: AS400Exception) {
             handleAS400Error(e)
-            r = Result(Record())
+            Result(Record())
         }
         try {
             file.positionCursorToNext()
@@ -185,15 +171,14 @@ class JT400DBFile(override var name: String, override var fileMetadata: FileMeta
      */
     override fun readPrevious(): Result {
         resetStatus()
-        var r : Result
-        try {
+        val r : Result = try {
             if (this.previousAction!=CursorAction.SETLL) {
                 file.positionCursorToPrevious()
             }
-            r =  Result(as400RecordToSmeUPRecord(file.read()))
+            Result(as400RecordToSmeUPRecord(file.read()))
         } catch (e: AS400Exception) {
             handleAS400Error(e)
-            r = Result(Record())
+            Result(Record())
         }
         this.previousAction = CursorAction.NONE
         return r
@@ -350,7 +335,7 @@ class JT400DBFile(override var name: String, override var fileMetadata: FileMeta
         //for (key in fileMetadata.fileKeys) {
         for (i in keys.indices) {
             val keyName = fileMetadata.fileKeys[i]
-            val keyValue = keys.get(i)
+            val keyValue = keys[i]
             if (numericField(keyName)) {
                 keysValues.add(BigDecimal(keyValue))
             } else {

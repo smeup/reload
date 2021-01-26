@@ -51,7 +51,7 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
     override fun setll(keys: List<String>): Boolean {
         lastOperationSet = true
 
-        var keyAsRecordField = keys.mapIndexed { index, value ->
+        val keyAsRecordField = keys.mapIndexed { index, value ->
             val keyname = thisFileKeys.get(index)
             RecordField(keyname, value)
         }
@@ -69,7 +69,7 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
     override fun setgt(keys: List<String>): Boolean {
         lastOperationSet = true
 
-        var keyAsRecordField = keys.mapIndexed { index, value ->
+        val keyAsRecordField = keys.mapIndexed { index, value ->
             val keyname = thisFileKeys.get(index)
             RecordField(keyname, value)
         }
@@ -87,7 +87,7 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
 
         lastOperationSet = false
 
-        var keyAsRecordField = keys.mapIndexed { index, value ->
+        val keyAsRecordField = keys.mapIndexed { index, value ->
             val keyname = thisFileKeys.get(index)
             RecordField(keyname, value)
         }
@@ -95,7 +95,7 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
         checkAndStoreLastKeys(keyAsRecordField)
         movingForward = true
         calculateResultSet(keyAsRecordField)
-        return readFromResultSetFilteringBy(keyAsRecordField)
+        return readFirstFromResultSetFilteringBy(keyAsRecordField)
     }
 
     override fun read(): Result {
@@ -144,7 +144,7 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
 
         lastOperationSet = false
 
-        var keysAsRecordField = keys.mapIndexed { index, value ->
+        val keysAsRecordField = keys.mapIndexed { index, value ->
             val keyname = thisFileKeys.get(index)
             RecordField(keyname, value)
         }
@@ -177,7 +177,7 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
 
         lastOperationSet = false
 
-        var keyAsRecordField = keys.mapIndexed { index, value ->
+        val keyAsRecordField = keys.mapIndexed { index, value ->
             val keyname = thisFileKeys.get(index)
             RecordField(keyname, value)
         }
@@ -215,7 +215,7 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
         // record post update will be "record"
         var atLeastOneFieldChanged = false
         actualRecord?.forEach {
-            var fieldValue = record.getValue(it.key)
+            val fieldValue = record.getValue(it.key)
             if(fieldValue != it.value){
                 atLeastOneFieldChanged = true
                 this.getResultSet()?.updateObject(it.key, fieldValue)
@@ -311,17 +311,26 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
         } else {
             result = Result(resultSet.toValues())
         }
-        val record: Record = Record()
+        val record = Record()
         record.putAll(result.record)
         actualRecord = record
         return result
+    }
+
+    private fun readFirstFromResultSetFilteringBy(keys: List<RecordField>): Result {
+        val result = readFromResultSet()
+        if (result.record.matches(keys)) {
+            return result
+        } else {
+            return Result(indicatorHI = true)
+        }
     }
 
     private fun readFromResultSetFilteringBy(keys: List<RecordField>): Result {
         var result: Result
         do {
             result = readFromResultSet()
-        } while (!result.record.matches(keys) && resultSet.hasRecords() && !eof())
+        } while (result.record.matches(keys) == false && resultSet.hasRecords() && !eof())
         return result
     }
 

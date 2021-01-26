@@ -24,7 +24,7 @@ import kotlin.test.assertTrue
 
 class JT400Chain2KeysTest {
 
-    private lateinit var dbManager: JT400DBMMAnager
+    private lateinit var dbManager: JT400DBMManager
 
     @Before
     fun setUp() {

@@ -17,7 +17,6 @@
 
 package com.smeup.dbnative.jt400
 
-import com.smeup.dbnative.jt400.JT400DBMMAnager
 import com.smeup.dbnative.jt400.utils.*
 import org.junit.*
 import kotlin.test.assertEquals
@@ -25,7 +24,7 @@ import kotlin.test.assertTrue
 
 class JT400Chain1KeyTest {
 
-    private lateinit var dbManager: JT400DBMMAnager
+    private lateinit var dbManager: JT400DBMManager
 
     @Before
     fun setUp() {

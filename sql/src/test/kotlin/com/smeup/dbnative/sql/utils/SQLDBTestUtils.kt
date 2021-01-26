@@ -42,8 +42,12 @@ private var defaultDbType = TestSQLDBType.HSQLDB
 //private var defaultDbType = TestSQLDBType.MY_SQL
 //private var defaultDbType = TestSQLDBType.DB2_400
 const val DATABASE_NAME = "TEST"
+const val MYSQL_HOST = "localhost"
+const val MYSQL_DATABASE_NAME = DATABASE_NAME
+const val MYSQL_VERAPG_HOST = "172.16.2.123"
+const val MYSQL_VERAPG_DATABASE_NAME = "smeup"
 const val DB2_400_HOST = "SRVLAB01.SMEUP.COM"
-const val DB2_400_LIBRARY_NAME = "W_PARFRA"
+const val DB2_400_LIBRARY_NAME = "XSMEDATGRU"
 
 enum class TestSQLDBType(
     val connectionConfig: ConnectionConfig,
@@ -53,7 +57,7 @@ enum class TestSQLDBType(
     MY_SQL(
         connectionConfig = ConnectionConfig(
             fileName= "*",
-            url = "jdbc:mysql://localhost:3306/$DATABASE_NAME",
+            url = "jdbc:mysql://$MYSQL_HOST:3306/$MYSQL_DATABASE_NAME",
             user = "root",
             password = "root"),
         dbaConnectionConfig = ConnectionConfig(
@@ -63,6 +67,14 @@ enum class TestSQLDBType(
             password = "root"),
         createDatabase = { dbaConnection -> dbaConnection.prepareStatement("CREATE DATABASE $DATABASE_NAME").use { it.execute() }  },
         destroyDatabase = { dbaConnection -> dbaConnection.prepareStatement("DROP DATABASE  $DATABASE_NAME").use { it.execute() }  }
+    ),
+    MY_SQL_VERAPG(
+        connectionConfig = ConnectionConfig(
+            fileName= "*",
+            url = "jdbc:mysql://${MYSQL_VERAPG_HOST}:3307/${MYSQL_VERAPG_DATABASE_NAME}",
+            user = "user",
+            password = "password"),
+        dbaConnectionConfig = null
     ),
     HSQLDB(ConnectionConfig(
         fileName= "*",
@@ -75,8 +87,8 @@ enum class TestSQLDBType(
             fileName= "*",
             driver = "com.ibm.as400.access.AS400JDBCDriver",
             url = "jdbc:as400://$DB2_400_HOST/$DB2_400_LIBRARY_NAME;",
-            user = "SCAARM",
-            password = "**********"),
+            user = "*****",
+            password = "*****"),
         //force no create connection for dba operations
         dbaConnectionConfig = null
     )
@@ -178,7 +190,7 @@ fun createAndPopulateXemp2View(dbManager: SQLDBMManager?) {
         "WORKDEPT"
     )
 
-    val metadata = FileMetadata("$XEMP2_VIEW_NAME", "EMPLOYEE", fields, keys, false)
+    val metadata = FileMetadata(XEMP2_VIEW_NAME, "EMPLOYEE", fields, keys, false)
     dbManager!!.registerMetadata(metadata, true)
     dbManager.execute(listOf(createXEMP2(), createXEMP2Index()))
 }
@@ -219,7 +231,7 @@ fun getEmployeeName(record: Record): String {
 }
 
 fun getMunicipalityName(record: Record): String {
-    return (record["CITTA"]?.toString()?.trim() ?: "")
+    return (record["CITTA"]?.trim() ?: "")
 }
 
 fun testLog(message: String) {

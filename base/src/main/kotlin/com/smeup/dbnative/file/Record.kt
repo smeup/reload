@@ -28,6 +28,17 @@ class Record(vararg fields: RecordField) : LinkedHashMap<String, String>() {
         this[it.name] == it.value
     }
 
+    fun matchesOne(keyFields: List<RecordField>): Boolean {
+        var size = keyFields.size
+        do {
+            val subKeyList = keyFields.subList(0, size)
+            if (matches(subKeyList)) return true
+            size--
+        } while (size > 0)
+        return false
+    }
+
+
     fun add(field: RecordField) {
         put(field.name, field.value)
     }
