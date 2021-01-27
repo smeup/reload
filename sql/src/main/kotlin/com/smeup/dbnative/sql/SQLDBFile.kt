@@ -238,6 +238,7 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
     private fun executeQuery(sql: String, values: List<String>) {
         resultSet.closeIfOpen()
         val stm = connection.prepareStatement(sql, ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE)
+        stm.fetchSize = 1000
         stm.bind(values)
         resultSet = stm.executeQuery()
     }
@@ -328,8 +329,10 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
 
     private fun readFromResultSetFilteringBy(keys: List<RecordField>): Result {
         var result: Result
+        //var i = 0
         do {
             result = readFromResultSet()
+            //System.out.println("Readed ${i++}")
         } while (result.record.matches(keys) == false && resultSet.hasRecords() && !eof())
         return result
     }
