@@ -38,7 +38,6 @@ class Record(vararg fields: RecordField) : LinkedHashMap<String, String>() {
         return false
     }
 
-
     fun add(field: RecordField) {
         put(field.name, field.value)
     }

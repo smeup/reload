@@ -556,19 +556,25 @@ class DB2400OperationsOnFile {
         //keys: V£DATA, V£CDC
         val data = "20190215"
         val cdc = "RDSSVI         "
-        val keyList = listOf(data, cdc)
+        var keyList = listOf(data, cdc)
         println(">SETLL with keyList $keyList")
         assertTrue(dbFile.setll(keyList))
 
         var readedRecord = 0
         while(true){
             println(">READE with keyList $keyList")
+            /*
+            val data = "20190215"
+            val cdc = "ZZZZZZ         "
+            keyList = listOf(data, cdc)
+            */
+
             val readEResult = dbFile.readEqual(keyList)
             if (readEResult.record.isEmpty()) {
                 break
             }
             println(">readed record ${readEResult.record}")
-            readedRecord ++
+            readedRecord++
         }
         println(">Readed $readedRecord records")
         println(">Close table $tableName")

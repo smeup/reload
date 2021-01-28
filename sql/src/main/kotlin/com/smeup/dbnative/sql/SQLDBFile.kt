@@ -22,11 +22,13 @@ import com.smeup.dbnative.file.Record
 import com.smeup.dbnative.file.RecordField
 import com.smeup.dbnative.file.Result
 import com.smeup.dbnative.model.FileMetadata
+import com.sun.xml.internal.fastinfoset.algorithm.BooleanEncodingAlgorithm
 import java.sql.Connection
 import java.sql.ResultSet
 
 class SQLDBFile(override var name: String, override var fileMetadata: FileMetadata, var connection: Connection) : DBFile {
 
+    private var lastMatch: Boolean = false
     private var resultSet: ResultSet? = null
     private var movingForward = true
     private var lastKeys: List<RecordField> = emptyList()
@@ -329,12 +331,23 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
 
     private fun readFromResultSetFilteringBy(keys: List<RecordField>): Result {
         var result: Result
+        var match: Boolean
         //var i = 0
         do {
+            //println("Record nr: ${i++}")
             result = readFromResultSet()
-            //System.out.println("Readed ${i++}")
-        } while (result.record.matches(keys) == false && resultSet.hasRecords() && !eof())
-        return result
+            match = result.record.matches(keys)
+
+            if (match) {
+                lastMatch = true
+                return result
+            } else {
+                if (lastMatch ) {
+                    lastMatch = false
+                    return Result()
+                }
+            }
+        } while (true)
     }
 
     private fun signalEOF() {
