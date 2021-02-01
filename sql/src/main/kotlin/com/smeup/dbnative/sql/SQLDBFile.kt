@@ -21,6 +21,7 @@ import com.smeup.dbnative.file.DBFile
 import com.smeup.dbnative.file.Record
 import com.smeup.dbnative.file.RecordField
 import com.smeup.dbnative.file.Result
+import com.smeup.dbnative.log.logger
 import com.smeup.dbnative.model.FileMetadata
 import java.sql.Connection
 import java.sql.ResultSet
@@ -84,7 +85,7 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
     }
 
     override fun chain(keys: List<String>): Result {
-
+        logger().info("QUESTA E' UNA PROVA")
         lastOperationSet = false
 
         var keyAsRecordField = keys.mapIndexed { index, value ->
