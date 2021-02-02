@@ -51,7 +51,7 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
     }
 
     override fun setll(keys: List<String>): Boolean {
-        logger?.logEvent(SQL_logging_key.setll, "Start setll", object{}.javaClass.enclosingMethod.toString())
+        logger?.logEvent(SQL_logging_key.setll, "Start setll", object{}.javaClass.enclosingMethod)
         lastOperationSet = true
 
         var keyAsRecordField = keys.mapIndexed { index, value ->
@@ -70,7 +70,7 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
     }
 
     override fun setgt(keys: List<String>): Boolean {
-        logger?.logEvent(SQL_logging_key.setgt, "Start setgt", object{}.javaClass.enclosingMethod.toString())
+        logger?.logEvent(SQL_logging_key.setgt, "Start setgt", object{}.javaClass.enclosingMethod)
         lastOperationSet = true
 
         var keyAsRecordField = keys.mapIndexed { index, value ->
@@ -88,7 +88,7 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
     }
 
     override fun chain(keys: List<String>): Result {
-        logger?.logEvent(SQL_logging_key.chain, "Start chain", object{}.javaClass.enclosingMethod.toString())
+        logger?.logEvent(SQL_logging_key.chain, "Start chain", object{}.javaClass.enclosingMethod)
         lastOperationSet = false
 
         var keyAsRecordField = keys.mapIndexed { index, value ->

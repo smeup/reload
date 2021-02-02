@@ -4,8 +4,9 @@ import java.lang.reflect.Method
 import java.util.*
 
 
-data class LoggingEvent<E: Enum<E>>(val eventKey: E, val message: String, val caller: String? = ""){
+data class LoggingEvent<E: Enum<E>>(val eventKey: E, val message: String, private val callerMethod: Method? = null){
     val issueTime: Date = Date()
+    val caller: String = callerMethod?.let { "${it.declaringClass}.${it.name}" }?:""
 }
 
 abstract class Logger<E: Enum<E>>(val defaultLoggingFunction: ((LoggingEvent<E>) -> Unit)? = null){
@@ -22,8 +23,8 @@ abstract class Logger<E: Enum<E>>(val defaultLoggingFunction: ((LoggingEvent<E>)
         }
     }
 
-    fun logEvent(eventKey: E, message: String, caller: String?): LoggingEvent<E>{
-        return logEvent(LoggingEvent(eventKey, message, caller))
+    fun logEvent(eventKey: E, message: String, callerMethod: Method? = null): LoggingEvent<E>{
+        return logEvent(LoggingEvent(eventKey, message, callerMethod))
     }
 
     internal fun logEvent(ev: LoggingEvent<E>): LoggingEvent<E>{
