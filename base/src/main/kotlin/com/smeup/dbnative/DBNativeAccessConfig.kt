@@ -17,6 +17,8 @@
 
 package com.smeup.dbnative
 
+import com.smeup.dbnative.log.Logger
+
 data class DBNativeAccessConfig (val connectionsConfig: List<ConnectionConfig>)
 
 
@@ -38,5 +40,6 @@ data class ConnectionConfig (
     val password: String,
     val driver: String? = null,
     val impl: String? = null,
-    val properties : Map<String, String> = mutableMapOf())
+    val properties : Map<String, String> = mutableMapOf(),
+    val logger: Logger<*>? = null)
 

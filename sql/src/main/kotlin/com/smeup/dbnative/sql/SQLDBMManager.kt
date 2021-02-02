@@ -17,6 +17,7 @@
 
 package com.smeup.dbnative.sql
 
+import SQLLogger
 import com.smeup.dbnative.ConnectionConfig
 import com.smeup.dbnative.DBManagerBaseImpl
 import com.smeup.dbnative.model.FileMetadata
@@ -44,6 +45,11 @@ open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBMa
         connection.close()
     }
 
+    private fun getLogger(): SQLLogger {
+        require(connectionConfig.logger is SQLLogger){"ConnectionConfig.logger has wrong type, must be ${SQLDBFile::javaClass.name}"}
+        return connectionConfig.logger as SQLLogger
+    }
+
     /*
     override fun metadataOf(name: String): FileMetadata {
         require(openedFile.containsKey(name)) {
@@ -63,7 +69,7 @@ open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBMa
     override fun createFile(metadata: FileMetadata) {
         connection.createStatement().use {
             it.execute(metadata.toSQL())
-            var dbFile = SQLDBFile(name = metadata.tableName, fileMetadata = metadata, connection =  connection)
+            val dbFile = SQLDBFile(name = metadata.tableName, fileMetadata = metadata, connection =  connection, getLogger())
             openedFile.putIfAbsent(metadata.tableName, dbFile)
         }
         super.createFile(metadata)
@@ -73,7 +79,7 @@ open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBMa
         require(existFile(name)) {
             "Cannot open a unregistered file $name"
         }
-        SQLDBFile(name = name, fileMetadata = metadataOf(name), connection =  connection)
+        SQLDBFile(name = name, fileMetadata = metadataOf(name), connection =  connection, getLogger())
     }
 
 

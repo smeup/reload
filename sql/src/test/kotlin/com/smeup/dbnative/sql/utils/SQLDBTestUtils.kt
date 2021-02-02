@@ -68,7 +68,8 @@ enum class TestSQLDBType(
         fileName= "*",
         url = "jdbc:hsqldb:mem:$DATABASE_NAME",
         user = "sa",
-        password = "root"),
+        password = "root",
+        logger = SQLLogger.getSimpleInstance()),
         destroyDatabase = { dbaConnection -> dbaConnection.prepareStatement("DROP SCHEMA PUBLIC CASCADE").use { it.execute() }  }
     ),
     DB2_400(ConnectionConfig(

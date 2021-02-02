@@ -17,6 +17,7 @@
 
 package com.smeup.dbnative.sql
 
+import SQLLogger
 import com.smeup.dbnative.file.DBFile
 import com.smeup.dbnative.file.Record
 import com.smeup.dbnative.file.RecordField
@@ -25,7 +26,7 @@ import com.smeup.dbnative.model.FileMetadata
 import java.sql.Connection
 import java.sql.ResultSet
 
-class SQLDBFile(override var name: String, override var fileMetadata: FileMetadata, var connection: Connection) : DBFile {
+class SQLDBFile(override var name: String, override var fileMetadata: FileMetadata, var connection: Connection, val logger: SQLLogger? = null) : DBFile {
 
     private var resultSet: ResultSet? = null
     private var movingForward = true
@@ -44,11 +45,13 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
         if (indexes.isEmpty()) connection.orderingFields(name) else indexes
     }
 
+
     override fun setll(key: String): Boolean {
         return setll(mutableListOf(key))
     }
 
     override fun setll(keys: List<String>): Boolean {
+        logger?.logEvent(SQL_logging_key.setll, "Start setll", object{}.javaClass.enclosingMethod.toString())
         lastOperationSet = true
 
         var keyAsRecordField = keys.mapIndexed { index, value ->
@@ -67,6 +70,7 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
     }
 
     override fun setgt(keys: List<String>): Boolean {
+        logger?.logEvent(SQL_logging_key.setgt, "Start setgt", object{}.javaClass.enclosingMethod.toString())
         lastOperationSet = true
 
         var keyAsRecordField = keys.mapIndexed { index, value ->
@@ -84,7 +88,7 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
     }
 
     override fun chain(keys: List<String>): Result {
-
+        logger?.logEvent(SQL_logging_key.chain, "Start chain", object{}.javaClass.enclosingMethod.toString())
         lastOperationSet = false
 
         var keyAsRecordField = keys.mapIndexed { index, value ->
