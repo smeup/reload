@@ -11,9 +11,7 @@ class SQLLogger(defaultLoggingFunction: ((LoggingEvent<SQL_logging_key>) -> Unit
         fun getSimpleInstance(): SQLLogger{
             return SQLLogger { println("${it.issueTime} - ${it.eventKey.name} - ${it.caller}: ${it.message}") }.apply {
                 //addLoggingEvent(SQL_logging_key.setll).addLoggingEvent(SQL_logging_key.setgt)
-                for(key in SQL_logging_key.values()){
-                    addLoggingEvent(key)
-                }
+                SQL_logging_key.values().forEach { addLoggingEvent(it) }
             }
         }
     }
