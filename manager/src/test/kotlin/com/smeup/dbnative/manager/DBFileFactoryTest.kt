@@ -19,6 +19,8 @@ package com.smeup.dbnative.manager
 
 import com.smeup.dbnative.ConnectionConfig
 import com.smeup.dbnative.DBNativeAccessConfig
+import com.smeup.dbnative.log.Logger
+import com.smeup.dbnative.log.LoggingLevel
 import com.smeup.dbnative.model.CharacterType
 import com.smeup.dbnative.model.Field
 import com.smeup.dbnative.model.FileMetadata
@@ -30,6 +32,7 @@ import org.junit.Test
 import java.sql.Connection
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+private val LOGGING_LEVEL = LoggingLevel.OFF
 
 private enum class TestConnectionConfig(
     val connectionConfig: ConnectionConfig,
@@ -72,7 +75,8 @@ class DBFileFactoryTest {
             TestConnectionConfig.DEFAULT.connectionConfig,
             TestConnectionConfig.STARTS_WITH_TEST.connectionConfig,
             TestConnectionConfig.MUNICIPALITY.connectionConfig
-        ))
+        ),
+        Logger.getSimpleInstance(LOGGING_LEVEL))
         manager = SQLDBMManager(TestConnectionConfig.STARTS_WITH_TEST.connectionConfig)
         manager.connection.createStatement().use {
             it.executeUpdate("CREATE TABLE TEST1 (NAME CHAR(20))")

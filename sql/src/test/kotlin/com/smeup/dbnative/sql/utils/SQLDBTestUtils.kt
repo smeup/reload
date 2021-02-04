@@ -38,7 +38,7 @@ const val TSTTAB_TABLE_NAME = "TSTTAB"
 const val TST2TAB_TABLE_NAME = "TSTTAB"
 const val MUNICIPALITY_TABLE_NAME = "MUNICIPALITY"
 const val TEST_LOG = false
-val LOGGING_LEVEL = LoggingLevel.DEBUG
+private val LOGGING_LEVEL = LoggingLevel.DEBUG
 //do not change defaultValue
 //if you want to create sqlconnection against another db use function: dbManagerForTest(testSQLDBType: TestSQLDBType)
 private var defaultDbType = TestSQLDBType.HSQLDB
