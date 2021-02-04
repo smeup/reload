@@ -63,7 +63,7 @@ open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBMa
     override fun createFile(metadata: FileMetadata) {
         connection.createStatement().use {
             it.execute(metadata.toSQL())
-            val dbFile = SQLDBFile(name = metadata.tableName, fileMetadata = metadata, connection =  connection)
+            val dbFile = SQLDBFile(name = metadata.tableName, fileMetadata = metadata, connection =  connection, logger)
             openedFile.putIfAbsent(metadata.tableName, dbFile)
         }
         super.createFile(metadata)
