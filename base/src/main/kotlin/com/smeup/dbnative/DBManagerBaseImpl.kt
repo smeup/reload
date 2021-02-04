@@ -18,12 +18,13 @@
 
 package com.smeup.dbnative
 
+import com.smeup.dbnative.log.Logger
 import com.smeup.dbnative.metadata.MetadataRegister
 import com.smeup.dbnative.metadata.file.FSMetadataRegisterImpl
 import com.smeup.dbnative.model.FileMetadata
 
 abstract class DBManagerBaseImpl : DBMManager {
-
+    var logger: Logger? = null
    /*
     val metadataRegister: MetadataRegister
         get() {

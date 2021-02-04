@@ -1,34 +1,42 @@
 package com.smeup.dbnative.log
 
-import java.lang.reflect.Method
+import java.text.SimpleDateFormat
 import java.util.*
 
-
-data class LoggingEvent<E: Enum<E>>(val eventKey: E, val message: String, private val callerMethod: Method? = null){
-    val issueTime: Date = Date()
-    val caller: String = callerMethod?.let { "${it.declaringClass}.${it.name}" }?:""
+enum class LoggingLevel{
+    OFF, ERROR, WARN, INFO, DEBUG, TRACE, ALL
 }
 
-abstract class Logger<E: Enum<E>>(val defaultLoggingFunction: ((LoggingEvent<E>) -> Unit)? = null){
-    private var loggingFunctions: MutableMap<E, (LoggingEvent<E>) -> Unit> = mutableMapOf()
+enum class LoggingKey(val level: LoggingLevel){
+    native_access_method(LoggingLevel.TRACE),
+    read_data(LoggingLevel.TRACE),
+    execute_inquiry(LoggingLevel.DEBUG),
+    search_data(LoggingLevel.DEBUG)
+}
 
-    fun addLoggingEvent(loggingKey: E, loggingFunction: ((LoggingEvent<E>) -> Unit)? = null): Logger<E>{
-        loggingFunction?.apply { }?:defaultLoggingFunction?.apply { loggingFunctions[loggingKey] = this }
-        return this
+data class LoggingEvent(val eventKey: LoggingKey, val message: String, val callerMethod: String? = null){
+    val issueTime: Date = Date()
+}
+
+class Logger(val level:LoggingLevel = LoggingLevel.DEBUG, val loggingFunction: ((LoggingEvent) -> Unit)){
+    companion object{
+        fun getSimpleInstance(level:LoggingLevel = LoggingLevel.DEBUG): Logger{
+            return Logger(level) { println("[${SimpleDateFormat("yyyy-MM-dd HH:mm:ss SSS").format(it.issueTime)}][${it.eventKey.level}][${it.eventKey.name}][${it.callerMethod}] * ${it.message}") }
+        }
     }
-
-    fun addLoggingEvents(vararg eventKey: E){
-        for(key in eventKey){
-            defaultLoggingFunction?.apply { loggingFunctions[key] = this }
+    fun logEvent(eventKey: LoggingKey, message: String): LoggingEvent?{
+        return if(eventKey.level.ordinal <= level.ordinal) {
+            val caller = Thread.currentThread().getStackTrace().getOrNull(2)?.let { "${it.className} ${it.methodName}:${it.lineNumber}" }?:""
+            logEvent(LoggingEvent(eventKey, message, caller))
+        }
+        else{
+            null
         }
     }
 
-    fun logEvent(eventKey: E, message: String, callerMethod: Method? = null): LoggingEvent<E>{
-        return logEvent(LoggingEvent(eventKey, message, callerMethod))
-    }
-
-    internal fun logEvent(ev: LoggingEvent<E>): LoggingEvent<E>{
-        loggingFunctions[ev.eventKey]?.invoke(ev).let { return ev }
+    internal fun logEvent(ev: LoggingEvent): LoggingEvent{
+        loggingFunction.invoke(ev)
+        return ev
     }
 }
 

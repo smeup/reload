@@ -17,6 +17,7 @@
 
 package com.smeup.dbnative.file
 
+import com.smeup.dbnative.log.Logger
 import com.smeup.dbnative.model.FileMetadata
 
 /**
@@ -26,6 +27,7 @@ interface DBFile: AutoCloseable {
 
     var name: String
     var fileMetadata: FileMetadata
+    var logger: Logger?
 
     // Control functions
     fun eof(): Boolean
