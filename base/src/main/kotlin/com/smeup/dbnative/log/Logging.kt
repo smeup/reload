@@ -18,7 +18,7 @@ data class LoggingEvent(val eventKey: LoggingKey, val message: String, val calle
     val issueTime: Date = Date()
 }
 
-class Logger(val level:LoggingLevel = LoggingLevel.DEBUG, val loggingFunction: ((LoggingEvent) -> Unit)){
+class Logger(val level:LoggingLevel = LoggingLevel.OFF, val loggingFunction: ((LoggingEvent) -> Unit)){
     companion object{
         fun getSimpleInstance(level:LoggingLevel = LoggingLevel.DEBUG): Logger{
             return Logger(level) { println("[${SimpleDateFormat("yyyy-MM-dd HH:mm:ss SSS").format(it.issueTime)}][${it.eventKey.level}][${it.eventKey.name}][${it.callerMethod}] * ${it.message}") }
