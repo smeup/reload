@@ -343,7 +343,7 @@ class SQLDBFile(override var name: String,
             result = readFromResultSet()
             counter++
         } while (!result.record.matches(keys) && resultSet.hasRecords() && !eof())
-        logger?.logEvent(LoggingKey.search_data, "Search stops after $counter ResultSet iterations. Current row number is ${resultSet?.row?:" undefined"}}")
+        logger?.logEvent(LoggingKey.search_data, "Search stops after $counter ResultSet iterations. Is eof: ${eof()}. Current row number is ${resultSet?.row?:" undefined"}}")
         return result
     }
 
@@ -360,8 +360,10 @@ class SQLDBFile(override var name: String,
             return false
         } else {
             if (getResultSet() != null) {
+                logger?.logEvent(LoggingKey.read_data, "Read current record for equal")
                 val result = getResultSet().toValues().matches(lastKeys)
                 getResultSet()?.previous()
+                logger?.logEvent(LoggingKey.read_data, "Record for equal read")
                 return result
             } else {
                 return false
