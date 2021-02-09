@@ -19,6 +19,7 @@ package com.smeup.dbnative.sql
 
 import com.smeup.dbnative.ConnectionConfig
 import com.smeup.dbnative.DBManagerBaseImpl
+import com.smeup.dbnative.log.LoggingKey
 import com.smeup.dbnative.model.FileMetadata
 import java.sql.Connection
 import java.sql.DriverManager
@@ -30,11 +31,14 @@ open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBMa
     private var openedFile = mutableMapOf<String, SQLDBFile>()
 
     val connection : Connection by lazy {
+        logger?.logEvent(LoggingKey.connection, "Opening SQL connection")
         connectionConfig.driver?.let {
             Class.forName(connectionConfig.driver)
         }
         //todo handle connection pool
-        DriverManager.getConnection(connectionConfig.url, connectionConfig.user, connectionConfig.password)
+        DriverManager.getConnection(connectionConfig.url, connectionConfig.user, connectionConfig.password).apply {
+            logger?.logEvent(LoggingKey.connection, "SQL connection successfully opened")
+        }
     }
 
     override fun validateConfig() {

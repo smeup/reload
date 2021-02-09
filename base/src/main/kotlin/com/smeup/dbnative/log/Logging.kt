@@ -11,7 +11,8 @@ enum class LoggingKey(val level: LoggingLevel){
     native_access_method(LoggingLevel.TRACE),
     read_data(LoggingLevel.TRACE),
     execute_inquiry(LoggingLevel.DEBUG),
-    search_data(LoggingLevel.DEBUG)
+    search_data(LoggingLevel.DEBUG),
+    connection(LoggingLevel.DEBUG)
 }
 
 data class LoggingEvent(val eventKey: LoggingKey, val message: String, val callerMethod: String? = null){
