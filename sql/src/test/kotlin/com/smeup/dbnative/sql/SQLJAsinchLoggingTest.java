@@ -6,14 +6,12 @@ import com.smeup.dbnative.log.LoggingEvent;
 import com.smeup.dbnative.log.LoggingLevel;
 import com.smeup.dbnative.sql.utils.TestSQLDBType;
 import kotlin.Unit;
-import kotlin.jvm.functions.Function0;
 import kotlin.jvm.functions.Function1;
 import org.jetbrains.annotations.NotNull;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.Formatter;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -75,31 +73,49 @@ public class SQLJAsinchLoggingTest {
             queue = new EventQueue();
             setLoggingFunction(new Function1<LoggingEvent, Unit>() {
                 public Unit invoke(LoggingEvent event) {
-                    queue.offer(event);
+                    queue.offer(new EventWrapper(event));
                     return null;
                 }
             });
             Thread t = new Thread(new EventConsumer(queue), "Asynch loggon sample consumer");
+            t.setDaemon(false);
             t.start();
         }
 
         public void stop(){
-            queue.setStop(true);
+            queue.setStop();
         }
     }
 
-    private class EventQueue extends ArrayBlockingQueue<LoggingEvent>{
-        private boolean stop;
+    private class EventWrapper{
+        private LoggingEvent event;
+        private boolean poison;
+
+        public EventWrapper(LoggingEvent event){
+            this(event, false);
+        }
+
+        public EventWrapper(LoggingEvent event, boolean poison){
+            this.event = event;
+            this.poison = poison;
+        }
+
+        public LoggingEvent getEvent() {
+            return event;
+        }
+
+        public boolean isPoison() {
+            return poison;
+        }
+    }
+
+    private class EventQueue extends ArrayBlockingQueue<EventWrapper>{
         public EventQueue(){
             super(1000);
         }
 
-        public boolean isStop() {
-            return stop;
-        }
-
-        public void setStop(boolean stop) {
-            this.stop = stop;
+        public void setStop() {
+            this.offer(new EventWrapper(null, true));
         }
     }
 
@@ -111,9 +127,14 @@ public class SQLJAsinchLoggingTest {
 
         public void run() {
             try {
-                while (!getQueue().isStop()) {
-                    consume(getQueue().take());
+                EventWrapper ev = null;
+                do{
+                    ev = getQueue().take();
+                    if(!ev.isPoison()){
+                        consume(ev.getEvent());
+                    }
                 }
+                while(!ev.isPoison());
             }
             catch(Throwable t){
                 throw new RuntimeException(t);
