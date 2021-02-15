@@ -15,20 +15,39 @@ enum class LoggingKey(val level: LoggingLevel){
     connection(LoggingLevel.DEBUG)
 }
 
-data class LoggingEvent(val eventKey: LoggingKey, val message: String, val callerMethod: String? = null){
+data class LoggingEvent(val eventKey: LoggingKey,
+                        val message: String,
+                        val callerMethod: String? = null,
+                        val elapsedTime: Long? = null){
     val issueTime: Date = Date()
+    fun isMeasuredEvent() = elapsedTime != null
 }
 
-class Logger(val level:LoggingLevel = LoggingLevel.OFF, val loggingFunction: ((LoggingEvent) -> Unit)){
+open class Logger(val level:LoggingLevel = LoggingLevel.OFF,
+             var loggingFunction: ((LoggingEvent) -> Unit)?)
+{
     companion object{
+        @JvmStatic
         fun getSimpleInstance(level:LoggingLevel = LoggingLevel.DEBUG): Logger{
-            return Logger(level) { println("[${SimpleDateFormat("yyyy-MM-dd HH:mm:ss SSS").format(it.issueTime)}][${it.eventKey.level}][${it.eventKey.name}][${it.callerMethod}] * ${it.message}") }
+            return Logger(level, loggingFunction = {
+                val logged = "[%s][%s][%s][%s] * %s %s"
+                println(logged.format(SimpleDateFormat("yyyy-MM-dd HH:mm:ss SSS").format(it.issueTime),
+                    it.eventKey.level,
+                    it.eventKey.name,
+                    it.callerMethod,
+                    it.message,
+                    if(it.isMeasuredEvent()) "(${it.elapsedTime} ms)" else "")
+                    )
+            })
         }
     }
-    fun logEvent(eventKey: LoggingKey, message: String): LoggingEvent?{
+
+    fun logEvent(eventKey: LoggingKey, message: String, elapsedTime: Long? = null): LoggingEvent?{
         return if(eventKey.level.ordinal <= level.ordinal) {
-            val caller = Thread.currentThread().getStackTrace().getOrNull(2)?.let { "${it.className} ${it.methodName}:${it.lineNumber}" }?:""
-            logEvent(LoggingEvent(eventKey, message, caller))
+            val caller = Thread.currentThread().getStackTrace().getOrNull(2)?.let {
+                "${it.className} ${it.methodName}:${it.lineNumber}"
+            }?:""
+            logEvent(LoggingEvent(eventKey, message, caller, elapsedTime))
         }
         else{
             null
@@ -36,7 +55,7 @@ class Logger(val level:LoggingLevel = LoggingLevel.OFF, val loggingFunction: ((L
     }
 
     internal fun logEvent(ev: LoggingEvent): LoggingEvent{
-        loggingFunction.invoke(ev)
+        loggingFunction?.invoke(ev)
         return ev
     }
 }

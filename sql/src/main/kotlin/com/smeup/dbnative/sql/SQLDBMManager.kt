@@ -23,6 +23,7 @@ import com.smeup.dbnative.log.LoggingKey
 import com.smeup.dbnative.model.FileMetadata
 import java.sql.Connection
 import java.sql.DriverManager
+import kotlin.system.measureTimeMillis
 
 open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBManagerBaseImpl()  {
 
@@ -32,13 +33,16 @@ open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBMa
 
     val connection : Connection by lazy {
         logger?.logEvent(LoggingKey.connection, "Opening SQL connection")
-        connectionConfig.driver?.let {
-            Class.forName(connectionConfig.driver)
+        val conn: Connection
+        measureTimeMillis {
+            connectionConfig.driver?.let {
+                Class.forName(connectionConfig.driver)
+            }
+            conn = DriverManager.getConnection(connectionConfig.url, connectionConfig.user, connectionConfig.password)
+        }.apply {
+            logger?.logEvent(LoggingKey.connection, "SQL connection successfully opened", this)
         }
-        //todo handle connection pool
-        DriverManager.getConnection(connectionConfig.url, connectionConfig.user, connectionConfig.password).apply {
-            logger?.logEvent(LoggingKey.connection, "SQL connection successfully opened")
-        }
+        conn
     }
 
     override fun validateConfig() {
