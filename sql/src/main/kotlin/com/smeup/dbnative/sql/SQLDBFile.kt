@@ -17,15 +17,23 @@
 
 package com.smeup.dbnative.sql
 
+
 import com.smeup.dbnative.file.DBFile
 import com.smeup.dbnative.file.Record
 import com.smeup.dbnative.file.RecordField
 import com.smeup.dbnative.file.Result
+import com.smeup.dbnative.log.Logger
+import com.smeup.dbnative.log.LoggingKey
 import com.smeup.dbnative.model.FileMetadata
 import java.sql.Connection
+import java.sql.PreparedStatement
 import java.sql.ResultSet
+import kotlin.system.measureTimeMillis
 
-class SQLDBFile(override var name: String, override var fileMetadata: FileMetadata, var connection: Connection) : DBFile {
+class SQLDBFile(override var name: String,
+                override var fileMetadata: FileMetadata,
+                var connection: Connection,
+                override var logger: Logger? = null) : DBFile {
 
     private var resultSet: ResultSet? = null
     private var movingForward = true
@@ -44,21 +52,29 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
         if (indexes.isEmpty()) connection.orderingFields(name) else indexes
     }
 
+
     override fun setll(key: String): Boolean {
         return setll(mutableListOf(key))
     }
 
     override fun setll(keys: List<String>): Boolean {
-        lastOperationSet = true
+        logger?.logEvent(LoggingKey.native_access_method, "Executing setll on keys $keys")
+        val point: Boolean
+        measureTimeMillis {
+            lastOperationSet = true
 
-        var keyAsRecordField = keys.mapIndexed { index, value ->
-            val keyname = thisFileKeys.get(index)
-            RecordField(keyname, value)
+            var keyAsRecordField = keys.mapIndexed { index, value ->
+                val keyname = thisFileKeys.get(index)
+                RecordField(keyname, value)
+            }
+
+            checkAndStoreLastKeys(keyAsRecordField)
+            movingForward = true
+            point = point(keyAsRecordField);
+        }.apply {
+            logger?.logEvent(LoggingKey.native_access_method, "setll executed", this)
         }
-
-        checkAndStoreLastKeys(keyAsRecordField)
-        movingForward = true
-        return point(keyAsRecordField)
+        return point
     }
 
     override fun setgt(key: String): Boolean {
@@ -67,16 +83,23 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
     }
 
     override fun setgt(keys: List<String>): Boolean {
-        lastOperationSet = true
+        logger?.logEvent(LoggingKey.native_access_method, "Executing setgt on keys $keys")
+        val point: Boolean
+        measureTimeMillis {
+            lastOperationSet = true
 
-        var keyAsRecordField = keys.mapIndexed { index, value ->
-            val keyname = thisFileKeys.get(index)
-            RecordField(keyname, value)
+            var keyAsRecordField = keys.mapIndexed { index, value ->
+                val keyname = thisFileKeys.get(index)
+                RecordField(keyname, value)
+            }
+
+            checkAndStoreLastKeys(keyAsRecordField)
+            movingForward = false
+            point = point(keyAsRecordField)
+        }.apply {
+            logger?.logEvent(LoggingKey.native_access_method, "setgt executed", this)
         }
-
-        checkAndStoreLastKeys(keyAsRecordField)
-        movingForward = false
-        return point(keyAsRecordField)
+        return point
     }
 
     override fun chain(key: String): Result {
@@ -84,49 +107,68 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
     }
 
     override fun chain(keys: List<String>): Result {
+        logger?.logEvent(LoggingKey.native_access_method, "Executing chain on keys $keys")
+        val read: Result
+        measureTimeMillis {
+            lastOperationSet = false
 
-        lastOperationSet = false
+            var keyAsRecordField = keys.mapIndexed { index, value ->
+                val keyname = thisFileKeys.get(index)
+                RecordField(keyname, value)
+            }
 
-        var keyAsRecordField = keys.mapIndexed { index, value ->
-            val keyname = thisFileKeys.get(index)
-            RecordField(keyname, value)
+            checkAndStoreLastKeys(keyAsRecordField)
+            movingForward = true
+            calculateResultSet(keyAsRecordField)
+            read = readFromResultSetFilteringBy(keyAsRecordField)
+        }.apply {
+            logger?.logEvent(LoggingKey.native_access_method, "chain executed", this)
         }
-
-        checkAndStoreLastKeys(keyAsRecordField)
-        movingForward = true
-        calculateResultSet(keyAsRecordField)
-        return readFromResultSetFilteringBy(keyAsRecordField)
+        return read
     }
 
     override fun read(): Result {
-        lastOperationSet = false
+        logger?.logEvent(LoggingKey.native_access_method, "Executing read")
+        val read: Result
+        measureTimeMillis {
+            lastOperationSet = false
 
 
-        if (resultSet == null) {
-            pointAtUpperLL()
+            if (resultSet == null) {
+                pointAtUpperLL()
+            }
+            if (!movingForward) {
+                movingForward = true
+                recalculateResultSet()
+            }
+            read = readFromResultSet()
+        }.apply {
+            logger?.logEvent(LoggingKey.native_access_method, "read executed", this)
         }
-        if (!movingForward) {
-            movingForward = true
-            recalculateResultSet()
-        }
-        return readFromResultSet()
+        return read
     }
 
     override fun readPrevious(): Result {
-        lastOperationSet = false
+        logger?.logEvent(LoggingKey.native_access_method, "Executing readPrevious")
+        val read: Result
+        measureTimeMillis {
+            lastOperationSet = false
 
-        if (resultSet == null) {
-            pointAtUpperLL()
+            if (resultSet == null) {
+                pointAtUpperLL()
+            }
+            if (movingForward) {
+                movingForward = false
+                recalculateResultSet()
+            }
+            read = readFromResultSet()
+        }.apply {
+            logger?.logEvent(LoggingKey.native_access_method, "readPrevious executed", this)
         }
-        if (movingForward) {
-            movingForward = false
-            recalculateResultSet()
-        }
-        return readFromResultSet()
+        return read
     }
 
     override fun readEqual(): Result {
-
         val lastKeysAsList = lastKeys.map {
             it.value
         }
@@ -141,23 +183,29 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
     }
 
     override fun readEqual(keys: List<String>): Result {
+        logger?.logEvent(LoggingKey.native_access_method, "Executing readEqual")
+        val read: Result
+        measureTimeMillis {
+            lastOperationSet = false
 
-        lastOperationSet = false
+            var keysAsRecordField = keys.mapIndexed { index, value ->
+                val keyname = thisFileKeys.get(index)
+                RecordField(keyname, value)
+            }
 
-        var keysAsRecordField = keys.mapIndexed { index, value ->
-            val keyname = thisFileKeys.get(index)
-            RecordField(keyname, value)
+            checkAndStoreLastKeys(keysAsRecordField)
+            if (resultSet == null) {
+                pointAtUpperLL()
+            }
+            if (!movingForward) {
+                movingForward = true
+                recalculateResultSet()
+            }
+            read = readFromResultSetFilteringBy(keysAsRecordField)
+        }.apply {
+            logger?.logEvent(LoggingKey.native_access_method, "readEqual executed", this)
         }
-
-        checkAndStoreLastKeys(keysAsRecordField)
-        if (resultSet == null) {
-            pointAtUpperLL()
-        }
-        if (!movingForward) {
-            movingForward = true
-            recalculateResultSet()
-        }
-        return readFromResultSetFilteringBy(keysAsRecordField)
+        return read
     }
 
     override fun readPreviousEqual(): Result {
@@ -174,72 +222,100 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
     }
 
     override fun readPreviousEqual(keys: List<String>): Result {
+        logger?.logEvent(LoggingKey.native_access_method, "Executing readPreviousEqual on keys ${keys}")
+        val read: Result
+        measureTimeMillis {
+            lastOperationSet = false
 
-        lastOperationSet = false
+            var keyAsRecordField = keys.mapIndexed { index, value ->
+                val keyname = thisFileKeys.get(index)
+                RecordField(keyname, value)
+            }
 
-        var keyAsRecordField = keys.mapIndexed { index, value ->
-            val keyname = thisFileKeys.get(index)
-            RecordField(keyname, value)
+            checkAndStoreLastKeys(keyAsRecordField)
+            if (resultSet == null) {
+                pointAtUpperLL()
+            }
+            if (movingForward) {
+                movingForward = false
+                recalculateResultSet()
+            }
+            if (keys.isNotEmpty()) {
+                lastKeys = keyAsRecordField
+            }
+            read = readFromResultSetFilteringBy(keyAsRecordField)
+        }.apply {
+            logger?.logEvent(LoggingKey.native_access_method, "readPreviousEqual executed", this)
         }
-
-        checkAndStoreLastKeys(keyAsRecordField)
-        if (resultSet == null) {
-            pointAtUpperLL()
-        }
-        if (movingForward) {
-            movingForward = false
-            recalculateResultSet()
-        }
-        if (keys.isNotEmpty()) {
-            lastKeys = keyAsRecordField
-        }
-        return readFromResultSetFilteringBy(keyAsRecordField)
+        return read
     }
 
     override fun write(record: Record): Result {
+        logger?.logEvent(LoggingKey.native_access_method, "Executing write for record ${record}")
         lastOperationSet = false
-
-        // TODO: manage errors
-        val sql = name.insertSQL(record)
-        connection.prepareStatement(sql).use { it ->
-            it.bind(record.values.map { it })
-            it.execute()
+        measureTimeMillis {
+            // TODO: manage errors
+            val sql = name.insertSQL(record)
+            connection.prepareStatement(sql).use { it ->
+                it.bind(record.values.map { it })
+                it.execute()
+            }
+        }.apply {
+            logger?.logEvent(LoggingKey.native_access_method, "write executed", this)
         }
         return Result(record)
     }
 
     override fun update(record: Record): Result {
+        logger?.logEvent(LoggingKey.native_access_method, "Executing update for record ${record}")
         lastOperationSet = false
-
-        // record before update is "actualRecord"
-        // record post update will be "record"
-        var atLeastOneFieldChanged = false
-        actualRecord?.forEach {
-            var fieldValue = record.getValue(it.key)
-            if(fieldValue != it.value){
-                atLeastOneFieldChanged = true
-                this.getResultSet()?.updateObject(it.key, fieldValue)
+        measureTimeMillis {
+            // record before update is "actualRecord"
+            // record post update will be "record"
+            var atLeastOneFieldChanged = false
+            actualRecord?.forEach {
+                var fieldValue = record.getValue(it.key)
+                if(fieldValue != it.value){
+                    atLeastOneFieldChanged = true
+                    this.getResultSet()?.updateObject(it.key, fieldValue)
+                }
             }
-        }
-        if(atLeastOneFieldChanged){
-            this.getResultSet()?.updateRow()
+            if(atLeastOneFieldChanged){
+                this.getResultSet()?.updateRow()
+            }
+        }.apply {
+            logger?.logEvent(LoggingKey.native_access_method, "update executed", this)
         }
         return Result(record)
     }
 
     override fun delete(record: Record): Result {
+        logger?.logEvent(LoggingKey.native_access_method, "Executing delete for record ${record}")
         lastOperationSet = false
-
-        this.getResultSet()?.deleteRow()
+        measureTimeMillis {
+            this.getResultSet()?.deleteRow()
+        }.apply {
+            logger?.logEvent(LoggingKey.native_access_method, "delete executed", this)
+        }
         return Result(record)
     }
 
 
     private fun executeQuery(sql: String, values: List<String>) {
         resultSet.closeIfOpen()
-        val stm = connection.prepareStatement(sql, ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE)
-        stm.bind(values)
-        resultSet = stm.executeQuery()
+        logger?.logEvent(LoggingKey.execute_inquiry, "Preparing statement for query: $sql with bingings: $values")
+        val stm: PreparedStatement
+        measureTimeMillis {
+            stm = connection.prepareStatement(sql, ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE)
+            stm.bind(values)
+        }.apply {
+            logger?.logEvent(LoggingKey.execute_inquiry, "Statement prepared, executing query for statement", this)
+        }
+        measureTimeMillis {
+            resultSet = stm.executeQuery()
+        }.apply {
+            logger?.logEvent(LoggingKey.execute_inquiry, "Query succesfully executed", this)
+        }
     }
 
     private fun checkAndStoreLastKeys(keys: List<RecordField>) {
@@ -304,24 +380,36 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
     }
 
     private fun readFromResultSet(): Result {
+        logger?.logEvent(LoggingKey.read_data, "Read record from ResultSet")
         val result: Result
-        if (actualRecordToPop != null) {
-            result = Result(actualRecordToPop!!)
-            actualRecordToPop = null
-        } else {
-            result = Result(resultSet.toValues())
+        val record = Record()
+        measureTimeMillis {
+            if (actualRecordToPop != null) {
+                result = Result(actualRecordToPop!!)
+                actualRecordToPop = null
+            } else {
+                result = Result(resultSet.toValues())
+            }
+            record.putAll(result.record)
+            actualRecord = record
+        }.apply {
+            logger?.logEvent(LoggingKey.read_data, "Record read $record", this)
         }
-        val record: Record = Record()
-        record.putAll(result.record)
-        actualRecord = record
         return result
     }
 
     private fun readFromResultSetFilteringBy(keys: List<RecordField>): Result {
+        logger?.logEvent(LoggingKey.search_data, "Searching record for keys: ${keys}")
         var result: Result
-        do {
-            result = readFromResultSet()
-        } while (!result.record.matches(keys) && resultSet.hasRecords() && !eof())
+        var counter = 0
+        measureTimeMillis {
+            do {
+                result = readFromResultSet()
+                counter++
+            } while (!result.record.matches(keys) && resultSet.hasRecords() && !eof())
+        }.apply {
+            logger?.logEvent(LoggingKey.search_data, "Search stops after $counter ResultSet iterations. Is eof: ${eof()}. Current row number is ${resultSet?.row?:" undefined"}}", this)
+        }
         return result
     }
 
@@ -338,8 +426,14 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
             return false
         } else {
             if (getResultSet() != null) {
-                val result = getResultSet().toValues().matches(lastKeys)
-                getResultSet()?.previous()
+                logger?.logEvent(LoggingKey.read_data, "Read current record for equal")
+                val result: Boolean
+                measureTimeMillis {
+                    result = getResultSet().toValues().matches(lastKeys)
+                    getResultSet()?.previous()
+                }.apply {
+                    logger?.logEvent(LoggingKey.read_data, "Record for equal read", this)
+                }
                 return result
             } else {
                 return false

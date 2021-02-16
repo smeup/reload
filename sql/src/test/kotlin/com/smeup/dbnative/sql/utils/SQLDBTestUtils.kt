@@ -21,6 +21,8 @@ import com.github.doyaaaaaken.kotlincsv.dsl.csvReader
 import com.smeup.dbnative.ConnectionConfig
 import com.smeup.dbnative.file.Record
 import com.smeup.dbnative.file.RecordField
+import com.smeup.dbnative.log.Logger
+import com.smeup.dbnative.log.LoggingLevel
 import com.smeup.dbnative.model.*
 import com.smeup.dbnative.sql.CONVENTIONAL_INDEX_SUFFIX
 import com.smeup.dbnative.sql.SQLDBMManager
@@ -36,6 +38,7 @@ const val TSTTAB_TABLE_NAME = "TSTTAB"
 const val TST2TAB_TABLE_NAME = "TSTTAB"
 const val MUNICIPALITY_TABLE_NAME = "MUNICIPALITY"
 const val TEST_LOG = false
+private val LOGGING_LEVEL = LoggingLevel.OFF
 //do not change defaultValue
 //if you want to create sqlconnection against another db use function: dbManagerForTest(testSQLDBType: TestSQLDBType)
 private var defaultDbType = TestSQLDBType.HSQLDB
@@ -99,6 +102,7 @@ fun dbManagerForTest(testSQLDBType: TestSQLDBType) : SQLDBMManager {
         }
     }
     dbManager.setSQLLog(TEST_LOG)
+    dbManager.logger = Logger.getSimpleInstance(LOGGING_LEVEL)
     return dbManager
 }
 
