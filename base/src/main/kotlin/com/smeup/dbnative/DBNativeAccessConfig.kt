@@ -19,7 +19,9 @@ package com.smeup.dbnative
 
 import com.smeup.dbnative.log.Logger
 
-data class DBNativeAccessConfig (val connectionsConfig: List<ConnectionConfig>, val logger: Logger? = null)
+data class DBNativeAccessConfig (val connectionsConfig: List<ConnectionConfig>, val logger: Logger? = null){
+    constructor(connectionsConfig: List<ConnectionConfig>):this(connectionsConfig, null)
+}
 
 /**
  * Create a new instance of connection configuratio for a single file or file groups.
