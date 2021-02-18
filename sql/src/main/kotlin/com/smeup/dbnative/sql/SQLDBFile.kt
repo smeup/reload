@@ -35,6 +35,11 @@ class SQLDBFile(override var name: String,
                 var connection: Connection,
                 override var logger: Logger? = null) : DBFile {
 
+    constructor(
+        name: String,
+        fileMetadata: FileMetadata,
+        connection: Connection): this(name, fileMetadata, connection, null)
+
     private var resultSet: ResultSet? = null
     private var movingForward = true
     private var lastKeys: List<RecordField> = emptyList()
