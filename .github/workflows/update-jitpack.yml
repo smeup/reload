@@ -1,7 +1,7 @@
 on:
   push:
     branches:
-      - development
+      - master
     types: [closed]
 
 jobs:
