@@ -21,6 +21,8 @@ import com.github.doyaaaaaken.kotlincsv.dsl.csvReader
 import com.smeup.dbnative.ConnectionConfig
 import com.smeup.dbnative.file.Record
 import com.smeup.dbnative.file.RecordField
+import com.smeup.dbnative.log.Logger
+import com.smeup.dbnative.log.LoggingLevel
 import com.smeup.dbnative.model.CharacterType
 import com.smeup.dbnative.model.Field
 import com.smeup.dbnative.model.FileMetadata
@@ -32,10 +34,11 @@ import java.io.File
 
 const val MUNICIPALITY_TABLE_NAME = "MUNICIPALITY"
 const val TEST_LOG = false
+private val LOGGING_LEVEL = LoggingLevel.OFF
 
 fun dbManagerForTest(): NoSQLDBMManager {
     testLog("Creating NOSQLDBManager with db type MONGO")
-    return NoSQLDBMManager(ConnectionConfig("*", "mongodb://localhost:27017/W_TEST", "", ""))
+    return NoSQLDBMManager(ConnectionConfig("*", "mongodb://localhost:27017/W_TEST", "", "")).apply { logger = Logger.getSimpleInstance(LOGGING_LEVEL) }
 }
 
 fun createAndPopulateMunicipalityTable(dbManager: NoSQLDBMManager) {

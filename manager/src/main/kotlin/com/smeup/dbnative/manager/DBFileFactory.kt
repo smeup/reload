@@ -22,6 +22,7 @@ import com.smeup.dbnative.DBMManager
 import com.smeup.dbnative.DBManagerBaseImpl
 import com.smeup.dbnative.DBNativeAccessConfig
 import com.smeup.dbnative.file.DBFile
+import com.smeup.dbnative.log.Logger
 import com.smeup.dbnative.model.FileMetadata
 
 /**
@@ -56,7 +57,7 @@ class DBFileFactory(
     fun open(fileName: String, fileMetadata: FileMetadata?) : DBFile {
         val fileNameNormalized = fileNameNormalizer(fileName)
         val configMatch = findConnectionConfigFor(fileNameNormalized, config.connectionsConfig)
-        val dbmManager = managers.getOrPut(configMatch) {createDBManager(configMatch).apply { validateConfig() }}
+        val dbmManager = managers.getOrPut(configMatch) {createDBManager(configMatch, config.logger).apply { validateConfig() }}
 
         if (fileMetadata != null) {
             dbmManager.registerMetadata(fileMetadata, true)
@@ -107,14 +108,18 @@ fun findConnectionConfigFor(fileName: String, connectionsConfig: List<Connection
     return configList.sortedWith(DBFileFactory.COMPARATOR)[0]
 }
 
-private fun createDBManager(config: ConnectionConfig): DBMManager {
+private fun createDBManager(config: ConnectionConfig, logger: Logger? = null): DBMManager {
     val impl = getImplByUrl(config)
 
     val clazz :Class<DBMManager>? = Class.forName(impl) as Class<DBMManager>?
 
     return clazz?.let {
         val constructor = it.getConstructor(ConnectionConfig::class.java)
-        constructor.newInstance(config)
+        val dbmManager = constructor.newInstance(config)
+        if(dbmManager is DBManagerBaseImpl){
+            dbmManager.logger = logger
+        }
+        return dbmManager
     }!!
 }
 

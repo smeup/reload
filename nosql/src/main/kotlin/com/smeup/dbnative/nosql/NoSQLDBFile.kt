@@ -24,6 +24,7 @@ import com.smeup.dbnative.file.DBFile
 import com.smeup.dbnative.file.Record
 import com.smeup.dbnative.file.RecordField
 import com.smeup.dbnative.file.Result
+import com.smeup.dbnative.log.Logger
 import com.smeup.dbnative.model.Field
 import com.smeup.dbnative.model.FileMetadata
 import com.smeup.dbnative.nosql.utils.buildInsertCommand
@@ -31,7 +32,10 @@ import com.smeup.dbnative.utils.getField
 import com.smeup.dbnative.utils.matchFileKeys
 import org.bson.Document
 
-class NoSQLDBFile(override var name: String, override var fileMetadata: FileMetadata, private val database: MongoDatabase): DBFile {
+class NoSQLDBFile(override var name: String,
+                  override var fileMetadata: FileMetadata,
+                  private val database: MongoDatabase,
+                  override var logger: Logger? = null): DBFile {
 
     private var globalCursor: MongoCursor<Document>? = null
     private var up_direction: Boolean = true

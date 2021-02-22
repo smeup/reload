@@ -19,9 +19,11 @@ package com.smeup.dbnative.sql
 
 import com.smeup.dbnative.ConnectionConfig
 import com.smeup.dbnative.DBManagerBaseImpl
+import com.smeup.dbnative.log.LoggingKey
 import com.smeup.dbnative.model.FileMetadata
 import java.sql.Connection
 import java.sql.DriverManager
+import kotlin.system.measureTimeMillis
 
 open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBManagerBaseImpl()  {
 
@@ -30,11 +32,17 @@ open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBMa
     private var openedFile = mutableMapOf<String, SQLDBFile>()
 
     val connection : Connection by lazy {
-        connectionConfig.driver?.let {
-            Class.forName(connectionConfig.driver)
+        logger?.logEvent(LoggingKey.connection, "Opening SQL connection")
+        val conn: Connection
+        measureTimeMillis {
+            connectionConfig.driver?.let {
+                Class.forName(connectionConfig.driver)
+            }
+            conn = DriverManager.getConnection(connectionConfig.url, connectionConfig.user, connectionConfig.password)
+        }.apply {
+            logger?.logEvent(LoggingKey.connection, "SQL connection successfully opened", this)
         }
-        //todo handle connection pool
-        DriverManager.getConnection(connectionConfig.url, connectionConfig.user, connectionConfig.password)
+        conn
     }
 
     override fun validateConfig() {
@@ -63,7 +71,7 @@ open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBMa
     override fun createFile(metadata: FileMetadata) {
         connection.createStatement().use {
             it.execute(metadata.toSQL())
-            var dbFile = SQLDBFile(name = metadata.tableName, fileMetadata = metadata, connection =  connection)
+            val dbFile = SQLDBFile(name = metadata.tableName, fileMetadata = metadata, connection =  connection, logger)
             openedFile.putIfAbsent(metadata.tableName, dbFile)
         }
         super.createFile(metadata)
@@ -73,7 +81,7 @@ open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBMa
         require(existFile(name)) {
             "Cannot open a unregistered file $name"
         }
-        SQLDBFile(name = name, fileMetadata = metadataOf(name), connection =  connection)
+        SQLDBFile(name = name, fileMetadata = metadataOf(name), connection =  connection, logger)
     }
 
 

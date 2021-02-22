@@ -70,7 +70,7 @@ class NoSQLDBMManager (override val connectionConfig: ConnectionConfig) : DBMana
 
     override fun validateConfig() {
         require(match != null) {
-            "Url syntax is not valid, correct format: mongodb://host:port/database"
+            "Url syntax is not valid, correct format is: mongodb://host:port/database"
         }
     }
 
@@ -127,7 +127,7 @@ class NoSQLDBMManager (override val connectionConfig: ConnectionConfig) : DBMana
             require(existFile(name)) {
                 "File $name do not exist"
             }
-            sqldbFile = NoSQLDBFile(name, metadataOf(name), mongoDatabase)
+            sqldbFile = NoSQLDBFile(name, metadataOf(name), mongoDatabase, logger)
             openedFile.putIfAbsent(key, sqldbFile)
         }
         return sqldbFile

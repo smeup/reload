@@ -23,6 +23,7 @@ import com.smeup.dbnative.file.DBFile
 import com.smeup.dbnative.file.Record
 import com.smeup.dbnative.file.RecordField
 import com.smeup.dbnative.file.Result
+import com.smeup.dbnative.log.Logger
 import com.smeup.dbnative.model.Field
 import com.smeup.dbnative.model.FieldType
 import com.smeup.dbnative.model.FileMetadata
@@ -34,7 +35,10 @@ private enum class CursorAction {
     NONE, SETLL, SETGT
 }
 
-class JT400DBFile(override var name: String, override var fileMetadata: FileMetadata, var file: KeyedFile) : DBFile {
+class JT400DBFile(override var name: String,
+                  override var fileMetadata: FileMetadata,
+                  var file: KeyedFile,
+                  override var logger: Logger? = null) : DBFile {
 
     private var equalFlag: Boolean = false
     private var eofReached: Boolean = false

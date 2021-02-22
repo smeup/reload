@@ -22,13 +22,11 @@ import com.smeup.dbnative.file.Record
 import com.smeup.dbnative.file.RecordField
 import com.smeup.dbnative.file.Result
 import com.smeup.dbnative.model.FileMetadata
-import com.sun.xml.internal.fastinfoset.algorithm.BooleanEncodingAlgorithm
 import java.sql.Connection
 import java.sql.ResultSet
 
 class SQLDBFile(override var name: String, override var fileMetadata: FileMetadata, var connection: Connection) : DBFile {
 
-    private var lastMatch: Boolean = false
     private var resultSet: ResultSet? = null
     private var movingForward = true
     private var lastKeys: List<RecordField> = emptyList()
@@ -53,7 +51,7 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
     override fun setll(keys: List<String>): Boolean {
         lastOperationSet = true
 
-        val keyAsRecordField = keys.mapIndexed { index, value ->
+        var keyAsRecordField = keys.mapIndexed { index, value ->
             val keyname = thisFileKeys.get(index)
             RecordField(keyname, value)
         }
@@ -71,7 +69,7 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
     override fun setgt(keys: List<String>): Boolean {
         lastOperationSet = true
 
-        val keyAsRecordField = keys.mapIndexed { index, value ->
+        var keyAsRecordField = keys.mapIndexed { index, value ->
             val keyname = thisFileKeys.get(index)
             RecordField(keyname, value)
         }
@@ -89,7 +87,7 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
 
         lastOperationSet = false
 
-        val keyAsRecordField = keys.mapIndexed { index, value ->
+        var keyAsRecordField = keys.mapIndexed { index, value ->
             val keyname = thisFileKeys.get(index)
             RecordField(keyname, value)
         }
@@ -97,7 +95,7 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
         checkAndStoreLastKeys(keyAsRecordField)
         movingForward = true
         calculateResultSet(keyAsRecordField)
-        return readFirstFromResultSetFilteringBy(keyAsRecordField)
+        return readFromResultSetFilteringBy(keyAsRecordField)
     }
 
     override fun read(): Result {
@@ -146,7 +144,7 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
 
         lastOperationSet = false
 
-        val keysAsRecordField = keys.mapIndexed { index, value ->
+        var keysAsRecordField = keys.mapIndexed { index, value ->
             val keyname = thisFileKeys.get(index)
             RecordField(keyname, value)
         }
@@ -179,7 +177,7 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
 
         lastOperationSet = false
 
-        val keyAsRecordField = keys.mapIndexed { index, value ->
+        var keyAsRecordField = keys.mapIndexed { index, value ->
             val keyname = thisFileKeys.get(index)
             RecordField(keyname, value)
         }
@@ -217,7 +215,7 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
         // record post update will be "record"
         var atLeastOneFieldChanged = false
         actualRecord?.forEach {
-            val fieldValue = record.getValue(it.key)
+            var fieldValue = record.getValue(it.key)
             if(fieldValue != it.value){
                 atLeastOneFieldChanged = true
                 this.getResultSet()?.updateObject(it.key, fieldValue)
@@ -240,7 +238,6 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
     private fun executeQuery(sql: String, values: List<String>) {
         resultSet.closeIfOpen()
         val stm = connection.prepareStatement(sql, ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE)
-        stm.fetchSize = 1000
         stm.bind(values)
         resultSet = stm.executeQuery()
     }
@@ -314,40 +311,18 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
         } else {
             result = Result(resultSet.toValues())
         }
-        val record = Record()
+        val record: Record = Record()
         record.putAll(result.record)
         actualRecord = record
         return result
     }
 
-    private fun readFirstFromResultSetFilteringBy(keys: List<RecordField>): Result {
-        val result = readFromResultSet()
-        if (result.record.matches(keys)) {
-            return result
-        } else {
-            return Result(indicatorHI = true)
-        }
-    }
-
     private fun readFromResultSetFilteringBy(keys: List<RecordField>): Result {
         var result: Result
-        var match: Boolean
-        //var i = 0
         do {
-            //println("Record nr: ${i++}")
             result = readFromResultSet()
-            match = result.record.matches(keys)
-
-            if (match) {
-                lastMatch = true
-                return result
-            } else {
-                if (lastMatch ) {
-                    lastMatch = false
-                    return Result()
-                }
-            }
-        } while (true)
+        } while (!result.record.matches(keys) && resultSet.hasRecords() && !eof())
+        return result
     }
 
     private fun signalEOF() {
