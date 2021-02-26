@@ -135,7 +135,7 @@ class SQLDBFile(override var name: String,
             checkAndStoreLastKeys(keyAsRecordField)
             movingForward = true
             calculateResultSet(keyAsRecordField)
-            read = readFromResultSetFilteringBy(keyAsRecordField)
+            read = readFirstFromResultSetFilteringBy(keyAsRecordField)
         }.apply {
             logEvent(LoggingKey.native_access_method, "chain executed", this)
         }
@@ -425,6 +425,15 @@ class SQLDBFile(override var name: String,
             logEvent(LoggingKey.read_data, "Record read $record", this)
         }
         return result
+    }
+
+    private fun readFirstFromResultSetFilteringBy(keys: List<RecordField>): Result {
+        val result = readFromResultSet()
+        if (result.record.matches(keys)) {
+            return result
+        } else {
+            return Result(indicatorHI = true)
+        }
     }
 
     private fun readFromResultSetFilteringBy(keys: List<RecordField>): Result {
