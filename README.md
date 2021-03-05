@@ -125,7 +125,7 @@ are two:
 
 - CONFIG (default value if not passed): creates a single Logger instance for every instance of 
   DBNativeAccessConfig defined at startup.
--JVM: creates a single Logger instance for all DBNativeAccessConfig defined at startup.
+- JVM: creates a single Logger instance for all DBNativeAccessConfig defined at startup.
 
 Property reload.logger.impl could be defined in two alternatives ways:
 
