@@ -1,2 +1,2 @@
-File per forzatura jitpack
+Scripts per processi workflow di gitHub
 
