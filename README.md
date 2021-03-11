@@ -85,6 +85,9 @@ dependencies {
     implementation 'com.github.smeup:reload:-SNAPSHOT'
 }
 ```
+## Enabling logs in Reload
+
+See more details [in this document](docs/logging.md).
 
 ## Additional license info
 
