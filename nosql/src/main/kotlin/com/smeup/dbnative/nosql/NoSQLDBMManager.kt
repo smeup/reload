@@ -24,9 +24,6 @@ import com.mongodb.client.MongoDatabase
 import com.smeup.dbnative.ConnectionConfig
 import com.smeup.dbnative.DBManagerBaseImpl
 import com.smeup.dbnative.file.DBFile
-import com.smeup.dbnative.model.FileMetadata
-import com.smeup.dbnative.nosql.utils.buildIndexCommand
-import com.smeup.dbnative.nosql.utils.toMongoDocument
 import org.bson.Document
 
 /**
@@ -54,11 +51,11 @@ class NoSQLDBMManager (override val connectionConfig: ConnectionConfig) : DBMana
         MongoClient(host, port)
     }
 
-    private val mongoDatabase : MongoDatabase by lazy {
+    val mongoDatabase : MongoDatabase by lazy {
         mongoClient.getDatabase(dataBase)
     }
 
-    private val metadataFile : MongoCollection<Document> by lazy{
+    val metadataFile : MongoCollection<Document> by lazy{
         mongoDatabase.getCollection(METADATA_COLLECTION)
     }
 
@@ -92,25 +89,6 @@ class NoSQLDBMManager (override val connectionConfig: ConnectionConfig) : DBMana
         }
     }
     */
-
-
-    override fun createFile(metadata: FileMetadata) {
-
-        // Find table registration in library metadata file
-        val whereQuery = BasicDBObject()
-        whereQuery.put("name", metadata.tableName.toUpperCase())
-
-        val cursor = metadataFile.find(whereQuery)
-
-        if (cursor.count() == 0) {
-            // Register file metadata
-            metadataFile.insertOne(metadata.toMongoDocument())
-            // Create file index
-            mongoDatabase.runCommand(Document.parse(metadata.buildIndexCommand()))
-        }
-
-        super.createFile(metadata)
-    }
 
     override fun openFile(name: String): DBFile {
 

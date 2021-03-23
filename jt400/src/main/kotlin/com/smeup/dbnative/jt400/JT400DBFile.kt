@@ -17,6 +17,7 @@
 
 package com.smeup.dbnative.jt400
 
+import com.ibm.as400.access.AS400DataType
 import com.ibm.as400.access.AS400Exception
 import com.ibm.as400.access.KeyedFile
 import com.smeup.dbnative.file.DBFile
@@ -410,11 +411,21 @@ class JT400DBFile(override var name: String,
     }
 
     private fun numericField(name : String) : Boolean {
-        //val dataType = file.recordFormat.getFieldDescription(name).dataType.javaType
-        val field : Field? = this.fileMetadata.getField(name)
-        val type : FieldType? =  field?.type
-        return when (type?.type) {
-            Type.BIGINT, Type.DECIMAL, Type.DOUBLE, Type.FLOAT, Type.INTEGER, Type.SMALLINT ->
+        val dataType = file.recordFormat.getFieldDescription(name).dataType.instanceType
+        //val field : Field? = this.fileMetadata.getField(name)
+        //val type : FieldType? =  field?.type
+        return when (dataType) {
+            AS400DataType.TYPE_DECFLOAT,
+            AS400DataType.TYPE_BIN1,
+            AS400DataType.TYPE_BIN2,
+            AS400DataType.TYPE_BIN4,
+            AS400DataType.TYPE_BIN8,
+            AS400DataType.TYPE_UBIN1,
+            AS400DataType.TYPE_UBIN2,
+            AS400DataType.TYPE_UBIN4,
+            AS400DataType.TYPE_UBIN8,
+            AS400DataType.TYPE_FLOAT4,
+            AS400DataType.TYPE_FLOAT8 ->
                 true
             else ->
                 false

@@ -21,6 +21,7 @@ import com.ibm.as400.access.*
 import com.smeup.dbnative.ConnectionConfig
 import com.smeup.dbnative.DBManagerBaseImpl
 import com.smeup.dbnative.file.DBFile
+import com.smeup.dbnative.model.FileMetadata
 
 open class JT400DBMMAnager(final override val connectionConfig: ConnectionConfig) : DBManagerBaseImpl()  {
 

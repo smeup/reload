@@ -31,7 +31,7 @@ class JT400Chain1KeyTest {
     fun setUp() {
         println("setup")
         dbManager = dbManagerForTest()
-        createAndPopulateMunicipalityTable(dbManager)
+        createAndPopulateTestTable(dbManager)
     }
 
     @After

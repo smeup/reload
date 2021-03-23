@@ -19,6 +19,9 @@ package com.smeup.dbnative.metadata.file
 
 import com.smeup.dbnative.model.Field
 import com.smeup.dbnative.model.FileMetadata
+import com.smeup.dbnative.utils.TypedField
+import com.smeup.dbnative.utils.TypedMetadata
+import com.smeup.dbnative.utils.fieldsToProperties
 import com.smeup.dbnative.utils.getFieldTypeInstance
 import java.io.File
 import java.io.FileInputStream
@@ -31,37 +34,18 @@ import kotlin.collections.ArrayList
 object PropertiesSerializer {
 
     fun propertiesToMetadata(propertiesDirPath: String, fileName: String): FileMetadata{
-        val propertiesFile = FileInputStream(File("$propertiesDirPath${File.separatorChar}${fileName.toUpperCase()}.properties"))
-        //val properties = Properties()
-        //properties.load(InputStreamReader(propertiesFile, Charset.forName("UTF-8")))
-
-        val mp: MutableMap<String, String> = LinkedHashMap()
-        object : Properties() {
-            @Synchronized
-            override fun put(key: Any, value: Any): Any? {
-                return mp.put(key as String, value as String)
-            }
-        }.load(InputStreamReader(propertiesFile, Charset.forName("UTF-8")))
-
-
-        // FormatName
-        val recordFormat = mp.get("recordformat")!!
-
+        val mp: MutableMap<String, String> = loadProperties(propertiesDirPath, fileName)
         // Fields
-        var flds = mp.filterKeys { it.toString().startsWith("field.") }
+        var flds = mp.filterKeys { it.startsWith("field.") }
         val fields: MutableList<Field> = ArrayList()
         flds.forEach { fld ->
             val name = fld.key.split(".")[1]
-            val fldAttributes = fld.value.split(",")
-            val description = fldAttributes[0].trim()
-            val length = fldAttributes[2].trim().toInt()
-            val decimal = fldAttributes[3].trim().toInt()
-
-            val datatype = fldAttributes[1].trim()
-            val fieldType = datatype.getFieldTypeInstance(length, decimal)
-
-            fields.add(Field(name, fieldType, false, description))
+            val description = fld.value
+            fields.add(Field(name, description))
         }
+
+        // FormatName
+        val recordFormat = mp.get("recordformat")!!
 
         // FieldKeys
         val fieldsKeys: MutableList<String> = ArrayList()
@@ -75,20 +59,68 @@ object PropertiesSerializer {
         return FileMetadata(fileName, recordFormat, fields, fieldsKeys, unique)
     }
 
-    fun metadataToProperties(propertiesDirPath: String, fileMetadata: FileMetadata, overwrite: Boolean){
+    fun propertiesToTypedMetadata(propertiesDirPath: String, fileName: String): TypedMetadata {
+        val mp: MutableMap<String, String> = loadProperties(propertiesDirPath, fileName)
+        // Fields
+        var flds = mp.filterKeys { it.startsWith("field.") }
+        val fields: MutableList<TypedField> = ArrayList()
+        flds.forEach { fld ->
+            val name = fld.key.split(".")[1]
+            val fldAttributes = fld.value.split(",")
+            val description = fldAttributes[0].trim()
+            val length = fldAttributes[2].trim().toInt()
+            val decimal = fldAttributes[3].trim().toInt()
 
-        val properties = mutableListOf<Pair<String, String>>()
+            val datatype = fldAttributes[1].trim()
+            val fieldType = datatype.getFieldTypeInstance(length, decimal)
+
+            fields.add(TypedField(Field(name,  description), fieldType))
+        }
+
+        // FormatName
+        val recordFormat = mp.get("recordformat")!!
+
+        // FieldKeys
+        val fieldsKeys: MutableList<String> = ArrayList()
+        if(!(mp.get("filekeys")).isNullOrEmpty()){
+            fieldsKeys.addAll((mp.get("filekeys")?.split(",")!!))
+        }
+
+        // Unique
+        val unique = mp.get("unique")!!.toBoolean()
+
+        return TypedMetadata(fileName, recordFormat, fields, fieldsKeys, unique)
+    }
+
+    private fun loadProperties(propertiesDirPath: String, fileName: String): MutableMap<String, String>{
+        val propertiesFile = FileInputStream(File("$propertiesDirPath${File.separatorChar}${fileName.toUpperCase()}.properties"))
+        //val properties = Properties()
+        //properties.load(InputStreamReader(propertiesFile, Charset.forName("UTF-8")))
+
+        val mp: MutableMap<String, String> = LinkedHashMap()
+        object : Properties() {
+            @Synchronized
+            override fun put(key: Any, value: Any): Any? {
+                return mp.put(key as String, value as String)
+            }
+        }.load(InputStreamReader(propertiesFile, Charset.forName("UTF-8")))
+        return mp;
+    }
+
+    fun metadataToProperties(propertiesDirPath: String, fileMetadata: FileMetadata, overwrite: Boolean){
+        _metadataToProperties(propertiesDirPath, fileMetadata, fileMetadata.fieldsToProperties(), overwrite)
+    }
+
+    fun typedMetadataToProperties(propertiesDirPath: String, tMetadata: TypedMetadata, overwrite: Boolean){
+        _metadataToProperties(propertiesDirPath, tMetadata.fileMetadata(), tMetadata.fieldsToProperties(), overwrite)
+    }
+
+    private fun _metadataToProperties(propertiesDirPath: String,
+                                      fileMetadata: FileMetadata,
+                                      properties: MutableList<Pair<String, String>>,
+                                      overwrite: Boolean){
 
         properties.add(Pair("recordformat", fileMetadata.recordFormat))
-
-        for (field in fileMetadata.fields) {
-            properties.add(
-                Pair(
-                    "field.${field.name}",
-                    "${field.text},${field.type.type.name},${field.type.size},${field.type.digits}"
-                )
-            )
-        }
 
         var keys = "${fileMetadata.fileKeys.joinToString(",")}"
         properties.add(Pair("filekeys", keys))

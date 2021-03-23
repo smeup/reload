@@ -30,7 +30,7 @@ class JT400Chain2KeysTest {
     fun setUp() {
         println("setup")
         dbManager = dbManagerForTest()
-        createAndPopulateMunicipalityTable(dbManager)
+        createAndPopulateTest2Table(dbManager)
     }
 
     @After

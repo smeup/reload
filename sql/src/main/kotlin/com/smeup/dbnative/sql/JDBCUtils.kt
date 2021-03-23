@@ -20,6 +20,7 @@ package com.smeup.dbnative.sql
 import com.smeup.dbnative.file.Record
 import com.smeup.dbnative.file.RecordField
 import com.smeup.dbnative.model.*
+import com.smeup.dbnative.utils.TypedField
 import com.smeup.dbnative.utils.fieldByType
 import java.sql.Connection
 import java.sql.PreparedStatement
@@ -138,8 +139,8 @@ fun ResultSet?.currentRecordToValues(): Record {
     return result
 }
 
-fun Connection.fields(name: String): List<Field> {
-    val result = mutableListOf<Field>()
+fun Connection.fields(name: String): List<TypedField> {
+    val result = mutableListOf<TypedField>()
     var loopA = 0
     var loopB = 0
     this.metaData.getColumns(null, null, name, null).use {
@@ -193,7 +194,7 @@ fun sql2Type(sqlType: String, columnSize: Int, decimalDigits: Int): FieldType =
         else -> TODO("Conversion from SQL Type not yet implemented: $sqlType")
     }
 
-fun Field.type2sql(): String =
+fun TypedField.type2sql(): String =
     when (this.type.type) {
         Type.CHARACTER -> "CHAR(${this.type.size}) DEFAULT '' NOT NULL"
         Type.VARCHAR -> "VARCHAR(${this.type.size}) DEFAULT '' NOT NULL"

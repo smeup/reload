@@ -19,17 +19,7 @@ package com.smeup.dbnative.sql
 
 import com.smeup.dbnative.file.Record
 import com.smeup.dbnative.file.RecordField
-import com.smeup.dbnative.model.Field
-import com.smeup.dbnative.model.FileMetadata
 
-fun FileMetadata.toSQL(): String = "CREATE TABLE ${this.tableName} (${this.fields.toSQL(this)})"
-
-
-private fun Collection<Field>.toSQL(fileMetadata: FileMetadata): String {
-    val primaryKeys = fileMetadata.fileKeys.joinToString { it }
-
-    return joinToString { "${it.name} ${it.type2sql()}" } + (if (primaryKeys.isEmpty()) "" else ", PRIMARY KEY($primaryKeys)")
-}
 
 fun String.insertSQL(record: Record): String {
     val names = record.keys.joinToString { it }

@@ -233,8 +233,8 @@ class DB2400OperationsOnFile {
         // Step2: read above written records and update A§DEA2 field
         // Step3: check and check for correct update
         // Step4: delete written record.
-        val fileMetadata = PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", "BRARTI1L")
-        dbManager!!.registerMetadata(fileMetadata, false)
+        val tMetadata = PropertiesSerializer.propertiesToTypedMetadata("src/test/resources/dds/properties/", "BRARTI1L")
+        dbManager!!.registerMetadata(tMetadata.fileMetadata(), false)
         var dbFile = dbManager!!.openFile("BRARTI1L")
 
         // Number of record this test work with (write, update and delete)
@@ -247,7 +247,7 @@ class DB2400OperationsOnFile {
             Thread.sleep(5)
         }
 
-        val fieldsNumber = fileMetadata.fields.size
+        val fieldsNumber = tMetadata.fields.size
         val empty35char = "                                   "
         val dearKey = "Kotlin DBNativeAccess TEST         "
         val dea2Key = "Kotlin DBNativeAccess TEST-UPDATED "
@@ -257,11 +257,11 @@ class DB2400OperationsOnFile {
             var record = Record()
             repeat(fieldsNumber){ index ->
                 var name: String = dbFile.fileMetadata.fields[index].name
-                print(dbFile.fileMetadata.getField(name)?.type)
+                print(tMetadata.getField(name)?.type)
                 var value = when(name){
                     "A§ARTI" -> items[it]
                     "A§DEAR" -> dearKey
-                    else -> when(dbFile.fileMetadata.getField(name)?.type){
+                    else -> when(tMetadata.getField(name)?.type){
                         is DecimalType -> "0"
                         else -> ""
                     }

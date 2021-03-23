@@ -20,30 +20,6 @@ package com.smeup.dbnative.utils
 import com.smeup.dbnative.file.RecordField
 import com.smeup.dbnative.model.*
 
-infix fun String.fieldByType(type: FieldType): Field = Field(this, type)
-
-fun String.getFieldTypeInstance(columnSize: Int, decimalDigits: Int): FieldType {
-
-    val fieldTypeObject = when (this.toUpperCase()) {
-        "CHAR","CHARACTER" -> CharacterType(columnSize)
-        "VARCHAR" -> VarcharType(columnSize)
-        "INT", "INTEGER" -> IntegerType
-        "SMALLINT" -> SmallintType
-        "BIGINT" -> BigintType
-        "BOOLEAN", "BOOL" -> BooleanType
-        "DECIMAL" -> DecimalType(columnSize, decimalDigits)
-        "DOUBLE" -> DoubleType
-        "FLOAT" -> FloatType
-        "TIMESTAMP" -> TimeStampType
-        "TIME" -> TimeType
-        "DATE" -> DateType
-        "BINARY" -> BinaryType(columnSize)
-        "VARBINARY" -> VarbinaryType(columnSize)
-        else -> throw IllegalArgumentException("Wrong type of FieldType")
-    }
-
-    return fieldTypeObject
-}
 
 /*
     Return true if passed keys are all primary fields in metadata
@@ -72,4 +48,18 @@ fun FileMetadata.getField(name: String): Field? {
     } else {
         null
     }
+}
+
+fun FileMetadata.fieldsToProperties(): MutableList<Pair<String, String>>{
+    val properties = mutableListOf<Pair<String, String>>()
+
+    for (field in fields.iterator()) {
+        properties.add(
+            Pair(
+                "field.${field.name}",
+                "${field.text}"
+            )
+        )
+    }
+    return properties;
 }

@@ -23,6 +23,7 @@ import com.smeup.dbnative.file.RecordField
 import com.smeup.dbnative.model.CharacterType
 import com.smeup.dbnative.model.DecimalType
 import com.smeup.dbnative.model.FileMetadata
+import com.smeup.dbnative.nosql.utils.createAndPopulateTestTable
 import com.smeup.dbnative.nosql.utils.dbManagerForTest
 import com.smeup.dbnative.utils.fieldByType
 import org.junit.After
@@ -37,40 +38,17 @@ class NoSQLDBFileTest {
     private val tableName = "TSTTAB01"
 
     private lateinit var dbManager : NoSQLDBMManager
-    private var dbfile: DBFile? = null
 
     @Before
     fun initEnv() {
         dbManager = dbManagerForTest()
-
-        // Create file
-        val fields = listOf(
-            "TSTFLDCHR" fieldByType CharacterType(3),
-            "TSTFLDNBR" fieldByType DecimalType(5, 2)
-        )
-
-        val keys = listOf(
-           "TSTFLDCHR"
-        )
-
-        val metadata = FileMetadata(tableName, "TSTREC", fields, keys)
-        dbManager.createFile(metadata)
-        assertTrue(dbManager.existFile(tableName))
-
-        // Test metadata serialization/deserialization
-        val read_metadata = dbManager.metadataOf(tableName)
-
-        assertTrue(read_metadata == metadata)
-
-        dbfile = dbManager.openFile(tableName)
-        dbfile!!.write(Record(RecordField("TSTFLDCHR", "XXX"), RecordField("TSTFLDNBR", "123.45")))
-        dbManager.closeFile(tableName)
+        createAndPopulateTestTable(dbManager)
     }
 
     @Test
     fun testChain() {
         // Search not existing record
-        dbfile = dbManager.openFile(tableName)
+        val dbfile: DBFile? = dbManager.openFile(tableName)
         assertTrue(dbfile!!.chain("XYZ").record.isEmpty())
 
         // Search existing record and test contained fields
@@ -86,7 +64,7 @@ class NoSQLDBFileTest {
     @Test
     fun testRead() {
         // Search not existing record
-        dbfile = dbManager.openFile(tableName)
+        val dbfile: DBFile? = dbManager.openFile(tableName)
         assertFalse(dbfile!!.setll("XYZ"))
 
         // Search existing record and test contained fields

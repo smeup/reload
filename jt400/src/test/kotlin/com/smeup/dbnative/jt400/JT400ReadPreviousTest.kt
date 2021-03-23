@@ -30,7 +30,7 @@ class JT400ReadPreviousTest {
     fun setUp() {
         println("setup")
         dbManager = dbManagerForTest()
-        createAndPopulateMunicipalityTable(dbManager)
+        createAndPopulateEmployeeTable(dbManager)
     }
 
     @After

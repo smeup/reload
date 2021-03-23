@@ -24,9 +24,11 @@ import com.smeup.dbnative.file.RecordField
 import com.smeup.dbnative.log.Logger
 import com.smeup.dbnative.log.LoggingLevel
 import com.smeup.dbnative.model.*
-import com.smeup.dbnative.sql.CONVENTIONAL_INDEX_SUFFIX
-import com.smeup.dbnative.sql.SQLDBMManager
+import com.smeup.dbnative.sql.*
+import com.smeup.dbnative.utils.TypedField
+import com.smeup.dbnative.utils.TypedMetadata
 import com.smeup.dbnative.utils.fieldByType
+import com.smeup.dbnative.utils.fieldList
 import org.junit.Assert
 import java.io.File
 import java.sql.Connection
@@ -182,7 +184,7 @@ fun createAndPopulateXemp2View(dbManager: SQLDBMManager?) {
         "WORKDEPT"
     )
 
-    val metadata = FileMetadata("$XEMP2_VIEW_NAME", "EMPLOYEE", fields, keys, false)
+    val metadata = FileMetadata("$XEMP2_VIEW_NAME", "EMPLOYEE", fields.fieldList(), keys, false)
     dbManager!!.registerMetadata(metadata, true)
     dbManager.execute(listOf(createXEMP2(), createXEMP2Index()))
 }
@@ -236,16 +238,15 @@ private fun createAndPopulateTable(
     dbManager: SQLDBMManager?,
     tableName: String,
     formatName: String,
-    fields: List<Field>,
+    fields: List<TypedField>,
     keys: List<String>,
     unique: Boolean,
     dataFilePath: String
 ) {
 
-    val metadata = FileMetadata(tableName, formatName, fields, keys, unique)
-    dbManager!!.createFile(metadata)
+    val tMetadata = TypedMetadata(tableName, formatName, fields, keys, unique)
+    createFile(tMetadata, dbManager!!)
     Assert.assertTrue(dbManager.existFile(tableName))
-    dbManager.registerMetadata(metadata, true)
     val dbFile = dbManager.openFile(tableName)
 
     val dataFile = File(dataFilePath)
@@ -273,4 +274,19 @@ fun buildMunicipalityKey(vararg values: String): List<String> {
     return keyValues
 }
 
+fun createFile(tMetadata: TypedMetadata, dbManager: SQLDBMManager) {
+    val metadata: FileMetadata = tMetadata.fileMetadata();
+    dbManager.connection.createStatement().use {
+        it.execute(tMetadata.toSQL())
+    }
+    dbManager.registerMetadata(metadata, true)
+}
 
+fun TypedMetadata.toSQL(): String = "CREATE TABLE ${this.tableName} (${this.fields.toSQL(this)})"
+
+
+fun Collection<TypedField>.toSQL(tMetadata: TypedMetadata): String {
+    val primaryKeys = tMetadata.fileKeys.joinToString { it }
+
+    return joinToString { "${it.field.name} ${it.type2sql()}" } + (if (primaryKeys.isEmpty()) "" else ", PRIMARY KEY($primaryKeys)")
+}
