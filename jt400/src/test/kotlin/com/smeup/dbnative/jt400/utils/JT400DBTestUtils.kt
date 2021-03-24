@@ -221,8 +221,8 @@ private fun registerTable(
     dataFilePath: String
 ) {
     val metadata = TypedMetadata(tableName, formatName, fields, keys).fileMetadata()
-    Assert.assertTrue(dbManager!!.existFile(tableName))
-    dbManager.registerMetadata(metadata, true)
+    dbManager!!.registerMetadata(metadata, true)
+    Assert.assertTrue(dbManager.existFile(tableName))
 }
 
 /*
