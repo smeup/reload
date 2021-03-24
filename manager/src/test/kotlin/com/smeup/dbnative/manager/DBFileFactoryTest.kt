@@ -22,7 +22,6 @@ import com.smeup.dbnative.DBNativeAccessConfig
 import com.smeup.dbnative.log.Logger
 import com.smeup.dbnative.log.LoggingLevel
 import com.smeup.dbnative.model.CharacterType
-import com.smeup.dbnative.model.Field
 import com.smeup.dbnative.model.FileMetadata
 import com.smeup.dbnative.sql.SQLDBMManager
 import com.smeup.dbnative.utils.TypedField

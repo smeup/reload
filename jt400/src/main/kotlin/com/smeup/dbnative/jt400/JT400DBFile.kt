@@ -25,11 +25,7 @@ import com.smeup.dbnative.file.Record
 import com.smeup.dbnative.file.RecordField
 import com.smeup.dbnative.file.Result
 import com.smeup.dbnative.log.Logger
-import com.smeup.dbnative.model.Field
-import com.smeup.dbnative.model.FieldType
 import com.smeup.dbnative.model.FileMetadata
-import com.smeup.dbnative.model.Type
-import com.smeup.dbnative.utils.getField
 import java.math.BigDecimal
 
 private enum class CursorAction {
@@ -415,6 +411,8 @@ class JT400DBFile(override var name: String,
         //val field : Field? = this.fileMetadata.getField(name)
         //val type : FieldType? =  field?.type
         return when (dataType) {
+            AS400DataType.TYPE_ZONED,
+            AS400DataType.TYPE_PACKED,
             AS400DataType.TYPE_DECFLOAT,
             AS400DataType.TYPE_BIN1,
             AS400DataType.TYPE_BIN2,

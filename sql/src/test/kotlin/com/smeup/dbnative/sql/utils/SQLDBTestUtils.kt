@@ -32,6 +32,7 @@ import com.smeup.dbnative.utils.fieldList
 import org.junit.Assert
 import java.io.File
 import java.sql.Connection
+import java.sql.ResultSet
 import java.util.concurrent.atomic.AtomicInteger
 
 const val EMPLOYEE_TABLE_NAME = "EMPLOYEE"
@@ -131,7 +132,7 @@ fun createAndPopulateTstTable(dbManager: SQLDBMManager?) {
     )
 
 
-    createAndPopulateTable(dbManager, TSTTAB_TABLE_NAME, "TSTREC", fields, keys, false, "src/test/resources/csv/TstTab.csv")
+    createAndPopulateTable(dbManager, TSTTAB_TABLE_NAME, "TSTREC", fields, keys, "src/test/resources/csv/TstTab.csv")
 }
 
 fun createAndPopulateTst2Table(dbManager: SQLDBMManager?) {
@@ -146,7 +147,7 @@ fun createAndPopulateTst2Table(dbManager: SQLDBMManager?) {
         "TSTFLDNBR"
     )
 
-    createAndPopulateTable(dbManager, TST2TAB_TABLE_NAME, "TSTREC", fields, keys, false,"src/test/resources/csv/Tst2Tab.csv")
+    createAndPopulateTable(dbManager, TST2TAB_TABLE_NAME, "TSTREC", fields, keys,"src/test/resources/csv/Tst2Tab.csv")
 }
 
 fun createAndPopulateEmployeeTable(dbManager: SQLDBMManager?) {
@@ -162,7 +163,7 @@ fun createAndPopulateEmployeeTable(dbManager: SQLDBMManager?) {
         "EMPNO"
     )
 
-    createAndPopulateTable(dbManager, EMPLOYEE_TABLE_NAME, "TSTREC", fields, keys, false,"src/test/resources/csv/Employee.csv")
+    createAndPopulateTable(dbManager, EMPLOYEE_TABLE_NAME, "TSTREC", fields, keys,"src/test/resources/csv/Employee.csv")
 }
 
 fun createAndPopulateXemp2View(dbManager: SQLDBMManager?) {
@@ -184,7 +185,7 @@ fun createAndPopulateXemp2View(dbManager: SQLDBMManager?) {
         "WORKDEPT"
     )
 
-    val metadata = FileMetadata("$XEMP2_VIEW_NAME", "EMPLOYEE", fields.fieldList(), keys, false)
+    val metadata = FileMetadata("$XEMP2_VIEW_NAME", "EMPLOYEE", fields.fieldList(), keys)
     dbManager!!.registerMetadata(metadata, true)
     dbManager.execute(listOf(createXEMP2(), createXEMP2Index()))
 }
@@ -215,7 +216,6 @@ fun createAndPopulateMunicipalityTable(dbManager: SQLDBMManager?) {
         "TSTREC",
         fields,
         keys,
-        false,
         "src/test/resources/csv/Municipality.csv"
     )
 }
@@ -240,11 +240,10 @@ private fun createAndPopulateTable(
     formatName: String,
     fields: List<TypedField>,
     keys: List<String>,
-    unique: Boolean,
     dataFilePath: String
 ) {
 
-    val tMetadata = TypedMetadata(tableName, formatName, fields, keys, unique)
+    val tMetadata = TypedMetadata(tableName, formatName, fields, keys)
     createFile(tMetadata, dbManager!!)
     Assert.assertTrue(dbManager.existFile(tableName))
     val dbFile = dbManager.openFile(tableName)
@@ -290,3 +289,53 @@ fun Collection<TypedField>.toSQL(tMetadata: TypedMetadata): String {
 
     return joinToString { "${it.field.name} ${it.type2sql()}" } + (if (primaryKeys.isEmpty()) "" else ", PRIMARY KEY($primaryKeys)")
 }
+
+fun TypedField.type2sql(): String =
+    when (this.type.type) {
+        Type.CHARACTER -> "CHAR(${this.type.size}) DEFAULT '' NOT NULL"
+        Type.VARCHAR -> "VARCHAR(${this.type.size}) DEFAULT '' NOT NULL"
+        Type.INTEGER -> "INT"
+        Type.SMALLINT -> "SMALLINT"
+        Type.BIGINT -> "BIGINT"
+        Type.BOOLEAN -> "BOOLEAN"
+        Type.DECIMAL -> "DECIMAL(${this.type.size},${this.type.digits}) DEFAULT 0 NOT NULL"
+        Type.FLOAT -> "FLOAT(${this.type.size},${this.type.digits}) DEFAULT 0 NOT NULL"
+        Type.DOUBLE -> "DOUBLE DEFAULT 0 NOT NULL"
+        Type.TIMESTAMP -> "TIMESTAMP"
+        Type.TIME -> "TIME"
+        Type.DATE -> "DATE"
+        Type.BINARY -> "BINARY"
+        Type.VARBINARY -> "VARBINARY(${this.type.size})"
+        else -> TODO("Conversion to SQL Type not yet implemented: ${this.type}")
+    }
+
+fun sql2Type(metadataResultSet: ResultSet): FieldType {
+    val sqlType = metadataResultSet.getString("TYPE_NAME")
+    val columnSize = metadataResultSet.getInt("COLUMN_SIZE")
+    val decimalDigits = metadataResultSet.getInt("DECIMAL_DIGITS")
+    return sql2Type(sqlType, columnSize, decimalDigits)
+}
+
+
+
+/**
+ * Convert SQL type in FieldType
+ */
+fun sql2Type(sqlType: String, columnSize: Int, decimalDigits: Int): FieldType =
+    when (sqlType) {
+        "CHAR","CHARACTER","NCHAR" -> CharacterType(columnSize)
+        "VARCHAR" -> VarcharType(columnSize)
+        "INT", "INTEGER" -> IntegerType
+        "SMALLINT" -> SmallintType
+        "BIGINT" -> BigintType
+        "BOOLEAN", "BOOL" -> BooleanType
+        "DECIMAL", "NUMERIC" -> DecimalType(columnSize, decimalDigits)
+        "DOUBLE" -> DoubleType
+        "FLOAT" -> FloatType
+        "TIMESTAMP" -> TimeStampType
+        "TIME" -> TimeType
+        "DATE" -> DateType
+        "BINARY" -> BinaryType(columnSize)
+        "VARBINARY" -> VarbinaryType(columnSize)
+        else -> TODO("Conversion from SQL Type not yet implemented: $sqlType")
+    }

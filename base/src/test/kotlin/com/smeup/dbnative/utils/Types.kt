@@ -2,6 +2,12 @@ package com.smeup.dbnative.utils
 
 import com.smeup.dbnative.model.*
 import com.smeup.dbnative.model.FileMetadata
+import java.io.File
+import java.io.FileInputStream
+import java.io.InputStreamReader
+import java.nio.charset.Charset
+import java.util.*
+import kotlin.collections.ArrayList
 
 data class TypedField(val field: Field, val type: FieldType){
 }
@@ -17,9 +23,8 @@ fun Collection<TypedField>.fieldTypeList():List<FieldType>{
 data class TypedMetadata(var tableName: String,
                     var recordFormat: String,
                     var fields: List<TypedField>,
-                    var fileKeys:List<String>,
-                    var unique:Boolean = false){
-    fun fileMetadata(): FileMetadata = FileMetadata(tableName, recordFormat, fields.fieldList(), fileKeys, unique);
+                    var fileKeys:List<String>){
+    fun fileMetadata(): FileMetadata = FileMetadata(tableName, recordFormat, fields.fieldList(), fileKeys);
 
     fun fieldsToProperties(): MutableList<Pair<String, String>>{
         val properties = mutableListOf<Pair<String, String>>()
@@ -67,4 +72,45 @@ fun String.getFieldTypeInstance(columnSize: Int, decimalDigits: Int): FieldType 
     }
 
     return fieldTypeObject
+}
+
+fun propertiesToTypedMetadata(propertiesDirPath: String, fileName: String): TypedMetadata {
+    val propertiesFile = FileInputStream(File("$propertiesDirPath${File.separatorChar}${fileName.toUpperCase()}.properties"))
+    //val properties = Properties()
+    //properties.load(InputStreamReader(propertiesFile, Charset.forName("UTF-8")))
+
+    val mp: MutableMap<String, String> = LinkedHashMap()
+    object : Properties() {
+        @Synchronized
+        override fun put(key: Any, value: Any): Any? {
+            return mp.put(key as String, value as String)
+        }
+    }.load(InputStreamReader(propertiesFile, Charset.forName("UTF-8")))
+
+    // Fields
+    var flds = mp.filterKeys { it.startsWith("field.") }
+    val fields: MutableList<TypedField> = ArrayList()
+    flds.forEach { fld ->
+        val name = fld.key.split(".")[1]
+        val fldAttributes = fld.value.split(",")
+        val description = fldAttributes[0].trim()
+        val length = fldAttributes[2].trim().toInt()
+        val decimal = fldAttributes[3].trim().toInt()
+
+        val datatype = fldAttributes[1].trim()
+        val fieldType = datatype.getFieldTypeInstance(length, decimal)
+
+        fields.add(TypedField(Field(name,  description), fieldType))
+    }
+
+    // FormatName
+    val recordFormat = mp.get("recordformat")!!
+
+    // FieldKeys
+    val fieldsKeys: MutableList<String> = ArrayList()
+    if(!(mp.get("filekeys")).isNullOrEmpty()){
+        fieldsKeys.addAll((mp.get("filekeys")?.split(",")!!))
+    }
+
+    return TypedMetadata(fileName, recordFormat, fields, fieldsKeys)
 }

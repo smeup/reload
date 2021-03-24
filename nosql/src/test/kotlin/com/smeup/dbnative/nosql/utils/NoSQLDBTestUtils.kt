@@ -188,9 +188,6 @@ fun TypedMetadata.toMongoDocument(): Document {
     }
     metadataObject.put("fileKeys", keysDoc)
 
-    // Unique
-    metadataObject.put("unique", this.unique)
-
     return metadataObject
 }
 
@@ -215,7 +212,6 @@ fun Document.toMetadata(): TypedMetadata {
         val size =  typeAsDocument.getInteger("size")
         val digits =  typeAsDocument.getInteger("digits")
         val typeFieldObject = type.getFieldTypeInstance(size, digits)
-        val notnull = item.get("notnull") ?: false
         val text = typeAsDocument.getString("text")
 
         val field = TypedField(Field(fieldName, text), typeFieldObject)
@@ -232,9 +228,6 @@ fun Document.toMetadata(): TypedMetadata {
         keysList.add(key)
     }
 
-
-    val unique = get("unique") as Boolean
-
-    return TypedMetadata(name, formatName, fieldsList, keysList, unique)
+    return TypedMetadata(name, formatName, fieldsList, keysList)
 }
 

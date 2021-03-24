@@ -118,7 +118,6 @@ fun createAndPopulateMunicipalityTable(dbManager: JT400DBMMAnager?) {
         "TSTREC",
         fields,
         keys,
-        false,
         "src/test/resources/csv/Municipality.csv"
     )
      /**/
@@ -143,7 +142,6 @@ fun createAndPopulateTestTable(dbManager: JT400DBMMAnager?) {
         "TSTREC",
         fields,
         keys,
-        false,
         "src/test/resources/csv/TstTab.csv"
     )
     /**/
@@ -169,7 +167,6 @@ fun createAndPopulateTest2Table(dbManager: JT400DBMMAnager?) {
         "TSTREC",
         fields,
         keys,
-        false,
         "src/test/resources/csv/TstTab.csv"
     )
     /**/
@@ -196,7 +193,6 @@ fun createAndPopulateEmployeeTable(dbManager: JT400DBMMAnager?) {
         "TSTREC",
         fields,
         keys,
-        false,
         "src/test/resources/csv/Employee.csv"
     )
     /**/
@@ -222,10 +218,9 @@ private fun registerTable(
     formatName: String,
     fields: List<TypedField>,
     keys: List<String>,
-    unique: Boolean,
     dataFilePath: String
 ) {
-    val metadata = TypedMetadata(tableName, formatName, fields, keys, unique).fileMetadata()
+    val metadata = TypedMetadata(tableName, formatName, fields, keys).fileMetadata()
     Assert.assertTrue(dbManager!!.existFile(tableName))
     dbManager.registerMetadata(metadata, true)
 }

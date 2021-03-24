@@ -24,6 +24,7 @@ import com.smeup.dbnative.model.DecimalType
 import com.smeup.dbnative.sql.utils.TestSQLDBType
 import com.smeup.dbnative.sql.utils.dbManagerForTest
 import com.smeup.dbnative.utils.getField
+import com.smeup.dbnative.utils.propertiesToTypedMetadata
 import org.junit.AfterClass
 import org.junit.BeforeClass
 import org.junit.Ignore
@@ -233,7 +234,7 @@ class DB2400OperationsOnFile {
         // Step2: read above written records and update A§DEA2 field
         // Step3: check and check for correct update
         // Step4: delete written record.
-        val tMetadata = PropertiesSerializer.propertiesToTypedMetadata("src/test/resources/dds/properties/", "BRARTI1L")
+        val tMetadata = propertiesToTypedMetadata("src/test/resources/dds/properties/", "BRARTI1L")
         dbManager!!.registerMetadata(tMetadata.fileMetadata(), false)
         var dbFile = dbManager!!.openFile("BRARTI1L")
 

@@ -23,6 +23,7 @@ import com.smeup.dbnative.file.RecordField
 import com.smeup.dbnative.model.CharacterType
 import com.smeup.dbnative.model.DecimalType
 import com.smeup.dbnative.model.FileMetadata
+import com.smeup.dbnative.nosql.utils.TSTAB_TABLE_NAME
 import com.smeup.dbnative.nosql.utils.createAndPopulateTestTable
 import com.smeup.dbnative.nosql.utils.dbManagerForTest
 import com.smeup.dbnative.utils.fieldByType
@@ -35,7 +36,7 @@ import kotlin.test.assertFalse
 
 class NoSQLDBFileTest {
 
-    private val tableName = "TSTTAB01"
+    private val tableName = TSTAB_TABLE_NAME
 
     private lateinit var dbManager : NoSQLDBMManager
 
@@ -52,7 +53,7 @@ class NoSQLDBFileTest {
         assertTrue(dbfile!!.chain("XYZ").record.isEmpty())
 
         // Search existing record and test contained fields
-        val chainResult = dbfile!!.chain("XXX")
+        val chainResult = dbfile.chain("XXX")
         assertEquals(2, chainResult.record.size)
         val fieldsIterator = chainResult.record.iterator()
         assertEquals("XXX", fieldsIterator.next().value)
@@ -68,13 +69,13 @@ class NoSQLDBFileTest {
         assertFalse(dbfile!!.setll("XYZ"))
 
         // Search existing record and test contained fields
-        val chainResult = dbfile!!.setll("XXX")
+        val chainResult = dbfile.setll("XXX")
         assertTrue(chainResult)
 
-        val readResult1 = dbfile!!.read()
+        val readResult1 = dbfile.read()
         assertTrue(readResult1.record.isNotEmpty())
 
-        val readResult2 = dbfile!!.read()
+        val readResult2 = dbfile.read()
         assertTrue(readResult2.record.isNotEmpty())
 
         dbManager.closeFile(tableName)

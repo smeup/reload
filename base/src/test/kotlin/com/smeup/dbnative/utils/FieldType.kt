@@ -39,8 +39,6 @@ sealed class FieldType {
         abstract val type: Type
         abstract val size: Int
         abstract val digits: Int
-        abstract val fixedSize: Boolean
-
     }
 
 // Fixed length string
@@ -54,9 +52,6 @@ sealed class FieldType {
 
         override val digits: Int
             get() = 0
-
-        override val fixedSize: Boolean
-            get() = false
     }
 
 // Varying length string (with max length)
@@ -70,9 +65,6 @@ sealed class FieldType {
 
         override val digits: Int
             get() = 0
-
-        override val fixedSize: Boolean
-            get() = false
     }
 
     object IntegerType : FieldType() {
@@ -85,9 +77,6 @@ sealed class FieldType {
 
         override val digits: Int
             get() = 0
-
-        override val fixedSize: Boolean
-            get() = true
     }
 
     object SmallintType : FieldType() {
@@ -100,9 +89,6 @@ sealed class FieldType {
 
         override val digits: Int
             get() = 0
-
-        override val fixedSize: Boolean
-            get() = true
     }
 
     object BigintType : FieldType() {
@@ -115,9 +101,6 @@ sealed class FieldType {
 
         override val digits: Int
             get() = 0
-
-        override val fixedSize: Boolean
-            get() = true
     }
 
     object BooleanType : FieldType() {
@@ -130,9 +113,6 @@ sealed class FieldType {
 
         override val digits: Int
             get() = 0
-
-        override val fixedSize: Boolean
-            get() = true
     }
 
 
@@ -147,9 +127,6 @@ sealed class FieldType {
 
         override val digits: Int
             get() = precision
-
-        override val fixedSize: Boolean
-            get() = false
     }
 
     object FloatType : FieldType() {
@@ -162,9 +139,6 @@ sealed class FieldType {
 
         override val digits: Int
             get() = 0
-
-        override val fixedSize: Boolean
-            get() = true
     }
 
     object DoubleType : FieldType() {
@@ -177,9 +151,6 @@ sealed class FieldType {
 
         override val digits: Int
             get() = 0
-
-        override val fixedSize: Boolean
-            get() = true
     }
 
 // Year, month, day, hour, minutes, seconds
@@ -193,9 +164,6 @@ sealed class FieldType {
 
         override val digits: Int
             get() = 0
-
-        override val fixedSize: Boolean
-            get() = true
     }
 
 // Year, month, day
@@ -210,8 +178,6 @@ sealed class FieldType {
         override val digits: Int
             get() = 0
 
-        override val fixedSize: Boolean
-            get() = true
     }
 
 // hour, minutes, seconds
@@ -225,9 +191,6 @@ sealed class FieldType {
 
         override val digits: Int
             get() = 0
-
-        override val fixedSize: Boolean
-            get() = true
     }
 
 // Binary with fixed length
@@ -241,9 +204,6 @@ sealed class FieldType {
 
         override val digits: Int
             get() = 0
-
-        override val fixedSize: Boolean
-            get() = true
     }
 
 // Binary with varying length
@@ -257,7 +217,4 @@ sealed class FieldType {
 
         override val digits: Int
             get() = 0
-
-        override val fixedSize: Boolean
-            get() = true
     }
