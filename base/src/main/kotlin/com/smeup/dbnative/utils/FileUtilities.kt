@@ -18,7 +18,8 @@
 package com.smeup.dbnative.utils
 
 import com.smeup.dbnative.file.RecordField
-import com.smeup.dbnative.model.*
+import com.smeup.dbnative.model.Field
+import com.smeup.dbnative.model.FileMetadata
 
 
 /*

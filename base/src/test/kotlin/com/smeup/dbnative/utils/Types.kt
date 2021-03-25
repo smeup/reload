@@ -1,7 +1,6 @@
 package com.smeup.dbnative.utils
 
 import com.smeup.dbnative.model.*
-import com.smeup.dbnative.model.FileMetadata
 import java.io.File
 import java.io.FileInputStream
 import java.io.InputStreamReader

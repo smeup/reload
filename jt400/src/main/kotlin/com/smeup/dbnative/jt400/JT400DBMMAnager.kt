@@ -17,11 +17,13 @@
 
 package com.smeup.dbnative.jt400
 
-import com.ibm.as400.access.*
+import com.ibm.as400.access.AS400
+import com.ibm.as400.access.AS400File
+import com.ibm.as400.access.KeyedFile
+import com.ibm.as400.access.QSYSObjectPathName
 import com.smeup.dbnative.ConnectionConfig
 import com.smeup.dbnative.DBManagerBaseImpl
 import com.smeup.dbnative.file.DBFile
-import com.smeup.dbnative.model.FileMetadata
 
 open class JT400DBMMAnager(final override val connectionConfig: ConnectionConfig) : DBManagerBaseImpl()  {
 

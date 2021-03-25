@@ -23,11 +23,9 @@ import com.smeup.dbnative.metadata.file.PropertiesSerializer
 import com.smeup.dbnative.model.DecimalType
 import com.smeup.dbnative.sql.utils.TestSQLDBType
 import com.smeup.dbnative.sql.utils.dbManagerForTest
-import com.smeup.dbnative.utils.getField
 import com.smeup.dbnative.utils.propertiesToTypedMetadata
 import org.junit.AfterClass
 import org.junit.BeforeClass
-import org.junit.Ignore
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

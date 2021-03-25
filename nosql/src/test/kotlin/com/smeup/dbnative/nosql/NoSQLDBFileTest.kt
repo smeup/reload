@@ -18,15 +18,9 @@
 package com.smeup.dbnative.nosql
 
 import com.smeup.dbnative.file.DBFile
-import com.smeup.dbnative.file.Record
-import com.smeup.dbnative.file.RecordField
-import com.smeup.dbnative.model.CharacterType
-import com.smeup.dbnative.model.DecimalType
-import com.smeup.dbnative.model.FileMetadata
 import com.smeup.dbnative.nosql.utils.TSTAB_TABLE_NAME
 import com.smeup.dbnative.nosql.utils.createAndPopulateTestTable
 import com.smeup.dbnative.nosql.utils.dbManagerForTest
-import com.smeup.dbnative.utils.fieldByType
 import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Before

@@ -19,13 +19,15 @@ package com.smeup.dbnative.jt400
 
 import com.smeup.dbnative.file.Record
 import com.smeup.dbnative.file.RecordField
-import com.smeup.dbnative.metadata.file.PropertiesSerializer
-import com.smeup.dbnative.model.DecimalType
 import com.smeup.dbnative.jt400.utils.createAndPopulateMunicipalityTable
 import com.smeup.dbnative.jt400.utils.dbManagerForTest
 import com.smeup.dbnative.jt400.utils.destroyDatabase
+import com.smeup.dbnative.metadata.file.PropertiesSerializer
+import com.smeup.dbnative.model.DecimalType
 import com.smeup.dbnative.utils.propertiesToTypedMetadata
-import org.junit.*
+import org.junit.After
+import org.junit.Before
+import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 

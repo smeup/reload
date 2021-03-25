@@ -20,7 +20,6 @@ package com.smeup.dbnative.sql
 import com.smeup.dbnative.ConnectionConfig
 import com.smeup.dbnative.DBManagerBaseImpl
 import com.smeup.dbnative.log.LoggingKey
-import com.smeup.dbnative.model.FileMetadata
 import java.sql.Connection
 import java.sql.DriverManager
 import kotlin.system.measureTimeMillis

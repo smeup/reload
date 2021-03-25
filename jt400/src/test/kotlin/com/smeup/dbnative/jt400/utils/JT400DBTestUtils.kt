@@ -17,21 +17,17 @@
 
 package com.smeup.dbnative.jt400.utils
 
-import com.github.doyaaaaaken.kotlincsv.dsl.csvReader
 import com.ibm.as400.access.AS400
 import com.smeup.dbnative.ConnectionConfig
 import com.smeup.dbnative.file.Record
-import com.smeup.dbnative.file.RecordField
 import com.smeup.dbnative.jt400.JT400DBMMAnager
-import com.smeup.dbnative.model.*
+import com.smeup.dbnative.model.CharacterType
+import com.smeup.dbnative.model.DecimalType
+import com.smeup.dbnative.model.VarcharType
 import com.smeup.dbnative.utils.TypedField
 import com.smeup.dbnative.utils.TypedMetadata
 import com.smeup.dbnative.utils.fieldByType
 import org.junit.Assert
-import java.io.File
-import java.lang.Exception
-import java.sql.Connection
-import java.sql.DriverManager
 
 const val EMPLOYEE_TABLE_NAME = "EMPLOYEE"
 const val XEMP2_VIEW_NAME = "XEMP2"

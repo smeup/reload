@@ -24,7 +24,8 @@ import com.smeup.dbnative.file.RecordField
 import com.smeup.dbnative.log.Logger
 import com.smeup.dbnative.log.LoggingLevel
 import com.smeup.dbnative.model.*
-import com.smeup.dbnative.sql.*
+import com.smeup.dbnative.sql.CONVENTIONAL_INDEX_SUFFIX
+import com.smeup.dbnative.sql.SQLDBMManager
 import com.smeup.dbnative.utils.TypedField
 import com.smeup.dbnative.utils.TypedMetadata
 import com.smeup.dbnative.utils.fieldByType
