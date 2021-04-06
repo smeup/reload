@@ -17,7 +17,6 @@
 
 package com.smeup.dbnative.sql
 
-import com.smeup.dbnative.file.RecordField
 import com.smeup.dbnative.sql.utils.TST2TAB_TABLE_NAME
 import com.smeup.dbnative.sql.utils.createAndPopulateTst2Table
 import com.smeup.dbnative.sql.utils.dbManagerForTest

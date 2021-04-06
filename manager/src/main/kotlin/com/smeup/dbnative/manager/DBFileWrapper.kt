@@ -20,7 +20,6 @@ package com.smeup.dbnative.manager
 import com.smeup.dbnative.DBMManager
 import com.smeup.dbnative.file.DBFile
 import com.smeup.dbnative.file.Record
-import com.smeup.dbnative.file.RecordField
 import com.smeup.dbnative.file.Result
 import com.smeup.dbnative.log.Logger
 import com.smeup.dbnative.model.FileMetadata

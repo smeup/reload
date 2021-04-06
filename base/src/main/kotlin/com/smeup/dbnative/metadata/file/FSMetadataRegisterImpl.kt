@@ -27,7 +27,9 @@ object FSMetadataRegisterImpl: MetadataRegister{
 
     init {
 
-        propertiesDirPath = System.getenv("DBNATIVE_DDS_DIR") ?:"${System.getProperty("user.home")}/etc/dbnativeaccess/dds"
+        propertiesDirPath = System.getenv("DBNATIVE_DDS_DIR") ?:"${System.getProperty("user.home")}${File.separatorChar}" +
+                "etc${File.separatorChar}" +
+                "dbnativeaccess${File.separatorChar}dds"
 
         if (File(propertiesDirPath).exists() == false) {
             File(propertiesDirPath).mkdirs()

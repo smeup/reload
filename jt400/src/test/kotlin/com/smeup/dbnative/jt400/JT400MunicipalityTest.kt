@@ -18,7 +18,10 @@
 package com.smeup.dbnative.jt400
 
 import com.smeup.dbnative.jt400.utils.*
-import org.junit.*
+import org.junit.After
+import org.junit.Before
+import org.junit.Ignore
+import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 

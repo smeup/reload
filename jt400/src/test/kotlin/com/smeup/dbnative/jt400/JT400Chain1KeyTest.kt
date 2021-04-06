@@ -17,9 +17,13 @@
 
 package com.smeup.dbnative.jt400
 
-import com.smeup.dbnative.jt400.JT400DBMMAnager
-import com.smeup.dbnative.jt400.utils.*
-import org.junit.*
+import com.smeup.dbnative.jt400.utils.TSTTAB_TABLE_NAME
+import com.smeup.dbnative.jt400.utils.createAndPopulateTestTable
+import com.smeup.dbnative.jt400.utils.dbManagerForTest
+import com.smeup.dbnative.jt400.utils.destroyDatabase
+import org.junit.After
+import org.junit.Before
+import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -31,7 +35,7 @@ class JT400Chain1KeyTest {
     fun setUp() {
         println("setup")
         dbManager = dbManagerForTest()
-        createAndPopulateMunicipalityTable(dbManager)
+        createAndPopulateTestTable(dbManager)
     }
 
     @After

@@ -53,10 +53,6 @@ abstract class DBManagerBaseImpl : DBMManager {
         }
     }
 
-    override fun createFile(metadata: FileMetadata) {
-        registerMetadata(metadata, true)
-    }
-
     override fun existFile(name: String): Boolean {
         return getMetadataRegister().contains(name.toUpperCase())
     }

@@ -17,19 +17,17 @@
 
 package com.smeup.dbnative.jt400.utils
 
-import com.github.doyaaaaaken.kotlincsv.dsl.csvReader
 import com.ibm.as400.access.AS400
 import com.smeup.dbnative.ConnectionConfig
 import com.smeup.dbnative.file.Record
-import com.smeup.dbnative.file.RecordField
 import com.smeup.dbnative.jt400.JT400DBMMAnager
-import com.smeup.dbnative.model.*
+import com.smeup.dbnative.model.CharacterType
+import com.smeup.dbnative.model.DecimalType
+import com.smeup.dbnative.model.VarcharType
+import com.smeup.dbnative.utils.TypedField
+import com.smeup.dbnative.utils.TypedMetadata
 import com.smeup.dbnative.utils.fieldByType
 import org.junit.Assert
-import java.io.File
-import java.lang.Exception
-import java.sql.Connection
-import java.sql.DriverManager
 
 const val EMPLOYEE_TABLE_NAME = "EMPLOYEE"
 const val XEMP2_VIEW_NAME = "XEMP2"
@@ -54,8 +52,8 @@ enum class TestSQLDBType(
             fileName= "*",
             driver = "com.ibm.as400.access.AS400JDBCDriver",
             url = "jdbc:as400://$DB2_400_HOST/$DB2_400_LIBRARY_NAME;",
-            user = "AAABBB",
-            password = "*******"),
+            user = "USER",
+            password = "*********"),
         //force no create connection for dba operations
         dbaConnectionConfig = null
     )
@@ -116,10 +114,84 @@ fun createAndPopulateMunicipalityTable(dbManager: JT400DBMMAnager?) {
         "TSTREC",
         fields,
         keys,
-        false,
         "src/test/resources/csv/Municipality.csv"
     )
      /**/
+}
+
+fun createAndPopulateTestTable(dbManager: JT400DBMMAnager?) {
+    val fields = listOf(
+        "TSTFLDCHR"   fieldByType CharacterType(3),
+        "TSTFLDNBR"   fieldByType DecimalType(5, 2)
+    )
+
+    val keys = listOf(
+        "TSTFLDCHR",
+        "TSTFLDNBR"
+    )
+
+
+    //createAndPopulateTable( /* ci mette tantissimo >20min, la teniamo fissa già creata */
+    registerTable(
+        dbManager,
+        TSTTAB_TABLE_NAME,
+        "TSTREC",
+        fields,
+        keys,
+        "src/test/resources/csv/TstTab.csv"
+    )
+    /**/
+}
+
+fun createAndPopulateTest2Table(dbManager: JT400DBMMAnager?) {
+    val fields = listOf(
+        "TSTFLDCHR"   fieldByType CharacterType(3),
+        "TSTFLDNBR"   fieldByType DecimalType(5, 2),
+        "DESTST"   fieldByType CharacterType(10),
+    )
+
+    val keys = listOf(
+        "TSTFLDCHR",
+        "TSTFLDNBR"
+    )
+
+
+    //createAndPopulateTable( /* ci mette tantissimo >20min, la teniamo fissa già creata */
+    registerTable(
+        dbManager,
+        TST2TAB_TABLE_NAME,
+        "TSTREC",
+        fields,
+        keys,
+        "src/test/resources/csv/TstTab.csv"
+    )
+    /**/
+}
+
+fun createAndPopulateEmployeeTable(dbManager: JT400DBMMAnager?) {
+    val fields = listOf(
+        "EMPNO"   fieldByType CharacterType(6),
+        "FIRSTNME"   fieldByType CharacterType(20),
+        "MIDINIT"   fieldByType CharacterType(1),
+        "LASTNAME"   fieldByType CharacterType(20),
+        "WORKDEPT"   fieldByType CharacterType(3),
+    )
+
+    val keys = listOf(
+        "EMPNO"
+    )
+
+
+    //createAndPopulateTable( /* ci mette tantissimo >20min, la teniamo fissa già creata */
+    registerTable(
+        dbManager,
+        EMPLOYEE_TABLE_NAME,
+        "TSTREC",
+        fields,
+        keys,
+        "src/test/resources/csv/Employee.csv"
+    )
+    /**/
 }
 
 fun getEmployeeName(record: Record): String {
@@ -140,15 +212,13 @@ private fun registerTable(
     dbManager: JT400DBMMAnager?,
     tableName: String,
     formatName: String,
-    fields: List<Field>,
+    fields: List<TypedField>,
     keys: List<String>,
-    unique: Boolean,
     dataFilePath: String
 ) {
-    val metadata = FileMetadata(tableName, formatName, fields, keys, unique)
-    dbManager!!.createFile(metadata)
+    val metadata = TypedMetadata(tableName, formatName, fields, keys).fileMetadata()
+    dbManager!!.registerMetadata(metadata, true)
     Assert.assertTrue(dbManager.existFile(tableName))
-    dbManager.registerMetadata(metadata, true)
 }
 
 /*

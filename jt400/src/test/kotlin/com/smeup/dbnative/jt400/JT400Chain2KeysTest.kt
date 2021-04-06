@@ -17,8 +17,13 @@
 
 package com.smeup.dbnative.jt400
 
-import com.smeup.dbnative.jt400.utils.*
-import org.junit.*
+import com.smeup.dbnative.jt400.utils.TST2TAB_TABLE_NAME
+import com.smeup.dbnative.jt400.utils.createAndPopulateTest2Table
+import com.smeup.dbnative.jt400.utils.dbManagerForTest
+import com.smeup.dbnative.jt400.utils.destroyDatabase
+import org.junit.After
+import org.junit.Before
+import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -30,7 +35,7 @@ class JT400Chain2KeysTest {
     fun setUp() {
         println("setup")
         dbManager = dbManagerForTest()
-        createAndPopulateMunicipalityTable(dbManager)
+        createAndPopulateTest2Table(dbManager)
     }
 
     @After

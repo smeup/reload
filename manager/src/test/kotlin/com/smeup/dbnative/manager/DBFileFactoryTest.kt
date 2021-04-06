@@ -22,10 +22,11 @@ import com.smeup.dbnative.DBNativeAccessConfig
 import com.smeup.dbnative.log.Logger
 import com.smeup.dbnative.log.LoggingLevel
 import com.smeup.dbnative.model.CharacterType
-import com.smeup.dbnative.model.Field
 import com.smeup.dbnative.model.FileMetadata
 import com.smeup.dbnative.sql.SQLDBMManager
+import com.smeup.dbnative.utils.TypedField
 import com.smeup.dbnative.utils.fieldByType
+import com.smeup.dbnative.utils.fieldList
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -87,9 +88,9 @@ class DBFileFactoryTest {
             it.executeUpdate("INSERT INTO TEST3 VALUES ('MARCO')")
         }
 
-        var testFields = mutableListOf<Field>()
+        var testFields = mutableListOf<TypedField>()
         testFields.add("Name" fieldByType CharacterType(20))
-        val testTableMetadata = FileMetadata("TEST1", "TSTFFMT", testFields, listOf("Name"))
+        val testTableMetadata = FileMetadata("TEST1", "TSTFFMT", testFields.fieldList(), listOf("Name"))
         manager.registerMetadata(testTableMetadata, true)
 
 
@@ -121,17 +122,17 @@ class DBFileFactoryTest {
             dbFileFactory.open("TEST1", null)
 
             // Open a file not registered, registering metadata before open
-            var test2Fields = mutableListOf<Field>()
+            var test2Fields = mutableListOf<TypedField>()
             test2Fields.add("Name" fieldByType CharacterType(20))
-            val test2TableMetadata = FileMetadata("TEST2", "TSTFFMT", test2Fields, listOf<String>())
+            val test2TableMetadata = FileMetadata("TEST2", "TSTFFMT", test2Fields.fieldList(), listOf<String>())
             DBFileFactory.registerMetadata(test2TableMetadata)
 
             dbFileFactory.open("TEST2", null)
 
             // Open a file not registered, passing metadata to open invoke
-            var test3Fields = mutableListOf<Field>()
+            var test3Fields = mutableListOf<TypedField>()
             test3Fields.add("Name" fieldByType CharacterType(20))
-            val test3TableMetadata = FileMetadata("TEST3", "TSTFFMT", test2Fields, listOf("Name"))
+            val test3TableMetadata = FileMetadata("TEST3", "TSTFFMT", test2Fields.fieldList(), listOf("Name"))
             dbFileFactory.open("TEST3", test3TableMetadata)
         }
     }

@@ -19,13 +19,15 @@ package com.smeup.dbnative.jt400
 
 import com.smeup.dbnative.file.Record
 import com.smeup.dbnative.file.RecordField
-import com.smeup.dbnative.metadata.file.PropertiesSerializer
-import com.smeup.dbnative.model.DecimalType
 import com.smeup.dbnative.jt400.utils.createAndPopulateMunicipalityTable
 import com.smeup.dbnative.jt400.utils.dbManagerForTest
 import com.smeup.dbnative.jt400.utils.destroyDatabase
-import com.smeup.dbnative.utils.getField
-import org.junit.*
+import com.smeup.dbnative.metadata.file.PropertiesSerializer
+import com.smeup.dbnative.model.DecimalType
+import com.smeup.dbnative.utils.propertiesToTypedMetadata
+import org.junit.After
+import org.junit.Before
+import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -224,8 +226,8 @@ class JT400OperationsOnFile {
         // Step2: read above written records and update A§DEA2 field
         // Step3: check and check for correct update
         // Step4: delete written record.
-        val fileMetadata = PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", "BRARTI1L")
-        dbManager.registerMetadata(fileMetadata, false)
+        val tMetadata = propertiesToTypedMetadata("src/test/resources/dds/properties/", "BRARTI1L")
+        dbManager.registerMetadata(tMetadata.fileMetadata(), false)
         val dbFile = dbManager.openFile("BRARTI1L")
 
         // Number of record this test work with (write, update and delete)
@@ -238,7 +240,7 @@ class JT400OperationsOnFile {
             Thread.sleep(5)
         }
 
-        val fieldsNumber = fileMetadata.fields.size
+        val fieldsNumber = tMetadata.fields.size
         val empty35char = "                                   "
         val dearKey = "Kotlin DBNativeAccess TEST         "
         val dea2Key = "Kotlin DBNativeAccess TEST-UPDATED "
@@ -252,7 +254,7 @@ class JT400OperationsOnFile {
                 val value = when(name){
                     "A§ARTI" -> items[it]
                     "A§DEAR" -> dearKey
-                    else -> when(dbFile.fileMetadata.getField(name)?.type){
+                    else -> when(tMetadata.getField(name)?.type){
                         is DecimalType -> "0"
                         else -> ""
                     }

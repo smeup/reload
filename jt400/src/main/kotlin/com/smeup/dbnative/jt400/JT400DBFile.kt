@@ -17,6 +17,7 @@
 
 package com.smeup.dbnative.jt400
 
+import com.ibm.as400.access.AS400DataType
 import com.ibm.as400.access.AS400Exception
 import com.ibm.as400.access.KeyedFile
 import com.smeup.dbnative.file.DBFile
@@ -24,11 +25,7 @@ import com.smeup.dbnative.file.Record
 import com.smeup.dbnative.file.RecordField
 import com.smeup.dbnative.file.Result
 import com.smeup.dbnative.log.Logger
-import com.smeup.dbnative.model.Field
-import com.smeup.dbnative.model.FieldType
 import com.smeup.dbnative.model.FileMetadata
-import com.smeup.dbnative.model.Type
-import com.smeup.dbnative.utils.getField
 import java.math.BigDecimal
 
 private enum class CursorAction {
@@ -410,11 +407,23 @@ class JT400DBFile(override var name: String,
     }
 
     private fun numericField(name : String) : Boolean {
-        //val dataType = file.recordFormat.getFieldDescription(name).dataType.javaType
-        val field : Field? = this.fileMetadata.getField(name)
-        val type : FieldType? =  field?.type
-        return when (type?.type) {
-            Type.BIGINT, Type.DECIMAL, Type.DOUBLE, Type.FLOAT, Type.INTEGER, Type.SMALLINT ->
+        val dataType = file.recordFormat.getFieldDescription(name).dataType.instanceType
+        //val field : Field? = this.fileMetadata.getField(name)
+        //val type : FieldType? =  field?.type
+        return when (dataType) {
+            AS400DataType.TYPE_ZONED,
+            AS400DataType.TYPE_PACKED,
+            AS400DataType.TYPE_DECFLOAT,
+            AS400DataType.TYPE_BIN1,
+            AS400DataType.TYPE_BIN2,
+            AS400DataType.TYPE_BIN4,
+            AS400DataType.TYPE_BIN8,
+            AS400DataType.TYPE_UBIN1,
+            AS400DataType.TYPE_UBIN2,
+            AS400DataType.TYPE_UBIN4,
+            AS400DataType.TYPE_UBIN8,
+            AS400DataType.TYPE_FLOAT4,
+            AS400DataType.TYPE_FLOAT8 ->
                 true
             else ->
                 false

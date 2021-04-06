@@ -20,7 +20,6 @@ package com.smeup.dbnative.sql
 import com.smeup.dbnative.file.Record
 import com.smeup.dbnative.file.RecordField
 import com.smeup.dbnative.model.*
-import com.smeup.dbnative.utils.fieldByType
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.ResultSet
@@ -138,76 +137,5 @@ fun ResultSet?.currentRecordToValues(): Record {
     return result
 }
 
-fun Connection.fields(name: String): List<Field> {
-    val result = mutableListOf<Field>()
-    var loopA = 0
-    var loopB = 0
-    this.metaData.getColumns(null, null, name, null).use {
-
-        loopA += 1
-        while (it.next()) {
-            loopB += 1
-            /*
-            it.getString("COLUMN_NAME") withType typeFor(it)
-
-            it could be written
-
-            it.getString("COLUMN_NAME").withType(typeFor(it))
-
-            */
-            result.add(it.getString("COLUMN_NAME") fieldByType sql2Type(it))
-        }
-    }
-    return result
-}
 
 
-fun sql2Type(metadataResultSet: ResultSet): FieldType {
-    val sqlType = metadataResultSet.getString("TYPE_NAME")
-    val columnSize = metadataResultSet.getInt("COLUMN_SIZE")
-    val decimalDigits = metadataResultSet.getInt("DECIMAL_DIGITS")
-    return sql2Type(sqlType, columnSize, decimalDigits)
-}
-
-
-
-/**
- * Convert SQL type in FieldType
- */
-fun sql2Type(sqlType: String, columnSize: Int, decimalDigits: Int): FieldType =
-    when (sqlType) {
-        "CHAR","CHARACTER","NCHAR" -> CharacterType(columnSize)
-        "VARCHAR" -> VarcharType(columnSize)
-        "INT", "INTEGER" -> IntegerType
-        "SMALLINT" -> SmallintType
-        "BIGINT" -> BigintType
-        "BOOLEAN", "BOOL" -> BooleanType
-        "DECIMAL", "NUMERIC" -> DecimalType(columnSize, decimalDigits)
-        "DOUBLE" -> DoubleType
-        "FLOAT" -> FloatType
-        "TIMESTAMP" -> TimeStampType
-        "TIME" -> TimeType
-        "DATE" -> DateType
-        "BINARY" -> BinaryType(columnSize)
-        "VARBINARY" -> VarbinaryType(columnSize)
-        else -> TODO("Conversion from SQL Type not yet implemented: $sqlType")
-    }
-
-fun Field.type2sql(): String =
-    when (this.type.type) {
-        Type.CHARACTER -> "CHAR(${this.type.size}) DEFAULT '' NOT NULL"
-        Type.VARCHAR -> "VARCHAR(${this.type.size}) DEFAULT '' NOT NULL"
-        Type.INTEGER -> "INT"
-        Type.SMALLINT -> "SMALLINT"
-        Type.BIGINT -> "BIGINT"
-        Type.BOOLEAN -> "BOOLEAN"
-        Type.DECIMAL -> "DECIMAL(${this.type.size},${this.type.digits}) DEFAULT 0 NOT NULL"
-        Type.FLOAT -> "FLOAT(${this.type.size},${this.type.digits}) DEFAULT 0 NOT NULL"
-        Type.DOUBLE -> "DOUBLE DEFAULT 0 NOT NULL"
-        Type.TIMESTAMP -> "TIMESTAMP"
-        Type.TIME -> "TIME"
-        Type.DATE -> "DATE"
-        Type.BINARY -> "BINARY"
-        Type.VARBINARY -> "VARBINARY(${this.type.size})"
-        else -> TODO("Conversion to SQL Type not yet implemented: ${this.type}")
-    }

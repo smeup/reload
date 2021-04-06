@@ -18,7 +18,9 @@
 package com.smeup.dbnative.jt400
 
 import com.smeup.dbnative.jt400.utils.*
-import org.junit.*
+import org.junit.After
+import org.junit.Before
+import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -30,7 +32,7 @@ class JT400ReadPreviousTest {
     fun setUp() {
         println("setup")
         dbManager = dbManagerForTest()
-        createAndPopulateMunicipalityTable(dbManager)
+        createAndPopulateEmployeeTable(dbManager)
     }
 
     @After

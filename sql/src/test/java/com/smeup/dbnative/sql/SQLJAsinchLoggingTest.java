@@ -16,7 +16,6 @@ import java.text.SimpleDateFormat;
 import java.util.Formatter;
 import java.util.concurrent.ArrayBlockingQueue;
 
-
 import static com.smeup.dbnative.sql.utils.SQLDBTestUtilsKt.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
