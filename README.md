@@ -91,6 +91,6 @@ See more details [in this document](docs/logging.md).
 
 ## Additional license info
 
-- Reload project use [JT400Open library](https://sourceforge.net/projects/jt400/) distribuited under IBM IPL 1.0 license. See [this link](https://opensource.org/licenses/ibmpl.php) for license detail.
+- Reload project uses [JT400Open library](https://sourceforge.net/projects/jt400/) distribuited under IBM IPL 1.0 license. See [this link](https://opensource.org/licenses/ibmpl.php) for license detail.
 
 
