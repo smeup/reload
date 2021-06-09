@@ -8,7 +8,7 @@ The procedure is based on four distinct steps:
 2. Configure the access information to physical table 
 3. Creation of a DBFile manager
 4. Creation of DBFile instance that allows read, write and delete operations 
-   on the desired table   
+   on opened table   
 
 
 ## Step one: define and register the structure of the table we want to access
@@ -116,7 +116,7 @@ tools (for example, tools for database migrations).
 The second operation create a **dbFileManager** as instance of class DBFileManager. With this
 object we can open all tables defined in the dbConfig instance passed as parameter.
 
-## Step four: Creation of DBFile instance that allows read, write and delete operations on the desired table   
+## Step four: creation of DBFile instance that allows read, write and delete operations on opened table   
 
 Now we are ready to open a table and operate on it.
 
