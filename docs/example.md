@@ -1,4 +1,4 @@
-#Example: access to a database table with Reload
+# Example: access to a database table with Reload
 
 In this simple example, we show how to access a DB table using Reload library.
 
@@ -11,7 +11,7 @@ The procedure is based on four distinct steps:
 4. Operate on table   
 
 
-##Step one: define and register the structure of the table we want to access
+## Step one: define and register the structure of the table we want to access
 
 Before opening a table, is it necessary to define its structure and register the information in Reload. The table structure
 is defined using an instance of a Metadata class, that define the list of columns and the list of columns that are keys for the
@@ -42,7 +42,7 @@ This code define a MUNICIPALITY table, with 6 text columns defined by name and
 description and 4 keys. All information are contained in a FileMetadata instance
 named **municipalityTableMetadata**.
 
-##Step two: configure the access information to physical table
+## Step two: configure the access information to physical table
 
 Now we have to define where is the real table defined in the previous step as metadata.
 Reload can access different types of physical tables, both sql and nosql.
@@ -118,7 +118,7 @@ tools (for example, tools for database migrations).
 The second operation create a **dbFileManager** as instance of class DBFileManager. With this
 object we can open all tables defined in the dbConfig instance passed as parameter.
 
-##Step four: operate on file
+## Step four: operate on file
 
 Now we are ready to open a table and operate on it.
 
