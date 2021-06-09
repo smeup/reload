@@ -88,7 +88,7 @@ dependencies {
 
 ## Example of using the Reload library
 
-At [this page}(docs/example.md) there is a simple example of utilization of the Reload library for access
+At [this page](docs/example.md) there is a simple example of utilization of the Reload library for access
 
 ## Enabling logs in Reload
 
