@@ -19,7 +19,7 @@ package com.smeup.dbnative.metadata.file
 
 import com.smeup.dbnative.model.Field
 import com.smeup.dbnative.model.FileMetadata
-import com.smeup.dbnative.utils.getFieldTypeInstance
+import com.smeup.dbnative.utils.fieldsToProperties
 import java.io.File
 import java.io.FileInputStream
 import java.io.InputStreamReader
@@ -43,25 +43,18 @@ object PropertiesSerializer {
             }
         }.load(InputStreamReader(propertiesFile, Charset.forName("UTF-8")))
 
-
-        // FormatName
-        val recordFormat = mp.get("recordformat")!!
-
         // Fields
-        var flds = mp.filterKeys { it.toString().startsWith("field.") }
+        var flds = mp.filterKeys { it.startsWith("field.") }
         val fields: MutableList<Field> = ArrayList()
         flds.forEach { fld ->
             val name = fld.key.split(".")[1]
             val fldAttributes = fld.value.split(",")
             val description = fldAttributes[0].trim()
-            val length = fldAttributes[2].trim().toInt()
-            val decimal = fldAttributes[3].trim().toInt()
-
-            val datatype = fldAttributes[1].trim()
-            val fieldType = datatype.getFieldTypeInstance(length, decimal)
-
-            fields.add(Field(name, fieldType, false, description))
+            fields.add(Field(name, description))
         }
+
+        // FormatName
+        val recordFormat = mp.get("recordformat")!!
 
         // FieldKeys
         val fieldsKeys: MutableList<String> = ArrayList()
@@ -69,33 +62,28 @@ object PropertiesSerializer {
             fieldsKeys.addAll((mp.get("filekeys")?.split(",")!!))
         }
 
-        // Unique
-        val unique = mp.get("unique")!!.toBoolean()
 
-        return FileMetadata(fileName, recordFormat, fields, fieldsKeys, unique)
+
+        return FileMetadata(fileName, recordFormat, fields, fieldsKeys)
     }
 
-    fun metadataToProperties(propertiesDirPath: String, fileMetadata: FileMetadata, overwrite: Boolean){
 
-        val properties = mutableListOf<Pair<String, String>>()
+
+
+    fun metadataToProperties(propertiesDirPath: String, fileMetadata: FileMetadata, overwrite: Boolean){
+        _metadataToProperties(propertiesDirPath, fileMetadata, fileMetadata.fieldsToProperties(), overwrite)
+    }
+
+
+    private fun _metadataToProperties(propertiesDirPath: String,
+                                      fileMetadata: FileMetadata,
+                                      properties: MutableList<Pair<String, String>>,
+                                      overwrite: Boolean){
 
         properties.add(Pair("recordformat", fileMetadata.recordFormat))
 
-        for (field in fileMetadata.fields) {
-            properties.add(
-                Pair(
-                    "field.${field.name}",
-                    "${field.text},${field.type.type.name},${field.type.size},${field.type.digits}"
-                )
-            )
-        }
-
         var keys = "${fileMetadata.fileKeys.joinToString(",")}"
         properties.add(Pair("filekeys", keys))
-
-        var unique = "false"
-        if (fileMetadata.unique) unique = "true"
-        properties.add(Pair("unique", unique))
 
         val propertiesFilePath = "${propertiesDirPath}${File.separatorChar}${fileMetadata.tableName.toUpperCase()}.properties"
 

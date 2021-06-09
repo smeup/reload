@@ -20,7 +20,6 @@ package com.smeup.dbnative.sql
 import com.smeup.dbnative.ConnectionConfig
 import com.smeup.dbnative.DBManagerBaseImpl
 import com.smeup.dbnative.log.LoggingKey
-import com.smeup.dbnative.model.FileMetadata
 import java.sql.Connection
 import java.sql.DriverManager
 import kotlin.system.measureTimeMillis
@@ -68,14 +67,6 @@ open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBMa
     }
      */
 
-    override fun createFile(metadata: FileMetadata) {
-        connection.createStatement().use {
-            it.execute(metadata.toSQL())
-            val dbFile = SQLDBFile(name = metadata.tableName, fileMetadata = metadata, connection =  connection, logger)
-            openedFile.putIfAbsent(metadata.tableName, dbFile)
-        }
-        super.createFile(metadata)
-    }
 
     override fun openFile(name: String) = openedFile.getOrPut(name) {
         require(existFile(name)) {

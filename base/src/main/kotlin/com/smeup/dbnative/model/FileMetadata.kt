@@ -17,4 +17,4 @@
 
 package com.smeup.dbnative.model
 
-data class FileMetadata(var tableName: String, var recordFormat: String, var fields: List<Field>, var fileKeys:List<String>, var unique:Boolean = false)
+data class FileMetadata(var tableName: String, var recordFormat: String, var fields: List<Field>, var fileKeys:List<String>)

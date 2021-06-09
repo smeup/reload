@@ -21,7 +21,8 @@ import com.smeup.dbnative.file.Record
 import com.smeup.dbnative.file.RecordField
 import com.smeup.dbnative.model.CharacterType
 import com.smeup.dbnative.model.DecimalType
-import com.smeup.dbnative.model.FileMetadata
+import com.smeup.dbnative.sql.utils.toSQL
+import com.smeup.dbnative.utils.TypedMetadata
 import com.smeup.dbnative.utils.fieldByType
 import org.junit.Test
 import kotlin.test.assertEquals
@@ -30,7 +31,7 @@ class SQLUtilsTest {
 
     @Test
     fun sqlForCreateTableTestWithPrimaryKeys() {
-        val fileMetadata = FileMetadata(
+        val fileMetadata = TypedMetadata(
             "TSTTAB",
             "TSTREC",
             listOf(
@@ -51,7 +52,7 @@ class SQLUtilsTest {
 
     @Test
     fun sqlForCreateTableTestWithoutPrimaryKeys() {
-        val fileMetadata = FileMetadata(
+        val fileMetadata = TypedMetadata(
             "TSTTAB",
             "TSTREC",
             listOf(
