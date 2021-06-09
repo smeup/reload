@@ -85,8 +85,8 @@ wildcards can be used to simultaneously define connections for multiple tables.
 
 In fact, the notation *_MONGO means:
 
-_" All tables with name that ends with _MONGO are hosted on the MongoDB server 
-identified by this ConnectionConfig definition"_
+_All tables with name that ends with _MONGO are hosted on the MongoDB server 
+identified by this ConnectionConfig definition_
 
 When the connection config list is defined, we can create an instance of 
 **DBNativeAccessConfig** passing the connection config list as parameter.
