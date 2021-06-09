@@ -6,9 +6,9 @@ The procedure is based on four distinct steps:
 
 1. Define and register the structure of the table we want to access
 2. Configure the access information to physical table 
-3. Creation of a DBFile instance that allows read, write and delete operations 
-   on the desired table.
-4. Operate on table   
+3. Creation of a DBFile manager
+4. Creation of DBFile instance that allows read, write and delete operations 
+   on the desired table   
 
 
 ## Step one: define and register the structure of the table we want to access
@@ -75,7 +75,7 @@ var dbConfig = DBNativeAccessConfig(connectionConfigs);
 ```
 In this example, we define two table connection: the first one says that the table
 MUNICIPALITY (defined as metadata in step one) point to a phisycal table with the
-neme hosted in a Hypersonic DB called TESTDB. The connection config contains all 
+same name hosted in a Hypersonic DB called TESTDB. The connection config contains all 
 the information required for a phisical access to the SQL table (name, user, password,
 driver).
 
@@ -88,15 +88,13 @@ In fact, the notation *-MONGO means:
 _All tables with name that ends with -MONGO are hosted on the MongoDB server 
 identified by this ConnectionConfig definition_
 
-When the connection config list is defined, we can create an instance of 
+After the connection config list is defined, we can create an instance of 
 **DBNativeAccessConfig** passing the connection config list as parameter.
 
-##Step three: creation of a DBFile instance that allows read, write and delete operations on the desired table.
+## Step three: creation of a DBFileManager.
 
 In previous steps we have defined table structures and physical table connections. Now
-we are ready to open a table called MUNICIPALITY and operate on it.
-
-First of all, we have to create an instance of DBFile.
+we are ready to create a DBFileManger object that allow the access to pysical table..
 
 ```sh
 
@@ -118,7 +116,7 @@ tools (for example, tools for database migrations).
 The second operation create a **dbFileManager** as instance of class DBFileManager. With this
 object we can open all tables defined in the dbConfig instance passed as parameter.
 
-## Step four: operate on file
+## Step four: Creation of DBFile instance that allows read, write and delete operations on the desired table   
 
 Now we are ready to open a table and operate on it.
 
@@ -135,26 +133,29 @@ DBM but at this level there is no difference beetwen SQL and noSQL connections. 
 is always made with an open call and and all subsequent operations will have the same 
 syntax regardless of the type of database behind it. 
 
-For example:
+A simple example of operations on table:
 
 ```sh
 
 municipalityDBFile.setLL("ITA", "LOMBARDIA", "BG");
 
 Result readRecord = municipalityDBFile.readEqual("ITA", "LOMBARDIA", "BG");
+readRecord = municipalityDBFile.readEqual("ITA", "LOMBARDIA", "BG");
+readRecord = municipalityDBFile.readEqual("ITA", "LOMBARDIA", "BG");
+Result readRecord = municipalityDBFile.readPrevious("ITA", "LOMBARDIA", "BG");
+
 
 municipalityDBFile.close();
 
 ```
 
 In this simple case, the first statement point before the first record in the MUNICIPALITY that match the
-three passed keys. With second statement we read this record and save its data in an Record object, obtained
-as result.
+three passed keys. After pointment, we read the next three records, saving data in an record object obtained as result from single method call
+And after three read in forward direction, we decide to invert the direction end read the previous record.
 
-Using the methods offered by municipalityDBFile (as instance of DBFile interface) we can navigate in table 
-content managing a cursor as a pointer to a specific record and navigate in table forward and
-also backward. For example, we can point to a spefific record with a setLL or chain statement
-and the read the record before the pointed one.
+This simple example shows that using methods offered by municipalityDBFile (as instance of DBFile interface) we can navigate in table 
+content managing a cursor as a pointer to a specific record and navigate forward and also backward in sequential mode. 
+We can always change the position of cursor in the table calling a positioning method (as chain, setLL or setGT).
 
-When the avigation in the table is finished, is important to remember to close the connection, so
+When the navigation in the table is finished, is important to remember to close the connection, so
 the system can release all the allocated resources.
