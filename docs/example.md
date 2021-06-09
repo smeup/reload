@@ -65,7 +65,7 @@ connectionConfigs.add(
 
 connectionConfigs.add(
     ConnectionConfig(
-        fileName= "*_MONGO",
+        fileName= "*-MONGO",
         url = "mongodb://localhost:27017/TESTDB",
         user = "user",
         password = "password")
@@ -83,9 +83,9 @@ In the example there is also a second ConnectionConfig definition that configure
 phisical access to noSQL tables saved on a MongoDB server. This example shows how 
 wildcards can be used to simultaneously define connections for multiple tables.
 
-In fact, the notation *_MONGO means:
+In fact, the notation *-MONGO means:
 
-_All tables with name that ends with _MONGO are hosted on the MongoDB server 
+_All tables with name that ends with -MONGO are hosted on the MongoDB server 
 identified by this ConnectionConfig definition_
 
 When the connection config list is defined, we can create an instance of 
