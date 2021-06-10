@@ -13,10 +13,16 @@ The procedure is based on four distinct steps:
 
 ## Step one: define and register the structure of the table we want to access
 
-Before opening a table, is it necessary to define its structure and register the information in Reload. The table structure
+Before opening a table it is necessary to define its structure and register the information in Reload. The table structure
 is defined using an instance of a Metadata class, that define the list of columns and the list of columns that are keys for the
 desired tabel. Metadata don't contains information about the columns data type and lenght because
 Reload manage all datas as Text and has not limits in their lengths.
+
+**Note**: by design choice, the Reload library cannot create tables but only open and manage existing ones. Indeed, the information
+contained in the metadata are not necessary for the normal functioning of the library. But this information may be needed for external products that
+use the Reload library for accessing tables and may need information on their structure. Reload could read this information from
+physical table, but by design choice we prefer to store the information about the structure in an external repository and limit dependencies
+between the reload code and the connection to the physical table.
 
 So, the first step is the creation of a Metadata object:
 
@@ -115,6 +121,10 @@ tools (for example, tools for database migrations).
 
 The second operation create a **dbFileManager** as instance of class DBFileManager. With this
 object we can open all tables defined in the dbConfig instance passed as parameter.
+
+**Note:** for external tools that need information about the structure of a single table, the class
+DBFileFactory offer static methods for reading metadata of a registered table, identified by its name.
+
 
 ## Step four: creation of DBFile instance that allows read, write and delete operations on opened table   
 
