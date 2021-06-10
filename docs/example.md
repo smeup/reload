@@ -135,13 +135,13 @@ var municipalityDBFile = dbFileManager.open("MUNICIPALITY", null);
 ```
 
 This operation create a **municipalityDBFile** instance of DBFile class that 
-allow full access to the MUNICIPALITY table. Now whe have all what we need for search,
-read, write and delete records on this table.
+allow full access to the MUNICIPALITY table. Now we have all what we need for searching,
+reading, writing and deleting records on this table.
 
 Note that DBFile open method create a connection with physical table hosted on backend 
-DBM but at this level there is no difference beetwen SQL and noSQL connections. Access
-is always made with an open call and and all subsequent operations will have the same 
-syntax regardless of the type of database behind it. 
+DBM but at code level there is no difference beetwen SQL and noSQL connections. Access to
+a table is always obtained with a call to the open method and all subsequent operations on 
+the table will have the same syntax regardless of the type of database we are connected to.
 
 A simple example of operations on table:
 
