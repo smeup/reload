@@ -44,7 +44,7 @@ keys.add("CIT");
 val municipalityTableMetadata = FileMetadata("MUNICIPALITY", null, fileds, keys)
 ```
 
-This code define a MUNICIPALITY table, with 6 text columns defined by name and 
+This code define a MUNICIPALITY table, with 6 columns defined by name and 
 description and 4 keys. All information are contained in a FileMetadata instance
 named **municipalityTableMetadata**.
 
@@ -137,6 +137,10 @@ var municipalityDBFile = dbFileManager.open("MUNICIPALITY", null);
 This operation create a **municipalityDBFile** instance of DBFile class that 
 allow full access to the MUNICIPALITY table. Now we have all what we need for searching,
 reading, writing and deleting records on this table.
+
+**PS:** note that open method has a second parameter, in this case setted to null. In this second
+parameter we could pass a fileMetadata instance and in this case the open method make two operation:
+registering passed metadata as metadata for file "MUNICIPALITY" and opening the file.
 
 Note that DBFile open method create a connection with physical table hosted on backend 
 DBM but at code level there is no difference beetwen SQL and noSQL connections. Access to
