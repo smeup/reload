@@ -85,6 +85,11 @@ dependencies {
     implementation 'com.github.smeup:reload:-SNAPSHOT'
 }
 ```
+
+## Example of using the Reload library
+
+At [this page](docs/example.md) there is a simple example of utilization of the Reload library for access
+
 ## Enabling logs in Reload
 
 See more details [in this document](docs/logging.md).
