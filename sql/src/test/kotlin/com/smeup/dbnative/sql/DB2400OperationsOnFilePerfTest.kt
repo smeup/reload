@@ -28,34 +28,31 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 
-class SQLSMEUP_DATTest {
+class DB2400OperationsOnFilePerfTest {
 
-    companion object {
 
-        private var dbManager: SQLDBMManager? = null
+    private var dbManager: SQLDBMManager? = null
 
-        @BeforeClass
-        @JvmStatic
-        fun setUp() {
-            dbManager = dbManagerForTest(TestSQLDBType.DB2_400_DAT)
-        }
-
-        @AfterClass
-        fun tearDown() {
-        }
+    fun initDbManager(host: String = DB2_400_HOST, library: String = DB2_400_LIBRARY_NAME) {
+        dbManager = dbManagerDB2400ForTest(host, library)
     }
 
     @Test
     fun setllReadeNoMatch() {
+        initDbManager(library = "XSMEDATGRU")
         val fileMetadata = PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", "VERAPG9L")
         dbManager!!.registerMetadata(fileMetadata, false)
-        val dbFile = dbManager!!.openFilePerf("VERAPG9L")
+        val dbFile = dbManager!!.openFile("VERAPG9L")
         var keys = arrayListOf("20210117", "SMEGL.001      ")
         dbFile.setll(keys)
         dbFile.readEqual(keys)
+        dbManager!!.closeFile("VERAPG9L")
+        dbManager!!.close()
     }
+
     @Test
-    fun setllChain() {
+    fun chain() {
+        initDbManager(library = "SMEUP_DAT")
         val fileMetadata = PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", "BRARTI2L")
         dbManager!!.registerMetadata(fileMetadata, false)
         val dbFile = dbManager!!.openFile("BRARTI2L")
@@ -80,6 +77,7 @@ class SQLSMEUP_DATTest {
             doChain(keys, dbFile)
         }
         dbManager!!.closeFile("BRARTI0L")
+        dbManager!!.close()
     }
 
     private fun doChain(keys: List<String>, dbFile: DBFile){

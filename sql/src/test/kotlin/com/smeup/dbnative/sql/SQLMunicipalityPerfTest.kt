@@ -49,7 +49,7 @@ class SQLMunicipalityPerfTest {
 
     @Test
     fun read() {
-        val dbFile = dbManager.openFilePerf(MUNICIPALITY_TABLE_NAME)
+        val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
         assertTrue(dbFile.setll(buildMunicipalityKey("IT", "LOM", "BS", "ERBUSCO")))
         for(index in 0..138){
             var result = dbFile.read();
@@ -63,7 +63,7 @@ class SQLMunicipalityPerfTest {
 
     @Test
     fun chain() {
-        val dbFile = dbManager.openFilePerf(MUNICIPALITY_TABLE_NAME)
+        val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
         val chainResult1 = dbFile.chain(buildMunicipalityKey("IT", "LOM", "BS", "ERBASCO"))
         assertEquals(0, chainResult1.record.size)
         val chainResult2 = dbFile.chain(buildMunicipalityKey("IT", "LOM", "BS", "ERBUSCO"))
@@ -73,7 +73,7 @@ class SQLMunicipalityPerfTest {
 
     @Test
     fun equal() {
-        val dbFile = dbManager.openFilePerf(MUNICIPALITY_TABLE_NAME)
+        val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
         dbFile.setll(buildMunicipalityKey("IT", "LOM", "BS", "ERBUSCO"))
         assertTrue(dbFile.equal())
         dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
@@ -81,7 +81,7 @@ class SQLMunicipalityPerfTest {
 
     @Test
     fun notEqual() {
-        val dbFile = dbManager.openFilePerf(MUNICIPALITY_TABLE_NAME)
+        val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
         dbFile.setll(buildMunicipalityKey("IT", "LOM", "BS", "ERBASCO"))
         assertTrue(!dbFile.equal())
         dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
@@ -89,7 +89,7 @@ class SQLMunicipalityPerfTest {
 
     @Test
     fun setllReadeNoMatch() {
-        val dbFile = dbManager.openFilePerf(MUNICIPALITY_TABLE_NAME)
+        val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
         assertTrue(dbFile.setll(buildMunicipalityKey("IT", "LOM", "BS", "ERBASCO")))
         dbFile.readEqual(buildMunicipalityKey("IT", "LOM", "BS", "ERBASCO"))
         dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
@@ -97,7 +97,7 @@ class SQLMunicipalityPerfTest {
 
     @Test
     fun setllReadpe() {
-        val dbFile = dbManager.openFilePerf(MUNICIPALITY_TABLE_NAME)
+        val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
         assertTrue(dbFile.setll(buildMunicipalityKey("IT", "LOM", "BS", "ERBUSCO")))
         assertEquals("EDOLO", getMunicipalityName(dbFile.readPreviousEqual(buildMunicipalityKey("IT", "LOM")).record))
         dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
@@ -105,7 +105,7 @@ class SQLMunicipalityPerfTest {
 
     @Test
     fun setgtReade() {
-        val dbFile = dbManager.openFilePerf(MUNICIPALITY_TABLE_NAME)
+        val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
         assertTrue(dbFile.setgt(buildMunicipalityKey("IT", "LOM", "BS")))
         assertEquals("ALBAVILLA", getMunicipalityName(dbFile.readEqual(buildMunicipalityKey("IT", "LOM")).record))
         dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
@@ -113,7 +113,7 @@ class SQLMunicipalityPerfTest {
 
     @Test
     fun eofAfterRead() {
-        val dbFile = dbManager.openFilePerf(MUNICIPALITY_TABLE_NAME)
+        val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
         assertTrue(dbFile.setll(buildMunicipalityKey("IT", "LOM", "BS", "ZONE")))
         assertEquals("ZONE", getMunicipalityName(dbFile.readEqual(buildMunicipalityKey("IT", "LOM", "BS")).record))
         var r = dbFile.readEqual(buildMunicipalityKey("IT", "LOM", "BS"))
@@ -137,7 +137,7 @@ class SQLMunicipalityPerfTest {
 
     @Test
     fun usupportedUncoerentKeys() {
-        val dbFile = dbManager.openFilePerf(MUNICIPALITY_TABLE_NAME)
+        val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
         dbFile.setll(buildMunicipalityKey("IT", "LOM", "BS", "ZONE"))
         assertFails {dbFile.readEqual(buildMunicipalityKey("IT", "LOM", "CO"))}
         dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
@@ -145,7 +145,7 @@ class SQLMunicipalityPerfTest {
 
     @Test
     fun usupportedDifferentReadMethods() {
-        val dbFile = dbManager.openFilePerf(MUNICIPALITY_TABLE_NAME)
+        val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
         dbFile.setll(buildMunicipalityKey("IT", "LOM", "BS", "ZONE"))
         dbFile.readEqual(buildMunicipalityKey("IT", "LOM", "BS"))
         assertFails {dbFile.read()}
@@ -154,14 +154,14 @@ class SQLMunicipalityPerfTest {
 
     @Test
     fun usupportedUnpositioning() {
-        val dbFile = dbManager.openFilePerf(MUNICIPALITY_TABLE_NAME)
+        val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
         assertFails {dbFile.readEqual(buildMunicipalityKey("IT", "LOM", "BS"))}
         dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
 
     @Test
     fun usupportedReadChangeDirection() {
-        val dbFile = dbManager.openFilePerf(MUNICIPALITY_TABLE_NAME)
+        val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
         dbFile.setll(buildMunicipalityKey("IT", "LOM", "BS", "ZONE"))
         dbFile.readEqual(buildMunicipalityKey("IT", "LOM", "BS"))
         assertFails {dbFile.readPrevious()}

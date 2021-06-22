@@ -105,6 +105,18 @@ object DatabaseNameFactory {
     var COUNTER = AtomicInteger()
 }
 
+fun dbManagerDB2400ForTest(host: String, library:String): SQLDBMManager{
+    val dbManager = SQLDBMManager(ConnectionConfig(
+        fileName= "*",
+        driver = "com.ibm.as400.access.AS400JDBCDriver",
+        url = "jdbc:as400://$host/$library;",
+        user = "USER",
+        password = "**********"),
+    )
+    dbManager.logger = Logger.getSimpleInstance(LOGGING_LEVEL)
+    return dbManager
+}
+
 fun dbManagerForTest() = dbManagerForTest(defaultDbType)
 
 fun dbManagerForTest(testSQLDBType: TestSQLDBType) : SQLDBMManager {

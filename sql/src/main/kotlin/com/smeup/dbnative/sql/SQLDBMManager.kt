@@ -67,11 +67,11 @@ open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBMa
     }
      */
 
-    fun openFilePerf(name: String): SQLDBFilePerf {
+    fun openFileNoPerf(name: String): SQLDBFileNoPerf {
         require(existFile(name)) {
             "Cannot open a unregistered file $name"
         }
-        return SQLDBFilePerf(name = name, fileMetadata = metadataOf(name), connection =  connection, logger)
+        return SQLDBFileNoPerf(name = name, fileMetadata = metadataOf(name), connection =  connection, logger)
     }
 
     override fun openFile(name: String) = openedFile.getOrPut(name) {
