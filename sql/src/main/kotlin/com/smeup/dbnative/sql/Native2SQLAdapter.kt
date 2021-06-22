@@ -1,6 +1,7 @@
 package com.smeup.dbnative.sql
 
 import com.smeup.dbnative.file.Record
+import java.lang.Exception
 
 enum class PositioningMethod {
     SETLL, SETGT;
@@ -27,10 +28,6 @@ class ReadInstruction(var method: ReadMethod, var keys: List<String>){
         require(admitEmptyKeys()){
             "Keys are mandatory for read instruction $method "
         }
-    }
-
-    fun matchRecord(record: Record) = if(keys.isEmpty()) true else keys.zip(record.values).all {
-        it.first == it.second
     }
 
     fun admitEmptyKeys() = method == ReadMethod.READ || method == ReadMethod.READP
@@ -69,41 +66,71 @@ class Native2SQL(val fileKeys: List<String>, val tableName: String) {
         lastReadInstruction = null
     }
 
+    /*
+     * @return true if read method need new query execution
+     */
     fun setRead(method: ReadMethod, keys: List<String>? = null): Boolean{
-        val coerent = keys?.let{isCoerent(keys)} ?: true
-        //Test to remove on fully supported operations
-        require(coerent){
-            "Uncoerent read not yet managed"
-        }
-
-        require(lastReadInstruction == null || method == lastReadInstruction!!.method) {
-            "read operations are only allowed immediatly after positioning or after an identical read instruction"
-        }
-
+        var executeQuery = false
         when(method){
-            ReadMethod.CHAIN -> lastPositioningInstruction = null
+            ReadMethod.READPE, ReadMethod.READE ->{
+                val coerent = keys?.let{isCoerent(keys)} ?: true
+                //Test to remove on fully supported operations
+                require(coerent){
+                    "Uncoerent read not yet managed"
+                }
+            }
+            ReadMethod.READ, ReadMethod.READP -> checkPositioning()
+            ReadMethod.CHAIN -> {
+                lastPositioningInstruction = null
+                executeQuery = true;
+            }
+        }
+        require(lastReadInstruction == null || method == lastReadInstruction!!.method) {
+            "read operations are only allowed immediatly after positioning or after a same method read instruction"
+        }
+        if(lastReadInstruction == null){
+            executeQuery = true
         }
         lastReadInstruction = ReadInstruction(method, keys ?:emptyList())
-        return !coerent
+        return executeQuery
     }
 
-    fun lastReadMatchRecord(record: Record) = lastReadInstruction!!.matchRecord(record)
+    fun clear(){
+        lastReadInstruction = null
+        lastPositioningInstruction = null
+    }
+
+    fun getLastKeys() = lastReadInstruction?.keys ?:lastPositioningInstruction?.keys ?: throw Exception("Keys not yet set")
+
+    fun isLastOperationSet()=lastReadInstruction == null
+
+    fun lastReadMatchRecord(record: Record): Boolean {
+        if(lastReadInstruction!!.keys.isEmpty()){
+            return true
+        }
+        lastReadInstruction!!.keys.mapIndexed { index, value ->
+            val keyname = fileKeys.get(index)
+            if(record[keyname] != value){
+                return false;
+            }
+        }
+        return true;
+    }
 
 
     fun isCoerent(newKeys: List<String>): Boolean{
         checkPositioning()
-        return newKeys.isEmpty() || getCoerenceIndex(newKeys) >= 0
-    }
-
-    private fun getCoerenceIndex(newKeys: List<String>): Int {
-        //Need to check last positioning key but last read instruction too if presents. There should be more key respect last read
-        return if (newKeys.size <= lastPositioningInstruction!!.keys.size &&
-            newKeys.size <= lastReadInstruction?.keys?.size?:newKeys.size){
-            newKeys.mapIndexed{index, value ->
-                lastPositioningInstruction!!.keys.get(index) == value
-            }.size - 1
+        return newKeys.isEmpty() ||
+            if (newKeys.size <= lastPositioningInstruction!!.keys.size &&
+            newKeys.size <= lastReadInstruction?.keys?.size?:newKeys.size) {
+            newKeys.forEachIndexed() { index, value ->
+                if(lastPositioningInstruction!!.keys.get(index) != value){
+                    return false
+                }
+            }
+            return true;
         }
-        else -1
+        else false
     }
 
 
@@ -133,18 +160,30 @@ class Native2SQL(val fileKeys: List<String>, val tableName: String) {
         return " ORDER BY " + fileKeys.joinToString(separator = " " + sortOrder.symbol + ", ", postfix = " " + sortOrder.symbol )
     }
 
+    fun getReadSqlStatement(): Pair<String, List<String>>{
+        checkPositioning()
+        return Pair(getSQL(fileKeys.subList(0, lastPositioningInstruction!!.keys.size), Comparison.EQ, tableName), lastPositioningInstruction!!.keys)
+    }
+
     fun getSQLSatement(): Pair<String, List<String>>{
-        checkReadKeys()
         when(lastReadInstruction!!.method){
             ReadMethod.CHAIN ->{
+                checkReadKeys()
                 return Pair(getSQL(fileKeys.subList(0, lastReadInstruction!!.keys.size), Comparison.EQ, tableName), lastReadInstruction!!.keys)
             }
-            else -> return getCoerentSql()
+            ReadMethod.READ,ReadMethod.READP -> {
+                checkRead()
+                return getCoerentSql(true)
+            }
+            else -> {
+                checkReadKeys()
+                return getCoerentSql()
+            }
         }
     }
 
 
-    private fun getCoerentSql():Pair<String, List<String>>{
+    private fun getCoerentSql(fullUnion: Boolean = false):Pair<String, List<String>>{
         checkPositioning()
         val queries = mutableListOf<String>()
         val replacements = mutableListOf<String>()
@@ -157,7 +196,8 @@ class Native2SQL(val fileKeys: List<String>, val tableName: String) {
             replacements.addAll(lastPositioningInstruction!!.keys)
         }
         else {
-            for (i in lastPositioningInstruction!!.keys.size downTo 2) {
+            val limit = if(fullUnion)1 else 2
+            for (i in lastPositioningInstruction!!.keys.size downTo limit) {
                 queries.add(getSQL(fileKeys.subList(0, i), if(i == lastPositioningInstruction!!.keys.size) comparison.first else comparison.second, tableName))
                 replacements.addAll(lastPositioningInstruction!!.keys.subList(0, i))
             }

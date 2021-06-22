@@ -84,6 +84,17 @@ enum class TestSQLDBType(
             url = "jdbc:as400://$DB2_400_HOST/$DB2_400_LIBRARY_NAME;",
             user = "USER",
             password = "**********"),
+
+        //force no create connection for dba operations
+        dbaConnectionConfig = null
+    ),
+    DB2_400_DAT(ConnectionConfig(
+        fileName= "*",
+        driver = "com.ibm.as400.access.AS400JDBCDriver",
+        url = "jdbc:as400://$DB2_400_HOST/SMEUP_DAT",
+        user = "USER",
+        password = "**********"),
+
         //force no create connection for dba operations
         dbaConnectionConfig = null
     )
@@ -227,6 +238,10 @@ fun getEmployeeName(record: Record): String {
 
 fun getMunicipalityName(record: Record): String {
     return (record["CITTA"]?.toString()?.trim() ?: "")
+}
+
+fun getMunicipalityProv(record: Record): String {
+    return (record["PROV"]?.toString()?.trim() ?: "")
 }
 
 fun testLog(message: String) {
