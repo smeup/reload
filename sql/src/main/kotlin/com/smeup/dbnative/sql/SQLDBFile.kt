@@ -267,7 +267,7 @@ class SQLDBFile(override var name: String,
             eof = false
             return result
         } else {
-            eof = true;
+            eof = true
             resultSet.closeIfOpen()
             resultSet = null
             logEvent(LoggingKey.read_data, "No more record to read")

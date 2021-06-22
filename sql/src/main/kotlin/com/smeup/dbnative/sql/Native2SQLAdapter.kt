@@ -82,7 +82,7 @@ class Native2SQL(val fileKeys: List<String>, val tableName: String) {
             ReadMethod.READ, ReadMethod.READP -> checkPositioning()
             ReadMethod.CHAIN -> {
                 lastPositioningInstruction = null
-                executeQuery = true;
+                executeQuery = true
             }
         }
         require(lastReadInstruction == null || method == lastReadInstruction!!.method) {
@@ -111,10 +111,10 @@ class Native2SQL(val fileKeys: List<String>, val tableName: String) {
         lastReadInstruction!!.keys.mapIndexed { index, value ->
             val keyname = fileKeys.get(index)
             if(record[keyname] != value){
-                return false;
+                return false
             }
         }
-        return true;
+        return true
     }
 
 
@@ -128,7 +128,7 @@ class Native2SQL(val fileKeys: List<String>, val tableName: String) {
                     return false
                 }
             }
-            return true;
+            return true
         }
         else false
     }
