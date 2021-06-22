@@ -73,10 +73,10 @@ class Native2SQL(val fileKeys: List<String>, val tableName: String) {
         var executeQuery = false
         when(method){
             ReadMethod.READPE, ReadMethod.READE ->{
-                val coerent = keys?.let{isCoerent(keys)} ?: true
+                val coherent = keys?.let{isCoherent(keys)} ?: true
                 //Test to remove on fully supported operations
-                require(coerent){
-                    "Uncoerent read not yet managed"
+                require(coherent){
+                    "Uncoherent read not yet managed"
                 }
             }
             ReadMethod.READ, ReadMethod.READP -> checkPositioning()
@@ -118,7 +118,7 @@ class Native2SQL(val fileKeys: List<String>, val tableName: String) {
     }
 
 
-    fun isCoerent(newKeys: List<String>): Boolean{
+    fun isCoherent(newKeys: List<String>): Boolean{
         checkPositioning()
         return newKeys.isEmpty() ||
             if (newKeys.size <= lastPositioningInstruction!!.keys.size &&
@@ -173,17 +173,17 @@ class Native2SQL(val fileKeys: List<String>, val tableName: String) {
             }
             ReadMethod.READ,ReadMethod.READP -> {
                 checkRead()
-                return getCoerentSql(true)
+                return getCoherentSql(true)
             }
             else -> {
                 checkReadKeys()
-                return getCoerentSql()
+                return getCoherentSql()
             }
         }
     }
 
 
-    private fun getCoerentSql(fullUnion: Boolean = false):Pair<String, List<String>>{
+    private fun getCoherentSql(fullUnion: Boolean = false):Pair<String, List<String>>{
         checkPositioning()
         val queries = mutableListOf<String>()
         val replacements = mutableListOf<String>()
@@ -219,7 +219,7 @@ private fun getSQL(keys: List<String>, comparison: Comparison, tableName: String
 fun main(){
     val adapter = Native2SQL(listOf("Regione", "Provincia", "Comune"), "rld_comuni").apply{
         setPositioning(PositioningMethod.SETLL, listOf("Lombardia", "Brescia", "Erbusco"))
-        println(isCoerent(listOf("Lombardia", "Brescia", "Erbusco")))
+        println(isCoherent(listOf("Lombardia", "Brescia", "Erbusco")))
         setRead(ReadMethod.READE, listOf("Lombardia", "Brescia", "Erbusco"))
     }
     adapter.getSQLSatement().let{

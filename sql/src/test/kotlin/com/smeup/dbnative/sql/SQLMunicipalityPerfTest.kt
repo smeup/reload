@@ -20,7 +20,6 @@ package com.smeup.dbnative.sql
 import com.smeup.dbnative.sql.utils.*
 import org.junit.AfterClass
 import org.junit.BeforeClass
-import org.junit.Ignore
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
@@ -136,7 +135,7 @@ class SQLMunicipalityPerfTest {
     }
 
     @Test
-    fun usupportedUncoerentKeys() {
+    fun usupportedUncoherentKeys() {
         val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
         dbFile.setll(buildMunicipalityKey("IT", "LOM", "BS", "ZONE"))
         assertFails {dbFile.readEqual(buildMunicipalityKey("IT", "LOM", "CO"))}
@@ -170,7 +169,7 @@ class SQLMunicipalityPerfTest {
 
     @Test
     fun usupportedFeatures() {
-        usupportedUncoerentKeys()
+        usupportedUncoherentKeys()
         usupportedDifferentReadMethods()
         usupportedUnpositioning()
         usupportedReadChangeDirection()
