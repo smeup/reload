@@ -382,7 +382,7 @@ class DB2400OperationsOnFile {
 
         // Fill ResultSet
         assertTrue(dbFile.setll(key))
-
+        dbFile.read()
         var resultSet = dbFile.getResultSet()
 
         // Cursor to 1st row
@@ -406,7 +406,7 @@ class DB2400OperationsOnFile {
 
         // Fill ResultSet
         assertTrue(dbFile.setll(key))
-
+        dbFile.read()
         var resultSet = dbFile.getResultSet()
 
         // Cursor to 1st row

@@ -83,7 +83,7 @@ open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBMa
 
 
     override fun closeFile(name: String) {
-        openedFile.remove(name)
+        openedFile.remove(name)?.close()
     }
 
     fun execute(sqlStatements: List<String>) {

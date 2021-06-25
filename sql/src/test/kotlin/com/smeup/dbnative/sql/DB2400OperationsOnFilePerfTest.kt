@@ -18,6 +18,8 @@
 package com.smeup.dbnative.sql
 
 import com.smeup.dbnative.file.DBFile
+import com.smeup.dbnative.file.Record
+import com.smeup.dbnative.file.RecordField
 import com.smeup.dbnative.metadata.file.PropertiesSerializer
 import com.smeup.dbnative.sql.utils.*
 import org.junit.AfterClass
@@ -37,47 +39,83 @@ class DB2400OperationsOnFilePerfTest {
         dbManager = dbManagerDB2400ForTest(host, library)
     }
 
+
+    @Ignore
+    @Test
+    fun updateMethods() {
+        initDbManager(library = "XSMEDATGRU")
+        dbManager.use {
+            val fileMetadata =
+                PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", "VERAPG3L")
+            it!!.registerMetadata(fileMetadata, false)
+            val dbFile = it!!.openFile("VERAPG3L")
+
+            var record = dbFile.chain(arrayListOf("SMEGL.001      ", "20210117", "BUSFIO         ")).record
+            if (dbFile.eof()) {
+                record = Record(RecordField("V£IDOJ", "A3L0000001"),
+                    RecordField("V£DATA", "20210117"),
+                    RecordField("V£NOME", "BUSFIO         "),
+                    RecordField("V£CDC", "SMEGL.001      "),
+                    RecordField("V£COD1", "ERB            "))
+                dbFile.write(record)
+            }
+
+            record.put("V£ATV0", "2")
+            record.put("V£COM2", "\$\$EXT   Prova aggiornamento       EXT\$\$")
+            dbFile.update(record)
+
+            record = dbFile.chain(arrayListOf("SMEGL.001", "20210117", "BUSFIO")).record
+            assertEquals(record["V£ATV0"], "2")
+
+            it!!.closeFile("VERAPG3L")
+        }
+    }
+
     @Test
     fun setllReadeNoMatch() {
         initDbManager(library = "XSMEDATGRU")
-        val fileMetadata = PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", "VERAPG9L")
-        dbManager!!.registerMetadata(fileMetadata, false)
-        val dbFile = dbManager!!.openFile("VERAPG9L")
-        var keys = arrayListOf("20210117", "SMEGL.001      ")
-        dbFile.setll(keys)
-        dbFile.readEqual(keys)
-        dbManager!!.closeFile("VERAPG9L")
-        dbManager!!.close()
+        dbManager.use {
+            val fileMetadata =
+                PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", "VERAPG9L")
+            it!!.registerMetadata(fileMetadata, false)
+            val dbFile = it!!.openFile("VERAPG9L")
+            var keys = arrayListOf("20210117", "SMEGL.001      ")
+            dbFile.setll(keys)
+            dbFile.readEqual(keys)
+            it!!.closeFile("VERAPG9L")
+        }
     }
 
     @Test
     fun chain() {
         initDbManager(library = "SMEUP_DAT")
-        val fileMetadata = PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", "BRARTI2L")
-        dbManager!!.registerMetadata(fileMetadata, false)
-        val dbFile = dbManager!!.openFile("BRARTI2L")
-        var keys = arrayListOf("ART  ", "A08            ")
-        for (i in 1..10){
-            doChain(keys, dbFile)
+        dbManager.use {
+            val fileMetadata =
+                PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", "BRARTI2L")
+            it!!.registerMetadata(fileMetadata, false)
+            val dbFile = it!!.openFile("BRARTI2L")
+            var keys = arrayListOf("ART  ", "A08            ")
+            for (i in 1..10) {
+                doChain(keys, dbFile)
+            }
+            keys = arrayListOf("ART  ", "MS01           ")
+            for (i in 1..10) {
+                doChain(keys, dbFile)
+            }
+            keys = arrayListOf("ART  ", "SL03           ")
+            for (i in 1..10) {
+                doChain(keys, dbFile)
+            }
+            keys = arrayListOf("ART  ", "TX01           ")
+            for (i in 1..10) {
+                doChain(keys, dbFile)
+            }
+            keys = arrayListOf("ART  ", "MAN            ")
+            for (i in 1..10) {
+                doChain(keys, dbFile)
+            }
+            it!!.closeFile("BRARTI0L")
         }
-        keys = arrayListOf("ART  ", "MS01           ")
-        for (i in 1..10){
-            doChain(keys, dbFile)
-        }
-        keys = arrayListOf("ART  ", "SL03           ")
-        for (i in 1..10){
-            doChain(keys, dbFile)
-        }
-        keys = arrayListOf("ART  ", "TX01           ")
-        for (i in 1..10){
-            doChain(keys, dbFile)
-        }
-        keys = arrayListOf("ART  ", "MAN            ")
-        for (i in 1..10){
-            doChain(keys, dbFile)
-        }
-        dbManager!!.closeFile("BRARTI0L")
-        dbManager!!.close()
     }
 
     private fun doChain(keys: List<String>, dbFile: DBFile){

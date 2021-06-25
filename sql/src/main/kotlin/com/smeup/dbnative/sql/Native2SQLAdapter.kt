@@ -37,31 +37,38 @@ class Native2SQL(val fileKeys: List<String>, val tableName: String) {
     private var lastPositioningInstruction: PositioningInstruction? = null
     private var lastReadInstruction: ReadInstruction? = null
 
-    fun checkPositioning(){
+    private fun checkPositioning(){
         requireNotNull(lastPositioningInstruction){
             "No positioning instruction found"
         }
     }
 
-    fun checkRead(){
+    private fun checkKeys(keys: List<String>){
+        require(keys.size <= fileKeys.size){
+            "Number of metadata keys less than number of positioning/read keys"
+        }
+    }
+
+    private fun checkRead(){
         requireNotNull(lastReadInstruction){
             "No read instruction found"
         }
     }
 
-    fun checkReadKeys(){
+    private fun checkReadKeys(){
         checkRead()
         require(!lastReadInstruction!!.keys.isNullOrEmpty()){
             "No keys specified for read instruction ${lastReadInstruction!!.method}"
         }
     }
 
-    fun checkInstructions(){
+    private fun checkInstructions(){
         checkPositioning()
         checkRead()
     }
 
     fun setPositioning(method: PositioningMethod, keys: List<String>){
+        checkKeys(keys)
         lastPositioningInstruction = PositioningInstruction(method, keys)
         lastReadInstruction = null
     }
@@ -70,6 +77,7 @@ class Native2SQL(val fileKeys: List<String>, val tableName: String) {
      * @return true if read method need new query execution
      */
     fun setRead(method: ReadMethod, keys: List<String>? = null): Boolean{
+        checkKeys(keys ?: emptyList())
         var executeQuery = false
         when(method){
             ReadMethod.READPE, ReadMethod.READE ->{
@@ -192,7 +200,7 @@ class Native2SQL(val fileKeys: List<String>, val tableName: String) {
             "Empty positioning keys"
         }
         if(lastPositioningInstruction!!.keys.size == 1){
-            queries.add(getSQL(fileKeys, comparison.first, tableName))
+            queries.add(getSQL(fileKeys.subList(0, 1), comparison.first, tableName))
             replacements.addAll(lastPositioningInstruction!!.keys)
         }
         else {

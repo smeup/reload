@@ -64,7 +64,7 @@ class SQLDBFile(override var name: String,
     override fun setll(keys: List<String>): Boolean {
         lastNativeMethod = NativeMethod.setll
         logEvent(LoggingKey.native_access_method, "Executing setll on keys $keys")
-        adapter.apply {setPositioning(PositioningMethod.SETLL, keys)}
+        adapter.setPositioning(PositioningMethod.SETLL, keys)
         return true
     }
 
@@ -75,7 +75,7 @@ class SQLDBFile(override var name: String,
     override fun setgt(keys: List<String>): Boolean {
         lastNativeMethod = NativeMethod.setgt
         logEvent(LoggingKey.native_access_method, "Executing setgt on keys $keys")
-        adapter.apply {setPositioning(PositioningMethod.SETGT, keys)}
+        adapter.setPositioning(PositioningMethod.SETGT, keys)
         return true
     }
 
@@ -86,9 +86,7 @@ class SQLDBFile(override var name: String,
     override fun chain(keys: List<String>): Result {
         lastNativeMethod = NativeMethod.chain
         logEvent(LoggingKey.native_access_method, "Executing chain on keys $keys")
-        adapter.apply {
-            setRead(ReadMethod.CHAIN, keys)
-        }
+        adapter.setRead(ReadMethod.CHAIN, keys)
         val read: Result
         measureTimeMillis {
             executeQuery(adapter.getSQLSatement())
@@ -184,7 +182,6 @@ class SQLDBFile(override var name: String,
     override fun write(record: Record): Result {
         lastNativeMethod = NativeMethod.write
         logEvent(LoggingKey.native_access_method, "Executing write for record $record")
-        adapter.clear()
         measureTimeMillis {
             // TODO: manage errors
             val sql = name.insertSQL(record)
@@ -202,7 +199,6 @@ class SQLDBFile(override var name: String,
     override fun update(record: Record): Result {
         lastNativeMethod = NativeMethod.update
         logEvent(LoggingKey.native_access_method, "Executing update for record $record")
-        adapter.clear()
         measureTimeMillis {
             // record before update is "actualRecord"
             // record post update will be "record"
@@ -227,7 +223,6 @@ class SQLDBFile(override var name: String,
     override fun delete(record: Record): Result {
         lastNativeMethod = NativeMethod.delete
         logEvent(LoggingKey.native_access_method, "Executing delete for record $record")
-        adapter.clear()
         measureTimeMillis {
             this.getResultSet()?.deleteRow()
         }.apply {
@@ -263,16 +258,20 @@ class SQLDBFile(override var name: String,
         val result = Result(resultSet.toValues())
         if (!eof() && adapter.lastReadMatchRecord(result.record)) {
             logEvent(LoggingKey.read_data, "Record read: ${result.record}")
-            actualRecord = result.record
+            actualRecord = result.record.duplicate()
             eof = false
             return result
         } else {
             eof = true
-            resultSet.closeIfOpen()
-            resultSet = null
+            closeResultSet()
             logEvent(LoggingKey.read_data, "No more record to read")
             return Result()
         }
+    }
+
+    private fun closeResultSet(){
+        resultSet.closeIfOpen()
+        resultSet = null
     }
 
     override fun eof() = eof
@@ -299,5 +298,9 @@ class SQLDBFile(override var name: String,
 
     fun getResultSet(): ResultSet? {
         return this.resultSet
+    }
+
+    override fun close() {
+        resultSet.closeIfOpen()
     }
 }

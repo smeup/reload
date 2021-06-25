@@ -61,6 +61,29 @@ class SQLMunicipalityPerfTest {
     }
 
     @Test
+    fun deleteChain() {
+        val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
+        val chainResult2 = dbFile.chain(buildMunicipalityKey("IT", "LOM", "BS", "ERBUSCO"))
+        assertEquals("ERBUSCO", getMunicipalityName(chainResult2.record))
+        dbFile.delete(chainResult2.record)
+        dbFile.chain(buildMunicipalityKey("IT", "LOM", "BS", "ERBUSCO"))
+        assertTrue(dbFile.eof())
+        dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
+    }
+
+    @Test
+    fun deleteRead() {
+        val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
+        assertTrue(dbFile.setll(buildMunicipalityKey("IT", "LOM", "BS", "ERBUSCO")))
+        val record = dbFile.read().record
+        dbFile.delete(record)
+        assertTrue(dbFile.setll(buildMunicipalityKey("IT", "LOM", "BS", "ERBUSCO")))
+        dbFile.read()
+        assertTrue(dbFile.eof())
+        dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
+    }
+
+    @Test
     fun chain() {
         val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
         val chainResult1 = dbFile.chain(buildMunicipalityKey("IT", "LOM", "BS", "ERBASCO"))
