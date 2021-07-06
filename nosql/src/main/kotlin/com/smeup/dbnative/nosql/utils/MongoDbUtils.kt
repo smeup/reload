@@ -23,7 +23,7 @@ import com.smeup.dbnative.model.FileMetadata
 
 fun FileMetadata.buildInsertCommand(filename: String, record: Record): String {
     //TODO: insert controls beetwen metadata and record format
-    println("Build insert command from ${this.tableName} metadata")
+    println("Build insert command from ${this.fileName} metadata")
 
     val documents = StringBuilder()
 
@@ -84,11 +84,11 @@ fun FileMetadata.buildIndexCommand(): String{
 
     val result = """
     {
-        createIndexes: "${this.tableName.toUpperCase()}",
+        createIndexes: "${this.fileName.toUpperCase()}",
         indexes: [
         {
             key: ${keys},
-            name: "${this.tableName.toUpperCase()}_index",
+            name: "${this.fileName.toUpperCase()}_index",
             unique: false
         }
         ],

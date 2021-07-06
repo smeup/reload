@@ -26,7 +26,7 @@ import kotlin.test.assertTrue
 
 class JT400ReadPreviousTest {
 
-    private lateinit var dbManager: JT400DBMMAnager
+    private lateinit var dbManager: JT400DBMManager
 
     @Before
     fun setUp() {

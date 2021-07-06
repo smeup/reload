@@ -28,7 +28,6 @@ class DBFileWrapper (private val dbFile: DBFile, private val dbmManager: DBMMana
 
     private var closed = false
 
-    override var name: String = dbFile.name
     override var fileMetadata: FileMetadata
         get() = dbFile.fileMetadata
         set(value) {}
@@ -131,12 +130,12 @@ class DBFileWrapper (private val dbFile: DBFile, private val dbmManager: DBMMana
 
     private fun checkClosed() {
         require(!closed) {
-            "File: $name is closed"
+            "File: ${fileMetadata.fileName} is closed"
         }
     }
 
     override fun close() {
         closed = true
-        dbmManager.closeFile(name)
+        dbmManager.closeFile(fileMetadata.fileName)
     }
 }

@@ -32,8 +32,7 @@ import com.smeup.dbnative.utils.getField
 import com.smeup.dbnative.utils.matchFileKeys
 import org.bson.Document
 
-class NoSQLDBFile(override var name: String,
-                  override var fileMetadata: FileMetadata,
+class NoSQLDBFile(override var fileMetadata: FileMetadata,
                   private val database: MongoDatabase,
                   override var logger: Logger? = null): DBFile {
 
@@ -507,7 +506,7 @@ class NoSQLDBFile(override var name: String,
 
 
     override fun write(record: Record): Result {
-        val insertCommand = fileMetadata.buildInsertCommand(fileMetadata.tableName, record)
+        val insertCommand = fileMetadata.buildInsertCommand(fileMetadata.fileName, record)
         println(insertCommand)
         executeCommand(insertCommand)
         return Result(record = record)
@@ -708,7 +707,7 @@ class NoSQLDBFile(override var name: String,
 
         println("$filter - $sort")
 
-        val cursor = database.getCollection(fileMetadata.tableName).find(Document.parse(filter.toString()))
+        val cursor = database.getCollection(fileMetadata.fileName).find(Document.parse(filter.toString()))
 
         return cursor.sort(Document.parse(sort.toString()))
     }

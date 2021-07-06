@@ -25,7 +25,7 @@ import com.smeup.dbnative.ConnectionConfig
 import com.smeup.dbnative.DBManagerBaseImpl
 import com.smeup.dbnative.file.DBFile
 
-open class JT400DBMMAnager(final override val connectionConfig: ConnectionConfig) : DBManagerBaseImpl()  {
+open class JT400DBMManager(final override val connectionConfig: ConnectionConfig) : DBManagerBaseImpl()  {
 
     private var openedFile = mutableMapOf<String, JT400DBFile>()
 
@@ -64,7 +64,7 @@ open class JT400DBMMAnager(final override val connectionConfig: ConnectionConfig
         //file.recordFormat = rf[0]
         file.setRecordFormat() // Loads the record format directly from the server.
         file.open(AS400File.READ_WRITE, 0, AS400File.COMMIT_LOCK_LEVEL_NONE)
-        val jt400File = JT400DBFile(name, metadataOf(name), file, logger)
+        val jt400File = JT400DBFile(metadataOf(name), file, logger)
         openedFile.putIfAbsent(name, jt400File)
         return jt400File
 
