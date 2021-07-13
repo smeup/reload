@@ -38,8 +38,8 @@ abstract class DBManagerBaseImpl : DBMManager {
     }
 
     override fun registerMetadata(metadata: FileMetadata, overwrite: Boolean) {
-        if (getMetadataRegister().contains(metadata.tableName)) {
-            if (overwrite) getMetadataRegister().remove(metadata.tableName)
+        if (getMetadataRegister().contains(metadata.name)) {
+            if (overwrite) getMetadataRegister().remove(metadata.name)
             else return
             //TODO: send exception (existent metadata and no overwrite)
         }
@@ -69,8 +69,8 @@ abstract class DBManagerBaseImpl : DBMManager {
         }
 
         fun staticRegisterMetadata(metadata: FileMetadata, overwrite: Boolean) {
-            if (getMetadataRegister().contains(metadata.tableName)) {
-                if (overwrite) getMetadataRegister().remove(metadata.tableName)
+            if (getMetadataRegister().contains(metadata.name)) {
+                if (overwrite) getMetadataRegister().remove(metadata.name)
                 else return
                 //TODO: send exception (existent metadata and no overwrite)
             }
