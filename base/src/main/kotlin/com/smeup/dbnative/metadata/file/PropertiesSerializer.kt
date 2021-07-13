@@ -44,48 +44,50 @@ object PropertiesSerializer {
         }.load(InputStreamReader(propertiesFile, Charset.forName("UTF-8")))
 
         // Fields
-        var flds = mp.filterKeys { it.startsWith("field.") }
+        val flds = mp.filterKeys { it.startsWith("field.") }
         val fields: MutableList<Field> = ArrayList()
         flds.forEach { fld ->
-            val name = fld.key.split(".")[1]
+            val fieldName = fld.key.split(".")[1]
             val fldAttributes = fld.value.split(",")
             val description = fldAttributes[0].trim()
-            fields.add(Field(name, description))
+            fields.add(Field(fieldName, description))
         }
 
-        // FormatName
-        val recordFormat = mp.get("recordformat")!!
+        // fileName
+        var tableName = mp["tablename"]!!
+
+        // if fileName field is undefined, set it with metadata file name
+        if (tableName.isEmpty()) {
+            tableName = fileName
+        }
 
         // FieldKeys
         val fieldsKeys: MutableList<String> = ArrayList()
-        if(!(mp.get("filekeys")).isNullOrEmpty()){
-            fieldsKeys.addAll((mp.get("filekeys")?.split(",")!!))
+        if(!(mp["filekeys"]).isNullOrEmpty()){
+            fieldsKeys.addAll((mp["filekeys"]?.split(",")!!))
         }
 
-
-
-        return FileMetadata(fileName, recordFormat, fields, fieldsKeys)
+        // Create metadata
+        return FileMetadata(fileName, tableName, fields, fieldsKeys)
     }
-
-
 
 
     fun metadataToProperties(propertiesDirPath: String, fileMetadata: FileMetadata, overwrite: Boolean){
-        _metadataToProperties(propertiesDirPath, fileMetadata, fileMetadata.fieldsToProperties(), overwrite)
+        metadataToPropertiesImpl(propertiesDirPath, fileMetadata, fileMetadata.fieldsToProperties(), overwrite)
     }
 
 
-    private fun _metadataToProperties(propertiesDirPath: String,
+    private fun metadataToPropertiesImpl(propertiesDirPath: String,
                                       fileMetadata: FileMetadata,
                                       properties: MutableList<Pair<String, String>>,
                                       overwrite: Boolean){
+        properties.add(Pair("tablename", fileMetadata.tableName))
 
-        properties.add(Pair("recordformat", fileMetadata.recordFormat))
-
-        var keys = "${fileMetadata.fileKeys.joinToString(",")}"
+        val keys = fileMetadata.fileKeys.joinToString(",")
         properties.add(Pair("filekeys", keys))
 
-        val propertiesFilePath = "${propertiesDirPath}${File.separatorChar}${fileMetadata.tableName.toUpperCase()}.properties"
+
+        val propertiesFilePath = "${propertiesDirPath}${File.separatorChar}${fileMetadata.name.toUpperCase()}.properties"
 
         val propertiesFile = File(propertiesFilePath)
 

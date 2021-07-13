@@ -23,7 +23,7 @@ import com.smeup.dbnative.model.FileMetadata
 
 fun FileMetadata.buildInsertCommand(filename: String, record: Record): String {
     //TODO: insert controls beetwen metadata and record format
-    println("Build insert command from ${this.tableName} metadata")
+    println("Build insert command from ${filename} metadata")
 
     val documents = StringBuilder()
 
