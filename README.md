@@ -94,7 +94,7 @@ for library Reload.
 In the maven root module, simply launch the command:
 
 ```
-mvn clean package
+mvn clean package -DskipTests=true
 ```
 
 If command ends successfully, you can find the single jar file under the directory **target** under 
@@ -120,7 +120,7 @@ to do this steps:
 ```
 mvn versions:set -DnewVersion=1.2.0-SNAPSHOT
 mvn versions:commit
-mvn clean package
+mvn clean package -DskipTests=true
 ```
 
 and the result will be a file
