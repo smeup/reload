@@ -506,7 +506,7 @@ class NoSQLDBFile(override var fileMetadata: FileMetadata,
 
 
     override fun write(record: Record): Result {
-        val insertCommand = fileMetadata.buildInsertCommand(fileMetadata.fileName, record)
+        val insertCommand = fileMetadata.buildInsertCommand(fileMetadata.tableName, record)
         println(insertCommand)
         executeCommand(insertCommand)
         return Result(record = record)
@@ -707,7 +707,7 @@ class NoSQLDBFile(override var fileMetadata: FileMetadata,
 
         println("$filter - $sort")
 
-        val cursor = database.getCollection(fileMetadata.fileName).find(Document.parse(filter.toString()))
+        val cursor = database.getCollection(fileMetadata.tableName).find(Document.parse(filter.toString()))
 
         return cursor.sort(Document.parse(sort.toString()))
     }

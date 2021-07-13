@@ -30,8 +30,8 @@ import kotlin.collections.ArrayList
 
 object PropertiesSerializer {
 
-    fun propertiesToMetadata(propertiesDirPath: String, name: String): FileMetadata{
-        val propertiesFile = FileInputStream(File("$propertiesDirPath${File.separatorChar}${name.toUpperCase()}.properties"))
+    fun propertiesToMetadata(propertiesDirPath: String, fileName: String): FileMetadata{
+        val propertiesFile = FileInputStream(File("$propertiesDirPath${File.separatorChar}${fileName.toUpperCase()}.properties"))
         //val properties = Properties()
         //properties.load(InputStreamReader(propertiesFile, Charset.forName("UTF-8")))
 
@@ -54,11 +54,11 @@ object PropertiesSerializer {
         }
 
         // fileName
-        var fileName = mp["filename"]!!
+        var tableName = mp["tablename"]!!
 
         // if fileName field is undefined, set it with metadata file name
-        if (fileName.isEmpty()) {
-            fileName = name
+        if (tableName.isEmpty()) {
+            tableName = fileName
         }
 
         // FieldKeys
@@ -68,7 +68,7 @@ object PropertiesSerializer {
         }
 
         // Create metadata
-        return FileMetadata(name, fileName, fields, fieldsKeys)
+        return FileMetadata(fileName, tableName, fields, fieldsKeys)
     }
 
 
@@ -81,7 +81,7 @@ object PropertiesSerializer {
                                       fileMetadata: FileMetadata,
                                       properties: MutableList<Pair<String, String>>,
                                       overwrite: Boolean){
-        properties.add(Pair("filename", fileMetadata.fileName))
+        properties.add(Pair("tablename", fileMetadata.tableName))
 
         val keys = fileMetadata.fileKeys.joinToString(",")
         properties.add(Pair("filekeys", keys))

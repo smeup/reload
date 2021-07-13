@@ -130,12 +130,12 @@ class DBFileWrapper (private val dbFile: DBFile, private val dbmManager: DBMMana
 
     private fun checkClosed() {
         require(!closed) {
-            "File: ${fileMetadata.fileName} is closed"
+            "Table ${fileMetadata.tableName} is closed"
         }
     }
 
     override fun close() {
         closed = true
-        dbmManager.closeFile(fileMetadata.fileName)
+        dbmManager.closeFile(fileMetadata.tableName)
     }
 }

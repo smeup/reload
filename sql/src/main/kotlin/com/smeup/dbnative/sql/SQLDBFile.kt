@@ -277,7 +277,7 @@ class SQLDBFile(override var fileMetadata: FileMetadata,
         lastOperationSet = false
         measureTimeMillis {
             // TODO: manage errors
-            val sql = fileMetadata.fileName.insertSQL(record)
+            val sql = fileMetadata.tableName.insertSQL(record)
             connection.prepareStatement(sql).use { it ->
                 it.bind(record.values.map { it })
                 it.execute()
@@ -353,7 +353,7 @@ class SQLDBFile(override var fileMetadata: FileMetadata,
     }
 
     private fun pointAtUpperLL() {
-        val sql = "SELECT * FROM ${fileMetadata.fileName} ${orderBySQL(thisFileKeys)}"
+        val sql = "SELECT * FROM ${fileMetadata.tableName} ${orderBySQL(thisFileKeys)}"
         executeQuery(sql, emptyList())
         readFromResultSet()
         actualRecordToPop = actualRecord
@@ -369,7 +369,7 @@ class SQLDBFile(override var fileMetadata: FileMetadata,
     // calculate the upper or the lower part of the ordered table given the input keys using an sql query (composed of selects in union if primary keys size > 1)
     private fun calculateResultSet(keys: List<RecordField>, withEquals: Boolean = true) {
         actualRecordToPop = null
-        val sqlAndValues = filePartSQLAndValues(fileMetadata.fileName, movingForward, thisFileKeys, keys, withEquals)
+        val sqlAndValues = filePartSQLAndValues(fileMetadata.tableName, movingForward, thisFileKeys, keys, withEquals)
         val values = sqlAndValues.first
         val sql = sqlAndValues.second
         executeQuery(sql, values)
@@ -384,7 +384,7 @@ class SQLDBFile(override var fileMetadata: FileMetadata,
         // NOTE: NATIVE_ACCESS_MARKER can be avoided if you create and index a unique field key concordant with all the primary keys
         // NOTE: if using NATIVE_ACCESS_MARKER be careful with length (primary key fields must be of fixed length) and with dates, numbers or not string formats -> transform them into key strings
         val sql =
-            "SELECT * FROM (SELECT ${fileMetadata.fileName}.*, ${createMarkerSQL(thisFileKeys)} FROM ${fileMetadata.fileName}) AS NATIVE_ACCESS_WT ${markerWhereSQL(
+            "SELECT * FROM (SELECT ${fileMetadata.tableName}.*, ${createMarkerSQL(thisFileKeys)} FROM ${fileMetadata.tableName}) AS NATIVE_ACCESS_WT ${markerWhereSQL(
                 movingForward, withEquals
             )} ${orderBySQL(
                 thisFileKeys,
