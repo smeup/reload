@@ -31,7 +31,7 @@ import java.sql.PreparedStatement
 import java.sql.ResultSet
 import kotlin.system.measureTimeMillis
 
-class SQLDBFileNoPerf(override var name: String,
+class SQLDBFileNoPerf(
                       override var fileMetadata: FileMetadata,
                       var connection: Connection,
                       override var logger: Logger? = null) : DBFile {
@@ -39,7 +39,7 @@ class SQLDBFileNoPerf(override var name: String,
     constructor(
         name: String,
         fileMetadata: FileMetadata,
-        connection: Connection): this(name, fileMetadata, connection, null)
+        connection: Connection): this(fileMetadata, connection, null)
 
     private var resultSet: ResultSet? = null
     private var movingForward = true
@@ -51,13 +51,14 @@ class SQLDBFileNoPerf(override var name: String,
     private var lastNativeMethod: NativeMethod? = null;
 
 
+
     private val thisFileKeys: List<String> by lazy {
         // TODO: think about a right way (local file maybe?) to retrieve keylist
         var indexes = this.fileMetadata.fileKeys
         if(indexes.isEmpty()){
-            indexes = connection.primaryKeys(name)
+            indexes = connection.primaryKeys(fileMetadata.name)
         }
-        if (indexes.isEmpty()) connection.orderingFields(name) else indexes
+        if (indexes.isEmpty()) connection.orderingFields(fileMetadata.name) else indexes
     }
 
     private fun logEvent(loggingKey: LoggingKey, message: String, elapsedTime: Long? = null) =
@@ -279,7 +280,7 @@ class SQLDBFileNoPerf(override var name: String,
         lastOperationSet = false
         measureTimeMillis {
             // TODO: manage errors
-            val sql = name.insertSQL(record)
+            val sql = fileMetadata.tableName.insertSQL(record)
             connection.prepareStatement(sql).use { it ->
                 it.bind(record.values.map { it })
                 it.execute()
@@ -355,7 +356,7 @@ class SQLDBFileNoPerf(override var name: String,
     }
 
     private fun pointAtUpperLL() {
-        val sql = "SELECT * FROM $name ${orderBySQL(thisFileKeys)}"
+        val sql = "SELECT * FROM ${fileMetadata.tableName} ${orderBySQL(thisFileKeys)}"
         executeQuery(sql, emptyList())
         readFromResultSet()
         actualRecordToPop = actualRecord
@@ -371,28 +372,9 @@ class SQLDBFileNoPerf(override var name: String,
     // calculate the upper or the lower part of the ordered table given the input keys using an sql query (composed of selects in union if primary keys size > 1)
     private fun calculateResultSet(keys: List<RecordField>, withEquals: Boolean = true) {
         actualRecordToPop = null
-        val sqlAndValues = filePartSQLAndValues(name, movingForward, thisFileKeys, keys, withEquals)
+        val sqlAndValues = filePartSQLAndValues(fileMetadata.tableName, movingForward, thisFileKeys, keys, withEquals)
         val values = sqlAndValues.first
         val sql = sqlAndValues.second
-        executeQuery(sql, values)
-    }
-
-    // NOTE: unused impl left for hint
-    // created a calculated key called NATIVE_ACCESS_MARKER, that gives to records an order based on all the primary keys of the table and used it to calculate
-    // the upper or the lower part of the ordered table given the input keys
-    private fun calculateResultSetWithMarker(keys: List<RecordField>, withEquals: Boolean = true) {
-        actualRecordToPop = null
-        // NOTE: use the key field if primary keys size == 1
-        // NOTE: NATIVE_ACCESS_MARKER can be avoided if you create and index a unique field key concordant with all the primary keys
-        // NOTE: if using NATIVE_ACCESS_MARKER be careful with length (primary key fields must be of fixed length) and with dates, numbers or not string formats -> transform them into key strings
-        val sql =
-            "SELECT * FROM (SELECT $name.*, ${createMarkerSQL(thisFileKeys)} FROM $name) AS NATIVE_ACCESS_WT ${markerWhereSQL(
-                movingForward, withEquals
-            )} ${orderBySQL(
-                thisFileKeys,
-                reverse = !movingForward
-            )}"
-        val values = listOf(calculateMarkerValue(keys, movingForward, withEquals))
         executeQuery(sql, values)
     }
 

@@ -51,29 +51,6 @@ open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBMa
         connection.close()
     }
 
-    /*
-    override fun metadataOf(name: String): FileMetadata {
-        require(openedFile.containsKey(name)) {
-            "File: $name doesn't exist."
-        }
-        return openedFile.get(name)!!.fileMetadata
-    }
-
-    override fun existFile(name: String): Boolean {
-        val dbm: DatabaseMetaData = connection.metaData
-        dbm.getTables(null, null, name, arrayOf("TABLE", "VIEW")).use {
-            return it.next()
-        }
-    }
-     */
-
-    fun openFileNoPerf(name: String): SQLDBFileNoPerf {
-        require(existFile(name)) {
-            "Cannot open a unregistered file $name"
-        }
-        return SQLDBFileNoPerf(name = name, fileMetadata = metadataOf(name), connection =  connection, logger)
-    }
-
     override fun openFile(name: String) = openedFile.getOrPut(name) {
         require(existFile(name)) {
             "Cannot open a unregistered file $name"
