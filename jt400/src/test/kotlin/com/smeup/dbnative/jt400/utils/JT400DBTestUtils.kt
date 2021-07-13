@@ -20,7 +20,7 @@ package com.smeup.dbnative.jt400.utils
 import com.ibm.as400.access.AS400
 import com.smeup.dbnative.ConnectionConfig
 import com.smeup.dbnative.file.Record
-import com.smeup.dbnative.jt400.JT400DBMMAnager
+import com.smeup.dbnative.jt400.JT400DBMManager
 import com.smeup.dbnative.model.CharacterType
 import com.smeup.dbnative.model.DecimalType
 import com.smeup.dbnative.model.VarcharType
@@ -62,10 +62,10 @@ enum class TestSQLDBType(
 
 fun dbManagerForTest() = dbManagerForTest(defaultDbType)
 
-fun dbManagerForTest(testSQLDBType: TestSQLDBType) : JT400DBMMAnager {
+fun dbManagerForTest(testSQLDBType: TestSQLDBType) : JT400DBMManager {
     testLog("Creating SQLDBManager with db type = $testSQLDBType")
 
-    val dbManager = JT400DBMMAnager(testSQLDBType.connectionConfig)
+    val dbManager = JT400DBMManager(testSQLDBType.connectionConfig)
     if (testSQLDBType.dbaConnectionConfig != null) {
         //JT400DBMMAnager(testSQLDBType.dbaConnectionConfig).connection.use {
         //    testSQLDBType.createDatabase(it)
@@ -87,7 +87,7 @@ fun destroyDatabase(testSQLDBType: TestSQLDBType) {
     }
 }
 
-fun createAndPopulateMunicipalityTable(dbManager: JT400DBMMAnager?) {
+fun createAndPopulateMunicipalityTable(dbManager: JT400DBMManager?) {
     val fields = listOf(
         "NAZ"   fieldByType CharacterType(2),
         "REG"   fieldByType CharacterType(3),
@@ -119,7 +119,7 @@ fun createAndPopulateMunicipalityTable(dbManager: JT400DBMMAnager?) {
      /**/
 }
 
-fun createAndPopulateTestTable(dbManager: JT400DBMMAnager?) {
+fun createAndPopulateTestTable(dbManager: JT400DBMManager?) {
     val fields = listOf(
         "TSTFLDCHR"   fieldByType CharacterType(3),
         "TSTFLDNBR"   fieldByType DecimalType(5, 2)
@@ -143,7 +143,7 @@ fun createAndPopulateTestTable(dbManager: JT400DBMMAnager?) {
     /**/
 }
 
-fun createAndPopulateTest2Table(dbManager: JT400DBMMAnager?) {
+fun createAndPopulateTest2Table(dbManager: JT400DBMManager?) {
     val fields = listOf(
         "TSTFLDCHR"   fieldByType CharacterType(3),
         "TSTFLDNBR"   fieldByType DecimalType(5, 2),
@@ -168,7 +168,7 @@ fun createAndPopulateTest2Table(dbManager: JT400DBMMAnager?) {
     /**/
 }
 
-fun createAndPopulateEmployeeTable(dbManager: JT400DBMMAnager?) {
+fun createAndPopulateEmployeeTable(dbManager: JT400DBMManager?) {
     val fields = listOf(
         "EMPNO"   fieldByType CharacterType(6),
         "FIRSTNME"   fieldByType CharacterType(20),
@@ -209,7 +209,7 @@ fun testLog(message: String) {
 }
 
 private fun registerTable(
-    dbManager: JT400DBMMAnager?,
+    dbManager: JT400DBMManager?,
     tableName: String,
     formatName: String,
     fields: List<TypedField>,

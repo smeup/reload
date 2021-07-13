@@ -30,32 +30,33 @@ import java.sql.PreparedStatement
 import java.sql.ResultSet
 import kotlin.system.measureTimeMillis
 
-class SQLDBFile(override var name: String,
-                override var fileMetadata: FileMetadata,
+class SQLDBFile(override var fileMetadata: FileMetadata,
                 var connection: Connection,
                 override var logger: Logger? = null) : DBFile {
 
     constructor(
-        name: String,
         fileMetadata: FileMetadata,
-        connection: Connection): this(name, fileMetadata, connection, null)
+        connection: Connection): this(fileMetadata, connection, null)
 
     private var resultSet: ResultSet? = null
     private var actualRecord: Record? = null
+
     private var lastNativeMethod: NativeMethod? = null
+
     private val thisFileKeys: List<String> by lazy {
         // TODO: think about a right way (local file maybe?) to retrieve keylist
         var indexes = this.fileMetadata.fileKeys
         if(indexes.isEmpty()){
-            indexes = connection.primaryKeys(name)
+            indexes = connection.primaryKeys(fileMetadata.name)
         }
-        if (indexes.isEmpty()) connection.orderingFields(name) else indexes
+        if (indexes.isEmpty()) connection.orderingFields(fileMetadata.name) else indexes
     }
-    private var adapter: Native2SQL = Native2SQL(thisFileKeys, name)
+    private var adapter: Native2SQL = Native2SQL(thisFileKeys, fileMetadata.name)
     private var eof:Boolean = false
 
     private fun logEvent(loggingKey: LoggingKey, message: String, elapsedTime: Long? = null) =
-        logger?.logEvent(loggingKey, message, elapsedTime, lastNativeMethod, name)
+    logger?.logEvent(loggingKey, message, elapsedTime, lastNativeMethod, fileMetadata.name)
+
 
     override fun setll(key: String): Boolean {
         return setll(mutableListOf(key))
@@ -64,6 +65,7 @@ class SQLDBFile(override var name: String,
     override fun setll(keys: List<String>): Boolean {
         lastNativeMethod = NativeMethod.setll
         logEvent(LoggingKey.native_access_method, "Executing setll on keys $keys")
+
         adapter.setPositioning(PositioningMethod.SETLL, keys)
         return true
     }
@@ -75,8 +77,10 @@ class SQLDBFile(override var name: String,
     override fun setgt(keys: List<String>): Boolean {
         lastNativeMethod = NativeMethod.setgt
         logEvent(LoggingKey.native_access_method, "Executing setgt on keys $keys")
+
         adapter.setPositioning(PositioningMethod.SETGT, keys)
         return true
+
     }
 
     override fun chain(key: String): Result {
@@ -89,6 +93,7 @@ class SQLDBFile(override var name: String,
         adapter.setRead(ReadMethod.CHAIN, keys)
         val read: Result
         measureTimeMillis {
+
             executeQuery(adapter.getSQLSatement())
             read = readNextFromResultSet()
         }.apply {
@@ -143,6 +148,7 @@ class SQLDBFile(override var name: String,
         logEvent(LoggingKey.native_access_method, "Executing readEqual on keys $keys")
         val read: Result
         measureTimeMillis {
+
             if (adapter.setRead(ReadMethod.READE, keys)) {
                 executeQuery(adapter.getSQLSatement())
             }
@@ -168,6 +174,7 @@ class SQLDBFile(override var name: String,
         logEvent(LoggingKey.native_access_method, "Executing readPreviousEqual on keys $keys")
         val read: Result
         measureTimeMillis {
+
             if (adapter.setRead(ReadMethod.READPE, keys)) {
                 executeQuery(adapter.getSQLSatement())
             }
@@ -184,7 +191,7 @@ class SQLDBFile(override var name: String,
         logEvent(LoggingKey.native_access_method, "Executing write for record $record")
         measureTimeMillis {
             // TODO: manage errors
-            val sql = name.insertSQL(record)
+            val sql = fileMetadata.tableName.insertSQL(record)
             connection.prepareStatement(sql).use { it ->
                 it.bind(record.values.map { it })
                 it.execute()
@@ -253,6 +260,7 @@ class SQLDBFile(override var name: String,
             logEvent(LoggingKey.execute_inquiry, "Query succesfully executed", this)
         }
     }
+
 
     private fun readNextFromResultSet(): Result {
         val result = Result(resultSet.toValues())
