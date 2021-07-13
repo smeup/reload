@@ -86,6 +86,51 @@ dependencies {
 }
 ```
 
+### Build a single jar file distribution
+
+Thanks to assembly maven plugin it is possible to create a single jar file distribution
+for library Reload.
+
+In the maven root module, simply launch the command:
+
+```
+mvn clean package
+```
+
+If command ends successfully, you can find the single jar file under the directory **target** under 
+the module **distribution**.
+
+The produced file will have a name with a format like this:
+
+```
+reload-<version>-jar-with-dependencies.jar
+```
+
+Version of produced fatjar file is the version setted in maven modules; you can simpley change this version in your entire maven project
+running this maven commands:
+
+```
+mvn versions:set -DnewVersion=<new_version_in maven_format>
+mvn versions:commit
+```
+
+For example, to produce a new 1.2.0-SNAPSHOT version of Reload as fatjar you have
+to do this steps:
+
+```
+mvn versions:set -DnewVersion=1.2.0-SNAPSHOT
+mvn versions:commit
+mvn clean package
+```
+
+and the result will be a file
+
+```
+reload-1.2.0-SNAPSHOT.jar-with-dependencies.jar
+```
+
+contained in the **distribution/target** folder.
+
 ## Example of using the Reload library
 
 At [this page](docs/example.md) there is a simple example of utilization of the Reload library for access
