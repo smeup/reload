@@ -31,13 +31,14 @@ import java.sql.PreparedStatement
 import java.sql.ResultSet
 import kotlin.system.measureTimeMillis
 
-class SQLDBFile(override var fileMetadata: FileMetadata,
+class SQLDBFile(override var name: String, override var fileMetadata: FileMetadata,
                 var connection: Connection,
                 override var logger: Logger? = null) : DBFile {
 
     constructor(
+        name: String,
         fileMetadata: FileMetadata,
-        connection: Connection): this(fileMetadata, connection, null)
+        connection: Connection): this(name, fileMetadata, connection, null)
 
     private var resultSet: ResultSet? = null
     private var movingForward = true
