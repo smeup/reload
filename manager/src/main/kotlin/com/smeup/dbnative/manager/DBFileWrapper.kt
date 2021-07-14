@@ -28,6 +28,10 @@ class DBFileWrapper (private val dbFile: DBFile, private val dbmManager: DBMMana
 
     private var closed = false
 
+    override var name: String
+        get() = dbFile.name
+        set(value) {}
+
     override var fileMetadata: FileMetadata
         get() = dbFile.fileMetadata
         set(value) {}

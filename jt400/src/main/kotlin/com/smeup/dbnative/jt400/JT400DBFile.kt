@@ -32,7 +32,8 @@ private enum class CursorAction {
     NONE, SETLL, SETGT
 }
 
-class JT400DBFile(override var fileMetadata: FileMetadata,
+class JT400DBFile(override var name: String,
+                  override var fileMetadata: FileMetadata,
                   var file: KeyedFile,
                   override var logger: Logger? = null) : DBFile {
 
