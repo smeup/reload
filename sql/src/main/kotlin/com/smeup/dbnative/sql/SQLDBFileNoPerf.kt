@@ -31,7 +31,7 @@ import java.sql.PreparedStatement
 import java.sql.ResultSet
 import kotlin.system.measureTimeMillis
 
-class SQLDBFileNoPerf(
+class SQLDBFileNoPerf(override var name: String,
                       override var fileMetadata: FileMetadata,
                       var connection: Connection,
                       override var logger: Logger? = null) : DBFile {
@@ -39,7 +39,7 @@ class SQLDBFileNoPerf(
     constructor(
         name: String,
         fileMetadata: FileMetadata,
-        connection: Connection): this(fileMetadata, connection, null)
+        connection: Connection): this(name, fileMetadata, connection, null)
 
     private var resultSet: ResultSet? = null
     private var movingForward = true
