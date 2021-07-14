@@ -55,7 +55,7 @@ open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBMa
         require(existFile(name)) {
             "Cannot open a unregistered file $name"
         }
-        SQLDBFile(fileMetadata = metadataOf(name), connection =  connection, logger)
+        SQLDBFile(name = name, fileMetadata = metadataOf(name), connection =  connection, logger)
     }
 
 

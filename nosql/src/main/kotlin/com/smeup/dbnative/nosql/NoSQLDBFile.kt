@@ -32,7 +32,8 @@ import com.smeup.dbnative.utils.getField
 import com.smeup.dbnative.utils.matchFileKeys
 import org.bson.Document
 
-class NoSQLDBFile(override var fileMetadata: FileMetadata,
+class NoSQLDBFile(override var name: String,
+                  override var fileMetadata: FileMetadata,
                   private val database: MongoDatabase,
                   override var logger: Logger? = null): DBFile {
 

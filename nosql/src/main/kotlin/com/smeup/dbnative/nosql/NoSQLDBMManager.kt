@@ -105,7 +105,7 @@ class NoSQLDBMManager (override val connectionConfig: ConnectionConfig) : DBMana
             require(existFile(name)) {
                 "File $name do not exist"
             }
-            sqldbFile = NoSQLDBFile(metadataOf(name), mongoDatabase, logger)
+            sqldbFile = NoSQLDBFile(name, metadataOf(name), mongoDatabase, logger)
             openedFile.putIfAbsent(key, sqldbFile)
         }
         return sqldbFile
