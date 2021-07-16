@@ -40,6 +40,7 @@ class SQLDBFile(override var name: String,
         fileMetadata: FileMetadata,
         connection: Connection): this(name, fileMetadata, connection, null)
 
+    private var preparedStatements: MutableMap<String, PreparedStatement> = mutableMapOf()
     private var resultSet: ResultSet? = null
     private var actualRecord: Record? = null
     private var lastNativeMethod: NativeMethod? = null
@@ -242,7 +243,8 @@ class SQLDBFile(override var name: String,
         logEvent(LoggingKey.execute_inquiry, "Preparing statement for query: $sql with bingings: $values")
         val stm: PreparedStatement
         measureTimeMillis {
-            stm = connection.prepareStatement(sql, ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE)
+            stm = preparedStatements.get(sql)?:connection.prepareStatement(sql, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)
+            preparedStatements.putIfAbsent(sql, stm);
             stm.bind(values)
         }.apply {
             logEvent(LoggingKey.execute_inquiry, "Statement prepared, executing query for statement", this)
@@ -302,5 +304,6 @@ class SQLDBFile(override var name: String,
 
     override fun close() {
         resultSet.closeIfOpen()
+        preparedStatements.values.forEach { it.close() }
     }
 }

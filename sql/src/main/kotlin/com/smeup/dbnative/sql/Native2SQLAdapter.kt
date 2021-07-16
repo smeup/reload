@@ -45,7 +45,7 @@ class Native2SQL(val fileKeys: List<String>, val tableName: String) {
 
     private fun checkKeys(keys: List<String>){
         require(keys.size <= fileKeys.size){
-            "Number of metadata keys less than number of positioning/read keys"
+            "Number of metadata keys $fileKeys less than number of positioning/read keys $keys"
         }
     }
 
