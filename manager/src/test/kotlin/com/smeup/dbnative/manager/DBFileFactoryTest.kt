@@ -163,6 +163,7 @@ class DBFileFactoryTest {
     fun reopenClosedFile() {
         DBFileFactory(config).use {dbFileFactory ->
             val dbFile = dbFileFactory.open("TEST1L", null)
+            dbFile.setll("DARIO")
             dbFile.read()
             dbFile.close()
             assertTrue (dbFile.runCatching { read() }.isFailure)
