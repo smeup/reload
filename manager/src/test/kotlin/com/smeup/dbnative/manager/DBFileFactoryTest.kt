@@ -80,19 +80,21 @@ class DBFileFactoryTest {
         Logger.getSimpleInstance(LOGGING_LEVEL))
         manager = SQLDBMManager(TestConnectionConfig.STARTS_WITH_TEST.connectionConfig)
         manager.connection.createStatement().use {
-            it.executeUpdate("CREATE TABLE TEST1 (NAME CHAR(20))")
-            it.executeUpdate("INSERT INTO TEST1 VALUES ('MARCO')")
-            it.executeUpdate("CREATE TABLE TEST2 (NAME CHAR(20))")
-            it.executeUpdate("INSERT INTO TEST2 VALUES ('MARCO')")
-            it.executeUpdate("CREATE TABLE TEST3 (NAME CHAR(20))")
-            it.executeUpdate("INSERT INTO TEST3 VALUES ('MARCO')")
+            it.executeUpdate("CREATE TABLE TEST1F (NAME CHAR(20))")
+            it.executeUpdate("INSERT INTO TEST1F VALUES ('MARCO')")
+            it.executeUpdate("INSERT INTO TEST1F VALUES ('DARIO')")
+            it.executeUpdate("INSERT INTO TEST1F VALUES ('STEFANO')")
+            it.executeUpdate("INSERT INTO TEST1F VALUES ('LUIGI')")
+            it.executeUpdate("CREATE TABLE TEST2F (NAME CHAR(20))")
+            it.executeUpdate("INSERT INTO TEST2F VALUES ('MARCO')")
+            it.executeUpdate("CREATE TABLE TEST3F (NAME CHAR(20))")
+            it.executeUpdate("INSERT INTO TEST3F VALUES ('MARCO')")
         }
 
         var testFields = mutableListOf<TypedField>()
-        testFields.add("Name" fieldByType CharacterType(20))
-        val testTableMetadata = FileMetadata("TEST1", "TSTFFMT", testFields.fieldList(), listOf("Name"))
+        testFields.add("NAME" fieldByType CharacterType(20))
+        val testTableMetadata = FileMetadata("TEST1L", "TEST1F", testFields.fieldList(), listOf("NAME"))
         manager.registerMetadata(testTableMetadata, true)
-
 
     }
 
@@ -105,7 +107,7 @@ class DBFileFactoryTest {
     @Test
     fun findConnectionForTESTXXX() {
         assertEquals(TestConnectionConfig.STARTS_WITH_TEST.connectionConfig,
-            findConnectionConfigFor("TEST3", config.connectionsConfig))
+            findConnectionConfigFor("TEST3L", config.connectionsConfig))
     }
 
     @Test
@@ -119,21 +121,34 @@ class DBFileFactoryTest {
     fun openExistingTables() {
         DBFileFactory(config).use {dbFileFactory ->
             // Open a file already registered
-            dbFileFactory.open("TEST1", null)
+            dbFileFactory.open("TEST1L", null)
 
             // Open a file not registered, registering metadata before open
             var test2Fields = mutableListOf<TypedField>()
-            test2Fields.add("Name" fieldByType CharacterType(20))
-            val test2TableMetadata = FileMetadata("TEST2", "TSTFFMT", test2Fields.fieldList(), listOf<String>())
+            test2Fields.add("NAME" fieldByType CharacterType(20))
+            val test2TableMetadata = FileMetadata("TEST2L", "TEST2F", test2Fields.fieldList(), listOf<String>())
             DBFileFactory.registerMetadata(test2TableMetadata)
 
-            dbFileFactory.open("TEST2", null)
+            dbFileFactory.open("TEST2L", null)
 
             // Open a file not registered, passing metadata to open invoke
             var test3Fields = mutableListOf<TypedField>()
-            test3Fields.add("Name" fieldByType CharacterType(20))
-            val test3TableMetadata = FileMetadata("TEST3", "TSTFFMT", test2Fields.fieldList(), listOf("Name"))
-            dbFileFactory.open("TEST3", test3TableMetadata)
+            test3Fields.add("NAME" fieldByType CharacterType(20))
+            val test3TableMetadata = FileMetadata("TEST3L", "TEST3F", test2Fields.fieldList(), listOf("NAME"))
+            dbFileFactory.open("TEST3L", test3TableMetadata)
+        }
+    }
+
+    @Test
+    fun openAndChain() {
+        DBFileFactory(config).use { dbFileFactory ->
+            var dbFile = dbFileFactory.open("TEST1L", null)
+            var result = dbFile.chain("MARCO")
+            assertTrue (result.record["NAME"]?.trim().equals("MARCO"))
+            result = dbFile.chain("DARIO")
+            assertTrue (result.record["NAME"]?.trim().equals("DARIO"))
+
+            dbFile.close()
         }
     }
 
@@ -147,7 +162,7 @@ class DBFileFactoryTest {
     @Test
     fun reopenClosedFile() {
         DBFileFactory(config).use {dbFileFactory ->
-            val dbFile = dbFileFactory.open("TEST1", null)
+            val dbFile = dbFileFactory.open("TEST1L", null)
             dbFile.read()
             dbFile.close()
             assertTrue (dbFile.runCatching { read() }.isFailure)
@@ -158,16 +173,16 @@ class DBFileFactoryTest {
     fun tearDown() {
         manager.runCatching {
             connection.createStatement().use {
-                it.executeUpdate("DROP TABLE TEST1")
-                it.executeUpdate("DROP TABLE TEST2")
-                it.executeUpdate("DROP TABLE TEST3")
+                it.executeUpdate("DROP TABLE TEST1F")
+                it.executeUpdate("DROP TABLE TEST2F")
+                it.executeUpdate("DROP TABLE TEST3F")
             }
         }
         manager.close()
 
-        manager.unregisterMetadata("TEST1")
-        manager.unregisterMetadata("TEST2")
-        manager.unregisterMetadata("TEST3")
+        manager.unregisterMetadata("TEST1L")
+        manager.unregisterMetadata("TEST2L")
+        manager.unregisterMetadata("TEST3L")
     }
 
 }
