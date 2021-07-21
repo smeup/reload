@@ -30,16 +30,13 @@ import com.smeup.dbnative.utils.fieldList
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.sql.Connection
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 private val LOGGING_LEVEL = LoggingLevel.OFF
 
 private enum class TestConnectionConfig(
-    val connectionConfig: ConnectionConfig,
-    val dbaConnectionConfig: ConnectionConfig = connectionConfig,
-    val createDatabase : (dbaConnection: Connection) -> Unit = {},
-    val destroyDatabase: (dbaConnection: Connection) -> Unit = {}) {
+    val connectionConfig: ConnectionConfig
+) {
     DEFAULT(
         connectionConfig = ConnectionConfig(
             fileName= "*",
@@ -58,11 +55,13 @@ private enum class TestConnectionConfig(
             driver = "org.hsqldb.jdbcDriver"
         )
     ),
-    MUNICIPALITY(ConnectionConfig(
-        fileName= "MUNICIPALITY",
-        url = "mongodb://localhost:27017/W_TEST",
-        user = "",
-        password = ""))
+    MUNICIPALITY(
+        ConnectionConfig(
+            fileName= "MUNICIPALITY",
+            url = "mongodb://localhost:27017/W_TEST",
+            user = "",
+            password = "")
+    )
 }
 
 class DBFileFactoryTest {
@@ -91,7 +90,7 @@ class DBFileFactoryTest {
             it.executeUpdate("INSERT INTO TEST3F VALUES ('MARCO')")
         }
 
-        var testFields = mutableListOf<TypedField>()
+        val testFields = mutableListOf<TypedField>()
         testFields.add("NAME" fieldByType CharacterType(20))
         val testTableMetadata = FileMetadata("TEST1L", "TEST1F", testFields.fieldList(), listOf("NAME"))
         manager.registerMetadata(testTableMetadata, true)
@@ -124,15 +123,15 @@ class DBFileFactoryTest {
             dbFileFactory.open("TEST1L", null)
 
             // Open a file not registered, registering metadata before open
-            var test2Fields = mutableListOf<TypedField>()
+            val test2Fields = mutableListOf<TypedField>()
             test2Fields.add("NAME" fieldByType CharacterType(20))
-            val test2TableMetadata = FileMetadata("TEST2L", "TEST2F", test2Fields.fieldList(), listOf<String>())
+            val test2TableMetadata = FileMetadata("TEST2L", "TEST2F", test2Fields.fieldList(), listOf())
             DBFileFactory.registerMetadata(test2TableMetadata)
 
             dbFileFactory.open("TEST2L", null)
 
             // Open a file not registered, passing metadata to open invoke
-            var test3Fields = mutableListOf<TypedField>()
+            val test3Fields = mutableListOf<TypedField>()
             test3Fields.add("NAME" fieldByType CharacterType(20))
             val test3TableMetadata = FileMetadata("TEST3L", "TEST3F", test2Fields.fieldList(), listOf("NAME"))
             dbFileFactory.open("TEST3L", test3TableMetadata)
@@ -142,7 +141,7 @@ class DBFileFactoryTest {
     @Test
     fun openAndChain() {
         DBFileFactory(config).use { dbFileFactory ->
-            var dbFile = dbFileFactory.open("TEST1L", null)
+            val dbFile = dbFileFactory.open("TEST1L", null)
             var result = dbFile.chain("MARCO")
             assertTrue (result.record["NAME"]?.trim().equals("MARCO"))
             result = dbFile.chain("DARIO")
