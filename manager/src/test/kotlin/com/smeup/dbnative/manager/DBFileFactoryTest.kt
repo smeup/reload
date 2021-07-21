@@ -82,6 +82,9 @@ class DBFileFactoryTest {
         manager.connection.createStatement().use {
             it.executeUpdate("CREATE TABLE TEST1F (NAME CHAR(20))")
             it.executeUpdate("INSERT INTO TEST1F VALUES ('MARCO')")
+            it.executeUpdate("INSERT INTO TEST1F VALUES ('DARIO')")
+            it.executeUpdate("INSERT INTO TEST1F VALUES ('STEFANO')")
+            it.executeUpdate("INSERT INTO TEST1F VALUES ('LUIGI')")
             it.executeUpdate("CREATE TABLE TEST2F (NAME CHAR(20))")
             it.executeUpdate("INSERT INTO TEST2F VALUES ('MARCO')")
             it.executeUpdate("CREATE TABLE TEST3F (NAME CHAR(20))")
@@ -89,8 +92,8 @@ class DBFileFactoryTest {
         }
 
         var testFields = mutableListOf<TypedField>()
-        testFields.add("Name" fieldByType CharacterType(20))
-        val testTableMetadata = FileMetadata("TEST1L", "TEST1F", testFields.fieldList(), listOf("Name"))
+        testFields.add("NAME" fieldByType CharacterType(20))
+        val testTableMetadata = FileMetadata("TEST1L", "TEST1F", testFields.fieldList(), listOf("NAME"))
         manager.registerMetadata(testTableMetadata, true)
 
     }
@@ -122,7 +125,7 @@ class DBFileFactoryTest {
 
             // Open a file not registered, registering metadata before open
             var test2Fields = mutableListOf<TypedField>()
-            test2Fields.add("Name" fieldByType CharacterType(20))
+            test2Fields.add("NAME" fieldByType CharacterType(20))
             val test2TableMetadata = FileMetadata("TEST2L", "TEST2F", test2Fields.fieldList(), listOf<String>())
             DBFileFactory.registerMetadata(test2TableMetadata)
 
@@ -130,8 +133,8 @@ class DBFileFactoryTest {
 
             // Open a file not registered, passing metadata to open invoke
             var test3Fields = mutableListOf<TypedField>()
-            test3Fields.add("Name" fieldByType CharacterType(20))
-            val test3TableMetadata = FileMetadata("TEST3L", "TEST3F", test2Fields.fieldList(), listOf("Name"))
+            test3Fields.add("NAME" fieldByType CharacterType(20))
+            val test3TableMetadata = FileMetadata("TEST3L", "TEST3F", test2Fields.fieldList(), listOf("NAME"))
             dbFileFactory.open("TEST3L", test3TableMetadata)
         }
     }
@@ -141,6 +144,10 @@ class DBFileFactoryTest {
         DBFileFactory(config).use { dbFileFactory ->
             var dbFile = dbFileFactory.open("TEST1L", null)
             var result = dbFile.chain("MARCO")
+            assertTrue (result.record["NAME"]?.trim().equals("MARCO"))
+            result = dbFile.chain("DARIO")
+            assertTrue (result.record["NAME"]?.trim().equals("DARIO"))
+
             dbFile.close()
         }
     }
