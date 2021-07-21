@@ -83,5 +83,9 @@ abstract class DBManagerBaseImpl : DBMManager {
                 getMetadataRegister().remove(name)
             }
         }
+
+        fun staticGetMetadata(name: String): FileMetadata {
+            return getMetadataRegister().getMetadata(name);
+        }
     }
 }
