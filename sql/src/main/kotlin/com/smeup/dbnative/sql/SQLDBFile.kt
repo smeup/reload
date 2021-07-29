@@ -39,20 +39,24 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
         fileMetadata: FileMetadata,
         connection: Connection): this(name, fileMetadata, connection, null)
 
+    private var preparedStatements: MutableMap<String, PreparedStatement> = mutableMapOf()
     private var resultSet: ResultSet? = null
     private var actualRecord: Record? = null
 
     private var lastNativeMethod: NativeMethod? = null
 
-    private val thisFileKeys: List<String> by lazy {
-        // TODO: think about a right way (local file maybe?) to retrieve keylist
-        var indexes = this.fileMetadata.fileKeys
-        if(indexes.isEmpty()){
-            indexes = connection.primaryKeys(fileMetadata.name)
-        }
-        if (indexes.isEmpty()) connection.orderingFields(fileMetadata.name) else indexes
-    }
-    private var adapter: Native2SQL = Native2SQL(thisFileKeys, fileMetadata.tableName)
+    //Search from: metadata, primary key, unique index, view ordering fields
+    //private val thisFileKeys: List<String> by lazy {
+    //    // TODO: think about a right way (local file maybe?) to retrieve keylist
+    //    var indexes = this.fileMetadata.fileKeys
+    //    if(indexes.isEmpty()){
+    //        indexes = connection.primaryKeys(fileMetadata.name)
+    //    }
+    //    }
+    //    if (indexes.isEmpty()) connection.orderingFields(fileMetadata.name) else indexes
+    //}
+
+    private var adapter: Native2SQL = Native2SQL(this.fileMetadata.fileKeys, fileMetadata.tableName)
     private var eof:Boolean = false
 
     private fun logEvent(loggingKey: LoggingKey, message: String, elapsedTime: Long? = null) =
@@ -206,7 +210,7 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
 
     override fun update(record: Record): Result {
         lastNativeMethod = NativeMethod.update
-        logEvent(LoggingKey.native_access_method, "Executing update for record $record")
+        logEvent(LoggingKey.native_access_method, "Executing update record $actualRecord to $record")
         measureTimeMillis {
             // record before update is "actualRecord"
             // record post update will be "record"
@@ -217,7 +221,7 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
                     atLeastOneFieldChanged = true
                     this.getResultSet()?.updateObject(it.key, fieldValue)
                 }
-            }
+            }?:logEvent(LoggingKey.native_access_method, "No previous read executed, nothing to update")
             if(atLeastOneFieldChanged){
                 this.getResultSet()?.updateRow()
             }
@@ -230,9 +234,14 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
 
     override fun delete(record: Record): Result {
         lastNativeMethod = NativeMethod.delete
-        logEvent(LoggingKey.native_access_method, "Executing delete for record $record")
+        logEvent(LoggingKey.native_access_method, "Executing delete for current record $actualRecord")
         measureTimeMillis {
-            this.getResultSet()?.deleteRow()
+            if(actualRecord != null) {
+                this.getResultSet()?.deleteRow()
+            }
+            else{
+                logEvent(LoggingKey.native_access_method, "No previous read executed, nothing to delete")
+            }
         }.apply {
             logEvent(LoggingKey.native_access_method, "delete executed", this)
         }
@@ -250,7 +259,8 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
         logEvent(LoggingKey.execute_inquiry, "Preparing statement for query: $sql with bingings: $values")
         val stm: PreparedStatement
         measureTimeMillis {
-            stm = connection.prepareStatement(sql, ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE)
+            stm = preparedStatements.get(sql)?:connection.prepareStatement(sql, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_UPDATABLE)
+            preparedStatements.putIfAbsent(sql, stm);
             stm.bind(values)
         }.apply {
             logEvent(LoggingKey.execute_inquiry, "Statement prepared, executing query for statement", this)
@@ -311,5 +321,6 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
 
     override fun close() {
         resultSet.closeIfOpen()
+        preparedStatements.values.forEach { it.close() }
     }
 }

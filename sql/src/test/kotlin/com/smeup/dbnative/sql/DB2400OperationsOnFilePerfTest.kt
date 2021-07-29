@@ -27,6 +27,7 @@ import org.junit.BeforeClass
 import org.junit.Ignore
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 
@@ -39,18 +40,55 @@ class DB2400OperationsOnFilePerfTest {
         dbManager = dbManagerDB2400ForTest(host, library)
     }
 
-
-    @Ignore
     @Test
-    fun updateMethods() {
-        initDbManager(library = "XSMEDATGRU")
+    fun insert() {
+        initDbManager(library = "UP_PRR")
         dbManager.use {
             val fileMetadata =
                 PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", "VERAPG3L")
             it!!.registerMetadata(fileMetadata, false)
             val dbFile = it!!.openFile("VERAPG3L")
 
-            var record = dbFile.chain(arrayListOf("SMEGL.001      ", "20210117", "BUSFIO         ")).record
+            var record = Record(RecordField("V£IDOJ", "A3L00000X1"),
+                RecordField("V£DATA", "20210117"),
+                RecordField("V£NOME", "BUSFIO2        "),
+                RecordField("V£CDC", "SMEGL.001      "),
+                RecordField("V£COD1", "ERB            "))
+            dbFile.write(record)
+
+
+            it!!.closeFile("VERAPG3L")
+        }
+    }
+
+    @Test
+    fun delete() {
+        initDbManager(library = "UP_PRR")
+        dbManager.use {
+            val fileMetadata =
+                PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", "VERAPG0L")
+            it!!.registerMetadata(fileMetadata, false)
+            val dbFile = it!!.openFile("VERAPG0L")
+
+            var record = dbFile.chain(arrayListOf("A3L00000X1")).record
+            if (!dbFile.eof()) {
+                dbFile.delete(record)
+            }
+            it!!.closeFile("VERAPG0L")
+        }
+    }
+
+    @Ignore
+    @Test
+    fun updateMethods() {
+        initDbManager(library = "UP_PRR")
+        dbManager.use {
+            val fileMetadata =
+                PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", "VERAPG0L")
+            it!!.registerMetadata(fileMetadata, false)
+            val dbFile = it!!.openFile("VERAPG0L")
+
+            var record = dbFile.chain(arrayListOf("A3L0000001")).record
             if (dbFile.eof()) {
                 record = Record(RecordField("V£IDOJ", "A3L0000001"),
                     RecordField("V£DATA", "20210117"),
@@ -58,14 +96,17 @@ class DB2400OperationsOnFilePerfTest {
                     RecordField("V£CDC", "SMEGL.001      "),
                     RecordField("V£COD1", "ERB            "))
                 dbFile.write(record)
+                record = dbFile.chain(arrayListOf("A3L0000001")).record
+                assertFalse { dbFile.eof() }
             }
 
             record.put("V£ATV0", "2")
             record.put("V£COM2", "\$\$EXT   Prova aggiornamento       EXT\$\$")
             dbFile.update(record)
 
-            record = dbFile.chain(arrayListOf("SMEGL.001", "20210117", "BUSFIO")).record
+            record = dbFile.chain(arrayListOf("A3L0000001")).record
             assertEquals(record["V£ATV0"], "2")
+            dbFile.delete(record)
 
             it!!.closeFile("VERAPG3L")
         }
