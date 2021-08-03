@@ -114,7 +114,7 @@ private fun createAndPopulateTable(dbManager: NoSQLDBMManager, tableName: String
     val tMetadata = TypedMetadata(tableName, "TSTREC", fields, keys)
 
     //if not exist file on mongodb create and populate with data
-    if (dbManager.existTableInMongoDB(tableName) == false) {
+    if (dbManager.existFile(tableName) == false) {
 
         createFile(tMetadata, dbManager)
         Assert.assertTrue(dbManager.existFile(tableName))
@@ -141,93 +141,12 @@ private fun createAndPopulateTable(dbManager: NoSQLDBMManager, tableName: String
 fun createFile(tMetadata: TypedMetadata, dbManager: NoSQLDBMManager) {
     // Find table registration in library metadata file
     val metadata: FileMetadata = tMetadata.fileMetadata();
-    val whereQuery = BasicDBObject()
-    whereQuery.put("name", tMetadata.tableName.toUpperCase())
 
-    val cursor = dbManager.metadataFile.find(whereQuery)
+    if (dbManager.existFile(metadata.name) == false) {
 
-    if (cursor.count() == 0) {
-        // Register file metadata
-        dbManager.metadataFile.insertOne(tMetadata.toMongoDocument())
         // Create file index
         dbManager.mongoDatabase.runCommand(Document.parse(metadata.buildIndexCommand()))
+        dbManager.registerMetadata(metadata, true)
     }
-    dbManager.registerMetadata(metadata, true)
+
 }
-
-fun TypedMetadata.toMongoDocument(): Document {
-
-    val metadataObject = Document("name", tableName)
-
-    // formatName
-    metadataObject.put("format", this.recordFormat)
-
-    // Fields
-    val fieldsDoc = mutableListOf<Document>()
-
-    this.fields.forEach {
-        val fieldObjectDocument = Document("name", it.field.name)
-
-        val fieldTypeDocument = Document()
-        fieldTypeDocument.put("type",  it.type.type.toString())
-        fieldTypeDocument.put("size",  it.type.size)
-        fieldTypeDocument.put("digits", it.type.digits)
-        fieldObjectDocument.put("type", fieldTypeDocument)
-        fieldObjectDocument.put("notnull", false)
-        fieldObjectDocument.put("text", it.field.text)
-        fieldsDoc.add(fieldObjectDocument)
-    }
-    metadataObject.put("fields", fieldsDoc)
-
-    // fileKeys
-    val keysDoc = mutableListOf<Document>()
-
-    this.fileKeys.forEach {
-        val keyObjectDocument = Document("name", it)
-        keysDoc.add(keyObjectDocument)
-    }
-    metadataObject.put("fileKeys", keysDoc)
-
-    return metadataObject
-}
-
-fun Document.toMetadata(): TypedMetadata {
-    // Name
-    val name = get("name") as String
-
-    val formatName = get("format") as String
-
-    // Fields
-    val fields = getList("fields", Document::class.java)
-    val fieldsList = mutableListOf<TypedField>()
-
-    fields.forEach { item ->
-
-        val fieldName  = item.getString("name")
-
-        // Build FieldType object
-        val typeAsDocument = item.get("type") as Document
-
-        val type =  typeAsDocument.getString("type")
-        val size =  typeAsDocument.getInteger("size")
-        val digits =  typeAsDocument.getInteger("digits")
-        val typeFieldObject = type.getFieldTypeInstance(size, digits)
-        val text = typeAsDocument.getString("text")
-
-        val field = TypedField(Field(fieldName, text), typeFieldObject)
-        fieldsList.add(field)
-    }
-
-    //Keys
-    val keys = getList("fields", Document::class.java)
-    val keysList = mutableListOf<String>()
-
-    keys.forEach { item ->
-
-        val key  = item.getString("name")
-        keysList.add(key)
-    }
-
-    return TypedMetadata(name, formatName, fieldsList, keysList)
-}
-
