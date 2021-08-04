@@ -121,7 +121,7 @@ class Native2SQL(val fileKeys: List<String>, val tableName: String) {
         }
         lastReadInstruction!!.keys.mapIndexed { index, value ->
             val keyname = fileKeys.get(index)
-            if(record[keyname]?.trim() != value){
+            if(record[keyname]?.trim() != value.trim()){
                 return false
             }
         }
