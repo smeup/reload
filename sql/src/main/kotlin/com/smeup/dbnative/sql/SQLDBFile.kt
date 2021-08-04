@@ -193,7 +193,7 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
 
     override fun write(record: Record): Result {
         lastNativeMethod = NativeMethod.write
-        logEvent(LoggingKey.native_access_method, "Executing write for record $record")
+        logEvent(LoggingKey.native_access_method, "Executing write for record $record: with autocommit=${connection.autoCommit}")
         measureTimeMillis {
             // TODO: manage errors
             val sql = fileMetadata.tableName.insertSQL(record)
@@ -210,7 +210,7 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
 
     override fun update(record: Record): Result {
         lastNativeMethod = NativeMethod.update
-        logEvent(LoggingKey.native_access_method, "Executing update record $actualRecord to $record")
+        logEvent(LoggingKey.native_access_method, "Executing update record $actualRecord to $record with autocommit=${connection.autoCommit}")
         measureTimeMillis {
             // record before update is "actualRecord"
             // record post update will be "record"
@@ -234,7 +234,7 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
 
     override fun delete(record: Record): Result {
         lastNativeMethod = NativeMethod.delete
-        logEvent(LoggingKey.native_access_method, "Executing delete for current record $actualRecord")
+        logEvent(LoggingKey.native_access_method, "Executing delete for current record $actualRecord with autocommit=${connection.autoCommit}")
         measureTimeMillis {
             if(actualRecord != null) {
                 this.getResultSet()?.deleteRow()

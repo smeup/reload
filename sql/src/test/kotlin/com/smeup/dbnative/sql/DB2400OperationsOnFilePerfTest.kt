@@ -108,7 +108,6 @@ class DB2400OperationsOnFilePerfTest {
             assertEquals(record["V£ATV0"], "2")
             dbFile.delete(record)
 
-            it!!.closeFile("VERAPG3L")
         }
     }
 
@@ -129,39 +128,34 @@ class DB2400OperationsOnFilePerfTest {
 
     @Test
     fun chain() {
-        initDbManager(library = "SMEUP_DAT")
+        initDbManager(library = "UP_PRR")
         dbManager.use {
             val fileMetadata =
-                PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", "BRARTI2L")
+                PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", "BRARTI0L")
             it!!.registerMetadata(fileMetadata, false)
-            val dbFile = it!!.openFile("BRARTI2L")
-            var keys = arrayListOf("ART  ", "A08            ")
-            for (i in 1..10) {
-                doChain(keys, dbFile)
-            }
-            keys = arrayListOf("ART  ", "MS01           ")
-            for (i in 1..10) {
-                doChain(keys, dbFile)
-            }
-            keys = arrayListOf("ART  ", "SL03           ")
-            for (i in 1..10) {
-                doChain(keys, dbFile)
-            }
-            keys = arrayListOf("ART  ", "TX01           ")
-            for (i in 1..10) {
-                doChain(keys, dbFile)
-            }
-            keys = arrayListOf("ART  ", "MAN            ")
-            for (i in 1..10) {
-                doChain(keys, dbFile)
-            }
+            val dbFile = it!!.openFile("BRARTI0L")
+            var keys = arrayListOf("ASACC0001")
+            doChain(keys, dbFile)
+
+            keys = arrayListOf("ASACC0002")
+            doChain(keys, dbFile)
+
+            keys = arrayListOf("ASACC0003")
+            doChain(keys, dbFile)
+
+            keys = arrayListOf("ASACC0004")
+            doChain(keys, dbFile)
+
+            keys = arrayListOf("ASACC0005")
+            doChain(keys, dbFile)
+
             it!!.closeFile("BRARTI0L")
         }
     }
 
     private fun doChain(keys: List<String>, dbFile: DBFile){
         val chainResult = dbFile.chain(keys)
-        assertEquals(keys[1], chainResult.record["A§ARTI"])
+        assertEquals(keys[0], chainResult.record["A§ARTI"]?.trim())
     }
 
 

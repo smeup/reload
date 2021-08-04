@@ -31,7 +31,7 @@ open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBMa
     private var openedFile = mutableMapOf<String, SQLDBFile>()
 
     val connection : Connection by lazy {
-        logger?.logEvent(LoggingKey.connection, "Opening SQL connection")
+        logger?.logEvent(LoggingKey.connection, "Opening SQL connection on url ${connectionConfig.url}")
         val conn: Connection
         measureTimeMillis {
             connectionConfig.driver?.let {
@@ -48,6 +48,7 @@ open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBMa
     }
 
     override fun close() {
+        openedFile.keys.forEach { closeFile(it)}
         connection.close()
     }
 
