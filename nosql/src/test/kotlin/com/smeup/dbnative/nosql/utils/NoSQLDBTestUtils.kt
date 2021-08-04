@@ -71,8 +71,8 @@ fun createAndPopulateMunicipalityTable(dbManager: NoSQLDBMManager) {
     if (!dbManager.existFile(MUNICIPALITY_TABLE_NAME)) {
 
         val fields = listOf(
-            "NAZ" fieldByType  CharacterType(2),
-            "REG" fieldByType CharacterType(3),
+            "£NAZ" fieldByType  CharacterType(2),
+            "§REG" fieldByType CharacterType(3),
             "PROV" fieldByType CharacterType(2),
             "CITTA" fieldByType VarcharType(35),
             "CAP" fieldByType CharacterType(5),
@@ -82,8 +82,8 @@ fun createAndPopulateMunicipalityTable(dbManager: NoSQLDBMManager) {
         )
 
         val keys = listOf(
-            "NAZ",
-            "REG",
+            "£NAZ",
+            "§REG",
             "PROV",
             "CITTA"
         )
@@ -111,7 +111,7 @@ fun testLog(message: String) {
 
 private fun createAndPopulateTable(dbManager: NoSQLDBMManager, tableName: String, fields: List<TypedField>, keys:List<String>, dataFilePath: String) {
 
-    val tMetadata = TypedMetadata(tableName, "TSTREC", fields, keys)
+    val tMetadata = TypedMetadata(tableName, tableName, fields, keys)
 
     //if not exist file on mongodb create and populate with data
     if (dbManager.existFile(tableName) == false) {
@@ -130,7 +130,7 @@ private fun createAndPopulateTable(dbManager: NoSQLDBMManager, tableName: String
             dbFile.write(Record(*recordFields.toTypedArray()))
         }
     } else {
-        // If table already exist in MongoDB, only register metadata
+        // If table already exist in MongoDB, only registered metadata
         dbManager.registerMetadata(tMetadata.fileMetadata(), true)
     }
 

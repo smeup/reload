@@ -408,7 +408,7 @@ class NoSQLMunicipalityTest {
 
     private fun buildMunicipalityKey(vararg values: String): List<String> {
         val keyValues = mutableListOf<String>()
-        val keys = arrayOf("NAZ", "REG", "PROV", "CITTA")
+        val keys = arrayOf("£NAZ", "§REG", "PROV", "CITTA")
         for ((index, value) in values.withIndex()) {
             if (keys.size> index) {
                 keyValues.add(value)
