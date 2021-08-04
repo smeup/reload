@@ -55,15 +55,7 @@ class NoSQLDBMManager (override val connectionConfig: ConnectionConfig) : DBMana
         mongoClient.getDatabase(dataBase)
     }
 
-    val metadataFile : MongoCollection<Document> by lazy{
-        mongoDatabase.getCollection(METADATA_COLLECTION)
-    }
-
     private var openedFile = mutableMapOf<String, NoSQLDBFile>()
-
-    companion object {
-        const val METADATA_COLLECTION = "METADATA"
-    }
 
     override fun validateConfig() {
         require(match != null) {
@@ -74,21 +66,6 @@ class NoSQLDBMManager (override val connectionConfig: ConnectionConfig) : DBMana
     override fun close() {
         mongoClient.close()
     }
-
-    /*
-    override fun existFile(name: String): Boolean {
-        return metadataFile.find(eq("name", name)).count() != 0
-    }
-
-
-
-    override fun metadataOf(name: String): FileMetadata {
-        metadataFile.run {
-            val iterableResult = find(eq("name", name))
-            return iterableResult.first()!!.toMetadata()
-        }
-    }
-    */
 
     override fun openFile(name: String): DBFile {
 
@@ -113,15 +90,5 @@ class NoSQLDBMManager (override val connectionConfig: ConnectionConfig) : DBMana
 
     override fun closeFile(name: String) {
         openedFile.remove(name)
-    }
-
-    fun existTableInMongoDB(name:String):Boolean {
-        // Find table registration in library metadata file
-        val whereQuery = BasicDBObject()
-        whereQuery.put("name", name.toUpperCase())
-
-        val cursor = metadataFile.find(whereQuery)
-
-        return cursor.count() != 0
     }
 }

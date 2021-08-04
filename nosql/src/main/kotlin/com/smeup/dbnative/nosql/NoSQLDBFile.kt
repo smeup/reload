@@ -642,10 +642,10 @@ class NoSQLDBFile(override var name: String,
 
         keyFields.forEachIndexed{index: Int, dbField: Field ->
             if (index != keyFields.size-1) {
-                line.append("{ ${dbField.name}: {${operator3.symbol} \"${keys.get(keys.indexOfFirst { recordField -> recordField.name == dbField.name }).value}\" } }, ")
+                line.append("{ \"${dbField.name}\": {${operator3.symbol} \"${keys.get(keys.indexOfFirst { recordField -> recordField.name == dbField.name }).value}\" } }, ")
             }
             else {
-                line.append("{ ${dbField.name}: {${operator1.symbol} \"${keys.get(keys.indexOfFirst { recordField -> recordField.name == dbField.name }).value}\" } }")
+                line.append("{ \"${dbField.name}\": {${operator1.symbol} \"${keys.get(keys.indexOfFirst { recordField -> recordField.name == dbField.name }).value}\" } }")
             }
         }
 
@@ -668,10 +668,10 @@ class NoSQLDBFile(override var name: String,
 
                 subList.forEachIndexed{index: Int, dbField: Field ->
                     if (index != subList.size-1) {
-                        tempLine.append("{ ${dbField.name}: {${operator3.symbol} \"${keys.get(keys.indexOfFirst { recordField -> recordField.name == dbField.name }).value}\" } }, ")
+                        tempLine.append("{ \"${dbField.name}\": {${operator3.symbol} \"${keys.get(keys.indexOfFirst { recordField -> recordField.name == dbField.name }).value}\" } }, ")
                     }
                     else {
-                        tempLine.append("{ ${dbField.name}: {${operator2.symbol} \"${keys.get(keys.indexOfFirst { recordField -> recordField.name == dbField.name }).value}\" } }")
+                        tempLine.append("{ \"${dbField.name}\": {${operator2.symbol} \"${keys.get(keys.indexOfFirst { recordField -> recordField.name == dbField.name }).value}\" } }")
                     }
                 }
 
@@ -699,9 +699,9 @@ class NoSQLDBFile(override var name: String,
 
         keyFields.joinTo(sort, separator= ",", prefix= "{", postfix = "}") {
             if (up_direction) {
-                "${it.name}: 1"
+                "\"${it.name}\": 1"
             } else {
-                "${it.name}: -1"
+                "\"${it.name}\": -1"
             }
         }
         sort.append("}")

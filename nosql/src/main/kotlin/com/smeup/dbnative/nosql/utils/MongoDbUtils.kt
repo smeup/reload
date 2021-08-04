@@ -28,7 +28,7 @@ fun FileMetadata.buildInsertCommand(filename: String, record: Record): String {
     val documents = StringBuilder()
 
     record.toList().joinTo(documents, separator=",", prefix="{", postfix="}") {
-        "${it.first}: \"${it.second}\""
+        "\"${it.first}\": \"${it.second}\""
     }
 
     val result = """
@@ -79,7 +79,7 @@ fun FileMetadata.buildIndexCommand(): String{
     val keys = StringBuilder()
 
     this.fileKeys.joinTo(keys, separator=",", prefix="{", postfix="}") {
-        "${it}: 1"
+        "\"${it}\": 1"
     }
 
     val result = """
