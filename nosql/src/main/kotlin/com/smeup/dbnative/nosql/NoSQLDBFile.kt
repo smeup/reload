@@ -546,7 +546,7 @@ class NoSQLDBFile(override var name: String,
 
         if (document != null) {
             fileMetadata.fields.forEach({
-                result.add(RecordField(it.name, document.getString(it.name)))
+                result.add(RecordField(it.name, document.getValue(it.name).toString()))
             })
         }
         return result
