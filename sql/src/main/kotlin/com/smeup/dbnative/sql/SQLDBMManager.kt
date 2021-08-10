@@ -48,7 +48,8 @@ open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBMa
     }
 
     override fun close() {
-        openedFile.keys.forEach { closeFile(it)}
+        openedFile.values.forEach { it.close()}
+        openedFile.clear()
         connection.close()
     }
 
