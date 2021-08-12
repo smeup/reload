@@ -64,6 +64,8 @@ class NoSQLDBMManager (override val connectionConfig: ConnectionConfig) : DBMana
     }
 
     override fun close() {
+        openedFile.values.forEach { it.close()}
+        openedFile.clear()
         mongoClient.close()
     }
 
@@ -89,6 +91,6 @@ class NoSQLDBMManager (override val connectionConfig: ConnectionConfig) : DBMana
     }
 
     override fun closeFile(name: String) {
-        openedFile.remove(name)
+        openedFile.remove(name)!!.close()
     }
 }

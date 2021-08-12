@@ -25,12 +25,15 @@ import com.smeup.dbnative.file.Record
 import com.smeup.dbnative.file.RecordField
 import com.smeup.dbnative.file.Result
 import com.smeup.dbnative.log.Logger
+import com.smeup.dbnative.log.LoggingKey
+import com.smeup.dbnative.log.NativeMethod
 import com.smeup.dbnative.model.Field
 import com.smeup.dbnative.model.FileMetadata
 import com.smeup.dbnative.nosql.utils.buildInsertCommand
 import com.smeup.dbnative.utils.getField
 import com.smeup.dbnative.utils.matchFileKeys
 import org.bson.Document
+import kotlin.system.measureTimeMillis
 
 class NoSQLDBFile(override var name: String,
                   override var fileMetadata: FileMetadata,
@@ -43,6 +46,10 @@ class NoSQLDBFile(override var name: String,
     private var IncludeFirst: Boolean = true
     private var lastSetOperation: Boolean = false
     private var eof: Boolean = false
+    private var lastNativeMethod: NativeMethod? = null
+
+    private fun logEvent(loggingKey: LoggingKey, message: String, elapsedTime: Long? = null) =
+        logger?.logEvent(loggingKey, message, elapsedTime, lastNativeMethod, fileMetadata.name)
 
     override fun eof(): Boolean {
         return eof
@@ -69,91 +76,98 @@ class NoSQLDBFile(override var name: String,
     Create cursor on first occourence of passed keys (up sorted list)
      */
     override fun setll(keys: List<String>): Boolean {
-        eof = false
-
-        var keyAsRecordField = keys.mapIndexed { index, value ->
-            val keyname = fileMetadata.fileKeys.get(index)
-            RecordField(keyname, value)
-        }
-
-        /*
-        Passed keys are not primary key for DBFile
-         */
-        if (fileMetadata.matchFileKeys(keyAsRecordField) == false) {
-            return false
-        }
-
-
-        /*
-        Find syntax
-
-        $and: [ { key1: { $eq: "value1" } }, { key2: { $gte: "value2" } } ] }
-
-        example
-
-        {$and:[{ NAZ: { $eq: "IT" } }, { REG: { $eq: "LOM" } }, { PROV: { $eq: "BS" } }, { CITTA: { $gt: "ERBUSCO" } } ] }
-
-        */
-
-        /*
-        val filter = StringBuilder()
-
-        val keyFields = mutableListOf<DBField>()
-
-        keys.forEach {
-            val field = fileMetadata.getField(it.name)
-            if (field != null) {
-                keyFields.add(field)
-            }
-        }
-
-        keyFields.forEachIndexed{index: Int, dbField: DBField ->
-            if (index != keys.size-1) {
-                filter.append("{ ${dbField.name}: {\$eq: \"${keys.get(keys.indexOfFirst { recordField -> recordField.name == dbField.name }).value}\" } }, ")
-            } else {
-                filter.append("{ ${dbField.name}: {\$gte: \"${keys.get(keys.indexOfFirst { recordField -> recordField.name == dbField.name }).value}\" } }")
-            }
-        }
-         */
-
-        /*
-        Sort sintax:
-
-        {key1: 1, key2: -1, ....}
-
-         */
-
-        /*
-        val sort = StringBuilder()
-        fileMetadata.fields.filter { it.primaryKey }.joinTo(sort, separator=",", prefix="{", postfix="}") {
-            "${it.name}: 1"
-        }
-
-        val query = "{ \$and:[ $filter ]}"
-
-        println(query)
-
+        lastNativeMethod = NativeMethod.setll
+        logEvent(LoggingKey.native_access_method, "Executing setll on keys $keys")
         var result = false
+        measureTimeMillis {
+            eof = false
 
-        var cursor = database.getCollection(fileMetadata.tableName).find(Document.parse(query))
+            var keyAsRecordField = keys.mapIndexed { index, value ->
+                val keyname = fileMetadata.fileKeys.get(index)
+                RecordField(keyname, value)
+            }
 
-        cursor = setSorting(cursor, true)
-        up_direction = true
-        last_keys = keys
+            /*
+            Passed keys are not primary key for DBFile
+             */
+            if (fileMetadata.matchFileKeys(keyAsRecordField) == false) {
+                return false
+            }
 
-        */
 
-        val cursor = calculateCursor(keyAsRecordField, true, true)
-        var result = false
-        if (cursor.iterator().hasNext()) {
-            globalCursor = cursor.iterator()
-            result = true
+            /*
+            Find syntax
+
+            $and: [ { key1: { $eq: "value1" } }, { key2: { $gte: "value2" } } ] }
+
+            example
+
+            {$and:[{ NAZ: { $eq: "IT" } }, { REG: { $eq: "LOM" } }, { PROV: { $eq: "BS" } }, { CITTA: { $gt: "ERBUSCO" } } ] }
+
+            */
+
+            /*
+            val filter = StringBuilder()
+
+            val keyFields = mutableListOf<DBField>()
+
+            keys.forEach {
+                val field = fileMetadata.getField(it.name)
+                if (field != null) {
+                    keyFields.add(field)
+                }
+            }
+
+            keyFields.forEachIndexed{index: Int, dbField: DBField ->
+                if (index != keys.size-1) {
+                    filter.append("{ ${dbField.name}: {\$eq: \"${keys.get(keys.indexOfFirst { recordField -> recordField.name == dbField.name }).value}\" } }, ")
+                } else {
+                    filter.append("{ ${dbField.name}: {\$gte: \"${keys.get(keys.indexOfFirst { recordField -> recordField.name == dbField.name }).value}\" } }")
+                }
+            }
+             */
+
+            /*
+            Sort sintax:
+
+            {key1: 1, key2: -1, ....}
+
+             */
+
+            /*
+            val sort = StringBuilder()
+            fileMetadata.fields.filter { it.primaryKey }.joinTo(sort, separator=",", prefix="{", postfix="}") {
+                "${it.name}: 1"
+            }
+
+            val query = "{ \$and:[ $filter ]}"
+
+            println(query)
+
+            var result = false
+
+            var cursor = database.getCollection(fileMetadata.tableName).find(Document.parse(query))
+
+            cursor = setSorting(cursor, true)
+            up_direction = true
+            last_keys = keys
+
+            */
+
+            val cursor = calculateCursor(keyAsRecordField, true, true)
+
+            if (cursor.iterator().hasNext()) {
+                globalCursor = cursor.iterator()
+                result = true
+            }
+
+            up_direction = true
+            last_set_keys = keyAsRecordField
+            IncludeFirst = true
+        }.apply {
+            logEvent(LoggingKey.native_access_method, "setll executed", this)
         }
-
-        up_direction = true
-        last_set_keys = keyAsRecordField
-        IncludeFirst = true
-
+        lastNativeMethod = null
         return result
     }
 
@@ -165,98 +179,103 @@ class NoSQLDBFile(override var name: String,
     Create cursor on first occourence of passed keys (up sorted list)
      */
     override fun setgt(keys: List<String>): Boolean {
-        eof = false
+        lastNativeMethod = NativeMethod.setgt
+        logEvent(LoggingKey.native_access_method, "Executing setgt on keys $keys")
+        var result = false
+        measureTimeMillis {
+            eof = false
 
-        var keyAsRecordField = keys.mapIndexed { index, value ->
-            val keyname = fileMetadata.fileKeys.get(index)
-            RecordField(keyname, value)
-        }
-
-        /*
-        Passed keys are not primary key for DBFile
-         */
-        if (fileMetadata.matchFileKeys(keyAsRecordField) == false) {
-            return false
-        }
-
-        /*
-        Find syntax
-
-        {$and: [ { key1: { $gte: "value1" } }, { key2: { $gte: "value2" } } ] }
-
-        example
-
-        {$and:[{ NAZ: { $gte: "IT" } }, { REG: { $gte: "LOM" } }, { PROV: { $gte: "BS" } }, { CITTA: { $gte: "ERBUSCO" } } ] }
-
-        *** SETGT forward:
-
-        {$and:[{ NAZ: { $eq: "IT" } }, { REG: { $eq: "LOM" } }, { PROV: { $eq: "BS" } }, { CITTA: { $gt: "ERBUSCO" } } ] }
-
-        with order {NAZ: 1, REG: 1, PROV: 1, CITTA: 1}
-
-        ***SETGT backward:
-
-        {$and:[{ NAZ: { $eq: "IT" } }, { REG: { $eq: "LOM" } }, { PROV: { $eq: "BS" } }, { CITTA: { $gt: "ERBUSCO" } } ] }
-
-        with order {NAZ: 1, REG: 1, PROV: 1, CITTA: -1}
-
-        */
-
-        /*
-        val filter = StringBuilder()
-        val primaryFields = fileMetadata.fields.filter { it.primaryKey }
-
-        primaryFields.forEachIndexed{index: Int, dbField: DBField ->
-            if (index != primaryFields.size-1) {
-                filter.append("{ ${dbField.name}: {\$eq: \"${keys.get(keys.indexOfFirst { recordField -> recordField.name == dbField.name }).value}\" } }, ")
-            } else {
-                filter.append("{ ${dbField.name}: {\$gt: \"${keys.get(keys.indexOfFirst { recordField -> recordField.name == dbField.name }).value}\" } }")
+            var keyAsRecordField = keys.mapIndexed { index, value ->
+                val keyname = fileMetadata.fileKeys.get(index)
+                RecordField(keyname, value)
             }
+
+            /*
+            Passed keys are not primary key for DBFile
+             */
+            if (fileMetadata.matchFileKeys(keyAsRecordField) == false) {
+                return false
+            }
+
+            /*
+            Find syntax
+
+            {$and: [ { key1: { $gte: "value1" } }, { key2: { $gte: "value2" } } ] }
+
+            example
+
+            {$and:[{ NAZ: { $gte: "IT" } }, { REG: { $gte: "LOM" } }, { PROV: { $gte: "BS" } }, { CITTA: { $gte: "ERBUSCO" } } ] }
+
+            *** SETGT forward:
+
+            {$and:[{ NAZ: { $eq: "IT" } }, { REG: { $eq: "LOM" } }, { PROV: { $eq: "BS" } }, { CITTA: { $gt: "ERBUSCO" } } ] }
+
+            with order {NAZ: 1, REG: 1, PROV: 1, CITTA: 1}
+
+            ***SETGT backward:
+
+            {$and:[{ NAZ: { $eq: "IT" } }, { REG: { $eq: "LOM" } }, { PROV: { $eq: "BS" } }, { CITTA: { $gt: "ERBUSCO" } } ] }
+
+            with order {NAZ: 1, REG: 1, PROV: 1, CITTA: -1}
+
+            */
+
+            /*
+            val filter = StringBuilder()
+            val primaryFields = fileMetadata.fields.filter { it.primaryKey }
+
+            primaryFields.forEachIndexed{index: Int, dbField: DBField ->
+                if (index != primaryFields.size-1) {
+                    filter.append("{ ${dbField.name}: {\$eq: \"${keys.get(keys.indexOfFirst { recordField -> recordField.name == dbField.name }).value}\" } }, ")
+                } else {
+                    filter.append("{ ${dbField.name}: {\$gt: \"${keys.get(keys.indexOfFirst { recordField -> recordField.name == dbField.name }).value}\" } }")
+                }
+            }
+            */
+
+
+            /*
+            Sort sintax:
+
+            {key1: 1, key2: -1, ....}
+
+            example
+
+            {NAZ: 1, REG: 1, PROV: 1, CITTA: 1}
+
+             */
+
+            /*
+            val sort = StringBuilder()
+            fileMetadata.fields.filter { it.primaryKey }.joinTo(sort, separator=",", prefix="{", postfix="}") {
+                "${it.name}: 1"
+            }
+
+            val query = "{ \$and: [ $filter ]}"
+
+            println(query)
+
+            var result = false
+
+            var cursor = database.getCollection(fileMetadata.tableName).find(Document.parse(query))
+
+            cursor = setSorting(cursor, true)
+             */
+
+            val cursor = calculateCursor(keyAsRecordField, true, includeFirst = false)
+
+            if (cursor.iterator().hasNext()) {
+                globalCursor = cursor.iterator()
+                result = true
+            }
+
+            up_direction = true
+            last_set_keys = keyAsRecordField
+            IncludeFirst = false
+        }.apply {
+          logEvent(LoggingKey.native_access_method, "setgt executed", this)
         }
-        */
-
-
-        /*
-        Sort sintax:
-
-        {key1: 1, key2: -1, ....}
-
-        example
-
-        {NAZ: 1, REG: 1, PROV: 1, CITTA: 1}
-
-         */
-
-        /*
-        val sort = StringBuilder()
-        fileMetadata.fields.filter { it.primaryKey }.joinTo(sort, separator=",", prefix="{", postfix="}") {
-            "${it.name}: 1"
-        }
-
-        val query = "{ \$and: [ $filter ]}"
-
-        println(query)
-
-        var result = false
-
-        var cursor = database.getCollection(fileMetadata.tableName).find(Document.parse(query))
-
-        cursor = setSorting(cursor, true)
-         */
-
-        val cursor = calculateCursor(keyAsRecordField, true, includeFirst = false)
-
-        var result = false
-
-        if (cursor.iterator().hasNext()) {
-            globalCursor = cursor.iterator()
-            result = true
-        }
-
-        up_direction = true
-        last_set_keys = keyAsRecordField
-        IncludeFirst = false
-
+        lastNativeMethod = null
         return result
     }
 
@@ -266,77 +285,97 @@ class NoSQLDBFile(override var name: String,
     }
 
     override fun chain(keys: List<String>): Result {
-        eof = false
+        lastNativeMethod = NativeMethod.chain
+        logEvent(LoggingKey.native_access_method, "Executing chain on keys $keys")
+        var result: Result
+        measureTimeMillis {
+            eof = false
 
-        var keyAsRecordField = keys.mapIndexed { index, value ->
-            val keyname = fileMetadata.fileKeys.get(index)
-            RecordField(keyname, value)
+            var keyAsRecordField = keys.mapIndexed { index, value ->
+                val keyname = fileMetadata.fileKeys.get(index)
+                RecordField(keyname, value)
+            }
+
+            /*
+            Passed keys are not primary key for DBFile
+             */
+            if (fileMetadata.matchFileKeys(keyAsRecordField) == false) {
+                result =  Result(record = Record(), indicatorLO = true)
+            }
+            else {
+
+                val cursor = calculateCursor(keyAsRecordField, true, true)
+
+                globalCursor = cursor.iterator()
+                up_direction = true
+                last_set_keys = keyAsRecordField
+
+                //when globalCursor is empty return result empty
+                val document = globalCursor!!.tryNext()
+                if(document == null){
+                    result =  Result(Record())
+                }
+                else
+                if (matchKeys(document, keyAsRecordField)) {
+                    val record = documentToRecord(document)
+                    updateLastKeys(record)
+                    result = Result(record)
+                } else {
+                    result = Result(Record())
+                }
+            }
+        }.apply {
+            logEvent(LoggingKey.native_access_method, "chain executed, result; $result", this)
         }
-
-        /*
-        Passed keys are not primary key for DBFile
-         */
-        if (fileMetadata.matchFileKeys(keyAsRecordField) == false) {
-            return Result(record = Record(), indicatorLO = true)
-        }
-
-        val cursor = calculateCursor(keyAsRecordField, true, true)
-
-        globalCursor = cursor.iterator()
-        up_direction = true
-        last_set_keys = keyAsRecordField
-
-        //when globalCursor is empty return result empty
-        val document = globalCursor!!.tryNext() ?: return Result(Record())
-
-        if (matchKeys(document, keyAsRecordField)) {
-            val record = documentToRecord(document)
-            updateLastKeys(record)
-            return Result(record)
-        } else {
-            return Result(Record())
-        }
+        lastNativeMethod = null
+        return result
     }
 
     /*
     Read next record from current cursor (up direction sorted list)
      */
     override fun read(): Result {
-
-        if (globalCursor == null) {
-            return Result(
-                indicatorLO = true,
-                errorMsg = "Cursor not defined. Call SETLL or SETGT before invoke READ command"
-            )
-        }
-
-        if (!up_direction) {
-            val cursor = calculateCursor(last_set_keys, true, !IncludeFirst)
-            if (cursor.iterator().hasNext()) {
-                globalCursor = cursor.iterator()
+        lastNativeMethod = NativeMethod.read
+        logEvent(LoggingKey.native_access_method, "Executing read")
+        measureTimeMillis {
+            if (globalCursor == null) {
+                return Result(
+                    indicatorLO = true,
+                    errorMsg = "Cursor not defined. Call SETLL or SETGT before invoke READ command"
+                )
             }
-            up_direction = true
-        }
 
-        IncludeFirst = true
+            if (!up_direction) {
+                val cursor = calculateCursor(last_set_keys, true, !IncludeFirst)
+                if (cursor.iterator().hasNext()) {
+                    globalCursor = cursor.iterator()
+                }
+                up_direction = true
+            }
 
-        if (globalCursor != null) {
+            IncludeFirst = true
 
-            if (globalCursor!!.hasNext()) {
-                val record = documentToRecord(globalCursor!!.next())
+            if (globalCursor != null) {
+
                 if (globalCursor!!.hasNext()) {
-                    updateLastKeys(record)
-                    return Result(record = record)
+                    val record = documentToRecord(globalCursor!!.next())
+                    if (globalCursor!!.hasNext()) {
+                        updateLastKeys(record)
+                        return Result(record = record)
+                    } else {
+                        eof = true
+                        return Result(record = record, indicatorEQ = true)
+                    }
                 } else {
-                    eof = true
-                    return Result(record = record, indicatorEQ = true)
+                    return Result(indicatorLO = true, errorMsg = "READ called on EOF cursor")
                 }
             } else {
-                return Result(indicatorLO = true, errorMsg = "READ called on EOF cursor")
+                return Result(indicatorLO = true, errorMsg = "Cursor not defined. Call SETLL or SETGT before invoke READ command")
             }
-        } else {
-            return Result(indicatorLO = true, errorMsg = "Cursor not defined. Call SETLL or SETGT before invoke READ command")
+        }.apply {
+            logEvent(LoggingKey.native_access_method, "read executed", this)
         }
+        lastNativeMethod = null
     }
 
     /*
@@ -356,90 +395,103 @@ class NoSQLDBFile(override var name: String,
     https://www.ibm.com/support/knowledgecenter/ssw_ibm_i_71/rzasd/sc092508987.htm
      */
     override fun readEqual(keys: List<String>): Result {
-
-        var keyAsRecordField = keys.mapIndexed { index, value ->
-            val keyname = fileMetadata.fileKeys.get(index)
-            RecordField(keyname, value)
-        }
-
-        if (globalCursor == null) {
-            globalCursor = calculateCursor(keyAsRecordField, true, true).iterator()
-        }
-
-        /*
-        Passed keys are not primary key for DBFile
-         */
-        if (fileMetadata.matchFileKeys(keyAsRecordField) == false) {
-            return Result(indicatorLO = true, errorMsg = "READE keys not matching file primary keys")
-        }
-
-        if (!up_direction) {
-            val cursor = calculateCursor(last_set_keys, true, !IncludeFirst)
-            if (cursor.iterator().hasNext()) {
-                globalCursor = cursor.iterator()
+        lastNativeMethod = NativeMethod.readEqual
+        logEvent(LoggingKey.native_access_method, "Executing readEqual on keys $keys")
+        measureTimeMillis {
+            var keyAsRecordField = keys.mapIndexed { index, value ->
+                val keyname = fileMetadata.fileKeys.get(index)
+                RecordField(keyname, value)
             }
-            up_direction = true
-        }
 
-        IncludeFirst = true
+            if (globalCursor == null) {
+                globalCursor = calculateCursor(keyAsRecordField, true, true).iterator()
+            }
 
-        while (true) {
-            if (globalCursor!!.hasNext()) {
+            /*
+            Passed keys are not primary key for DBFile
+             */
+            if (fileMetadata.matchFileKeys(keyAsRecordField) == false) {
+                return Result(indicatorLO = true, errorMsg = "READE keys not matching file primary keys")
+            }
 
-                val document = globalCursor!!.next()
-                val record = documentToRecord(document)
+            if (!up_direction) {
+                val cursor = calculateCursor(last_set_keys, true, !IncludeFirst)
+                if (cursor.iterator().hasNext()) {
+                    globalCursor = cursor.iterator()
+                }
+                up_direction = true
+            }
 
-                updateLastKeys(record)
+            IncludeFirst = true
 
-                if (matchKeys(document, keyAsRecordField)) {
-                    return Result(record = record)
+            while (true) {
+                if (globalCursor!!.hasNext()) {
+
+                    val document = globalCursor!!.next()
+                    val record = documentToRecord(document)
+
+                    updateLastKeys(record)
+
+                    if (matchKeys(document, keyAsRecordField)) {
+                        return Result(record = record)
+                    } else {
+                        eof = true
+                        return Result(indicatorHI = true)
+                    }
                 } else {
                     eof = true
-                    return Result(indicatorHI = true)
+                    // End of data and no match found, reset cursor
+                    return Result(indicatorLO = true, errorMsg = "READ called on EOF cursor")
                 }
-            } else {
-                eof = true
-                // End of data and no match found, reset cursor
-                return Result(indicatorLO = true, errorMsg = "READ called on EOF cursor")
             }
+        }.apply {
+            logEvent(LoggingKey.native_access_method, "readEqual executed", this)
         }
+        lastNativeMethod = null
     }
 
     override fun readPrevious(): Result {
-        if (globalCursor == null) {
-            return Result(
-                indicatorLO = true,
-                errorMsg = "Cursor not defined. Call SETLL or SETGT before invoke READ command"
-            )
-        }
-
-        if (up_direction) {
-            val cursor = calculateCursor(last_set_keys, false, !IncludeFirst)
-            if (cursor.iterator().hasNext()) {
-                globalCursor = cursor.iterator()
+        lastNativeMethod = NativeMethod.readPrevious
+        logEvent(LoggingKey.native_access_method, "Executing readPrevious")
+        measureTimeMillis {
+            if (globalCursor == null) {
+                return Result(
+                    indicatorLO = true,
+                    errorMsg = "Cursor not defined. Call SETLL or SETGT before invoke READ command"
+                )
             }
-            up_direction = false
-        }
 
-        IncludeFirst = true
+            if (up_direction) {
+                val cursor = calculateCursor(last_set_keys, false, !IncludeFirst)
+                if (cursor.iterator().hasNext()) {
+                    globalCursor = cursor.iterator()
+                }
+                up_direction = false
+            }
 
-        if (globalCursor != null) {
+            IncludeFirst = true
 
-            if (globalCursor!!.hasNext()) {
-                val record = documentToRecord(globalCursor!!.next())
+            if (globalCursor != null) {
+
                 if (globalCursor!!.hasNext()) {
-                    updateLastKeys(record)
-                    return Result(record = record)
+                    val record = documentToRecord(globalCursor!!.next())
+                    if (globalCursor!!.hasNext()) {
+                        updateLastKeys(record)
+                        return Result(record = record)
+                    } else {
+                        eof = true
+                        return Result(record = record, indicatorEQ = true)
+                    }
                 } else {
-                    eof = true
-                    return Result(record = record, indicatorEQ = true)
+                    return Result(indicatorLO = true, errorMsg = "READ called on EOF cursor")
                 }
             } else {
-                return Result(indicatorLO = true, errorMsg = "READ called on EOF cursor")
+                return Result(indicatorLO = true, errorMsg = "Cursor not defined. Call SETLL or SETGT before invoke READ command")
             }
-        } else {
-            return Result(indicatorLO = true, errorMsg = "Cursor not defined. Call SETLL or SETGT before invoke READ command")
+        }.apply {
+            logEvent(LoggingKey.native_access_method, "readPrevious executed", this)
         }
+        lastNativeMethod = null
     }
 
     override fun readPreviousEqual(): Result {
@@ -451,66 +503,79 @@ class NoSQLDBFile(override var name: String,
     }
 
     override fun readPreviousEqual(keys: List<String>): Result {
-
-        var keyAsRecordField = keys.mapIndexed { index, value ->
-            val keyname = fileMetadata.fileKeys.get(index)
-            RecordField(keyname, value)
-        }
-
-        if (globalCursor == null) {
-            return Result(
-                indicatorLO = true,
-                errorMsg = "Cursor not defined. Call SETLL or SETGT before invoke READ command"
-            )
-        }
-
-        /*
-        Passed keys are not primary key for DBFile
-         */
-        if (fileMetadata.matchFileKeys(keyAsRecordField) == false) {
-            return Result(indicatorLO = true, errorMsg = "READE keys not matching file primary keys")
-        }
-
-        if (up_direction) {
-            val cursor = calculateCursor(last_set_keys, false, !IncludeFirst)
-
-            if (cursor.iterator().hasNext()) {
-                globalCursor = cursor.iterator()
+        lastNativeMethod = NativeMethod.readPreviousEqual
+        logEvent(LoggingKey.native_access_method, "Executing readPreviousEqual on keys $keys")
+        measureTimeMillis {
+            var keyAsRecordField = keys.mapIndexed { index, value ->
+                val keyname = fileMetadata.fileKeys.get(index)
+                RecordField(keyname, value)
             }
-            up_direction = false
-        }
 
-        IncludeFirst = true
+            if (globalCursor == null) {
+                return Result(
+                    indicatorLO = true,
+                    errorMsg = "Cursor not defined. Call SETLL or SETGT before invoke READ command"
+                )
+            }
+
+            /*
+            Passed keys are not primary key for DBFile
+             */
+            if (fileMetadata.matchFileKeys(keyAsRecordField) == false) {
+                return Result(indicatorLO = true, errorMsg = "READE keys not matching file primary keys")
+            }
+
+            if (up_direction) {
+                val cursor = calculateCursor(last_set_keys, false, !IncludeFirst)
+
+                if (cursor.iterator().hasNext()) {
+                    globalCursor = cursor.iterator()
+                }
+                up_direction = false
+            }
+
+            IncludeFirst = true
 
 
-        while (true) {
-            if (globalCursor!!.hasNext()) {
+            while (true) {
+                if (globalCursor!!.hasNext()) {
 
-                val document = globalCursor!!.next()
-                val record = documentToRecord(document)
+                    val document = globalCursor!!.next()
+                    val record = documentToRecord(document)
 
-                updateLastKeys(record)
+                    updateLastKeys(record)
 
-                if (matchKeys(document, keyAsRecordField)) {
-                    return Result(record = record)
+                    if (matchKeys(document, keyAsRecordField)) {
+                        return Result(record = record)
+                    } else {
+                        eof = true
+                        return Result(indicatorHI = true)
+                    }
                 } else {
                     eof = true
-                    return Result(indicatorHI = true)
+                    // End of data and no match found, reset cursor
+                    return Result(indicatorLO = true, errorMsg = "READ called on EOF cursor")
                 }
-            } else {
-                eof = true
-                // End of data and no match found, reset cursor
-                return Result(indicatorLO = true, errorMsg = "READ called on EOF cursor")
             }
+        }.apply {
+            logEvent(LoggingKey.native_access_method, "readPreviousEqual executed", this)
         }
+        lastNativeMethod = null
     }
 
 
     override fun write(record: Record): Result {
-        val insertCommand = fileMetadata.buildInsertCommand(fileMetadata.tableName, record)
-        println(insertCommand)
-        executeCommand(insertCommand)
-        return Result(record = record)
+        lastNativeMethod = NativeMethod.write
+        logEvent(LoggingKey.native_access_method, "Executing write for record $record")
+        measureTimeMillis {
+            val insertCommand = fileMetadata.buildInsertCommand(fileMetadata.tableName, record)
+            logEvent(LoggingKey.execute_inquiry, "Executing insert command $insertCommand")
+            executeCommand(insertCommand)
+            return Result(record = record)
+        }.apply {
+            logEvent(LoggingKey.native_access_method, "write executed", this)
+        }
+        lastNativeMethod = null
     }
 
     override fun update(record: Record): Result {
@@ -705,8 +770,8 @@ class NoSQLDBFile(override var name: String,
             }
         }
         sort.append("}")
-
-        println("$filter - $sort")
+        logEvent(LoggingKey.execute_inquiry, "Building filter command $filter with sort $sort")
+        //println("$filter - $sort")
 
         val cursor = database.getCollection(fileMetadata.tableName).find(Document.parse(filter.toString()))
 
