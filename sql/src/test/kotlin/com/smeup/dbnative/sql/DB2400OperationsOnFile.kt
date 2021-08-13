@@ -26,6 +26,7 @@ import com.smeup.dbnative.sql.utils.dbManagerForTest
 import com.smeup.dbnative.utils.propertiesToTypedMetadata
 import org.junit.AfterClass
 import org.junit.BeforeClass
+import org.junit.Ignore
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -48,6 +49,8 @@ class DB2400OperationsOnFile {
         }
     }
 
+    //Ignored fields in metadata not necessary
+    @Ignore
     @Test
     fun open() {
         var fileMetadata = PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", "BRARTI0F")
@@ -225,6 +228,8 @@ class DB2400OperationsOnFile {
         dbManager!!.closeFile("BRARTI0L")
     }
 
+    // Ignore, fields in metadata non necessary
+    @Ignore
     @Test
     fun multipleUpdateOnReadE(){
         // TEST FLOW

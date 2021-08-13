@@ -156,7 +156,7 @@ fun createAndPopulateTstTable(dbManager: SQLDBMManager?) {
     )
 
 
-    createAndPopulateTable(dbManager, TSTTAB_TABLE_NAME, "TSTREC", fields, keys, "src/test/resources/csv/TstTab.csv")
+    createAndPopulateTable(dbManager, TSTTAB_TABLE_NAME, TSTTAB_TABLE_NAME, fields, keys, "src/test/resources/csv/TstTab.csv")
 }
 
 fun createAndPopulateTst2Table(dbManager: SQLDBMManager?) {
@@ -171,7 +171,7 @@ fun createAndPopulateTst2Table(dbManager: SQLDBMManager?) {
         "TSTFLDNBR"
     )
 
-    createAndPopulateTable(dbManager, TST2TAB_TABLE_NAME, "TSTREC", fields, keys,"src/test/resources/csv/Tst2Tab.csv")
+    createAndPopulateTable(dbManager, TST2TAB_TABLE_NAME, TST2TAB_TABLE_NAME, fields, keys,"src/test/resources/csv/Tst2Tab.csv")
 }
 
 fun createAndPopulateEmployeeTable(dbManager: SQLDBMManager?) {
@@ -187,7 +187,7 @@ fun createAndPopulateEmployeeTable(dbManager: SQLDBMManager?) {
         "EMPNO"
     )
 
-    createAndPopulateTable(dbManager, EMPLOYEE_TABLE_NAME, "TSTREC", fields, keys,"src/test/resources/csv/Employee.csv")
+    createAndPopulateTable(dbManager, EMPLOYEE_TABLE_NAME, EMPLOYEE_TABLE_NAME, fields, keys,"src/test/resources/csv/Employee.csv")
 }
 
 fun createAndPopulateXemp2View(dbManager: SQLDBMManager?) {
@@ -237,7 +237,7 @@ fun createAndPopulateMunicipalityTable(dbManager: SQLDBMManager?) {
     createAndPopulateTable(
         dbManager,
         MUNICIPALITY_TABLE_NAME,
-        "TSTREC",
+        MUNICIPALITY_TABLE_NAME,
         fields,
         keys,
         "src/test/resources/csv/Municipality.csv"
@@ -264,14 +264,14 @@ fun testLog(message: String) {
 
 private fun createAndPopulateTable(
     dbManager: SQLDBMManager?,
+    name: String,
     tableName: String,
-    formatName: String,
     fields: List<TypedField>,
     keys: List<String>,
     dataFilePath: String
 ) {
 
-    val tMetadata = TypedMetadata(tableName, formatName, fields, keys)
+    val tMetadata = TypedMetadata(name, tableName, fields, keys)
     createFile(tMetadata, dbManager!!)
     Assert.assertTrue(dbManager.existFile(tableName))
     val dbFile = dbManager.openFile(tableName)

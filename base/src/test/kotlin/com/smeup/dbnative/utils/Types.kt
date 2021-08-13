@@ -103,7 +103,7 @@ fun propertiesToTypedMetadata(propertiesDirPath: String, fileName: String): Type
     }
 
     // FormatName
-    val recordFormat = mp.get("recordformat")!!
+    val tablename = mp.get("tablename")?:""
 
     // FieldKeys
     val fieldsKeys: MutableList<String> = ArrayList()
@@ -111,5 +111,5 @@ fun propertiesToTypedMetadata(propertiesDirPath: String, fileName: String): Type
         fieldsKeys.addAll((mp.get("filekeys")?.split(",")!!))
     }
 
-    return TypedMetadata(fileName, recordFormat, fields, fieldsKeys)
+    return TypedMetadata(fileName, tablename, fields, fieldsKeys)
 }

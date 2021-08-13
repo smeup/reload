@@ -45,19 +45,22 @@ class DB2400OperationsOnFilePerfTest {
         initDbManager(library = "UP_PRR")
         dbManager.use {
             val fileMetadata =
-                PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", "VERAPG3L")
+                PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", "VERAPG0L")
             it!!.registerMetadata(fileMetadata, false)
-            val dbFile = it!!.openFile("VERAPG3L")
-
-            var record = Record(RecordField("V£IDOJ", "A3L00000X1"),
-                RecordField("V£DATA", "20210117"),
-                RecordField("V£NOME", "BUSFIO2        "),
-                RecordField("V£CDC", "SMEGL.001      "),
-                RecordField("V£COD1", "ERB            "))
-            dbFile.write(record)
-
-
-            it!!.closeFile("VERAPG3L")
+            val dbFile = it!!.openFile("VERAPG0L")
+            for(i in 1..10) {
+                var record = Record(RecordField("V£IDOJ", "A3L00000X1"),
+                    RecordField("V£DATA", "20210117"),
+                    RecordField("V£NOME", "BUSFIO2        "),
+                    RecordField("V£CDC", "SMEGL.001      "),
+                    RecordField("V£COD1", "ERB            "))
+                dbFile.write(record)
+                record = dbFile.chain(arrayListOf("A3L00000X1")).record
+                if (!dbFile.eof()) {
+                    dbFile.delete(record)
+                }
+            }
+            it!!.close()
         }
     }
 
@@ -122,7 +125,6 @@ class DB2400OperationsOnFilePerfTest {
             var keys = arrayListOf("20210117", "SMEGL.001      ")
             dbFile.setll(keys)
             dbFile.readEqual(keys)
-            it!!.closeFile("VERAPG9L")
         }
     }
 
