@@ -17,9 +17,33 @@
 
 package com.smeup.dbnative.nosql.utils
 
+import com.mongodb.client.MongoCursor
 import com.smeup.dbnative.file.Record
+import com.smeup.dbnative.file.RecordField
 import com.smeup.dbnative.model.FileMetadata
+import org.bson.Document
+import java.sql.ResultSet
 
+enum class MongoOperator(val symbol: String) {
+    EQ("\$eq:"),
+    NE("\$neq:"),
+    GT("\$gt:"),
+    GE("\$gte:"),
+    LT("\$lt:"),
+    LE("\$lte:")
+}
+
+fun MongoCursor<Document>?.toValues(): Record {
+    return this?.tryNext()?.toRecord()?:Record()
+}
+
+fun Document?.toRecord(): Record {
+    val result = Record()
+    this?.keys?.forEach {
+        result.add(RecordField(it, this?.getValue(it).toString()))
+    }
+    return result
+}
 
 fun FileMetadata.buildInsertCommand(filename: String, record: Record): String {
     //TODO: insert controls beetwen metadata and record format

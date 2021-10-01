@@ -144,12 +144,13 @@ class Native2SQL(val fileKeys: List<String>, val tableName: String) {
         else false
     }
 
-
+    /////////
     private fun getSortOrder(): SortOrder {
         checkInstructions()
         return if(lastReadInstruction!!.method.forward) SortOrder.ASCEDING else SortOrder.DESCENDING
     }
 
+    ///////////////
     private fun getComparison(): Pair<Comparison, Comparison>{
         checkInstructions()
         return if(lastReadInstruction!!.method.forward){
@@ -166,16 +167,19 @@ class Native2SQL(val fileKeys: List<String>, val tableName: String) {
         }
     }
 
+    ///////////////
     private fun getSQLOrderByClause(): String{
         val sortOrder = getSortOrder()
         return " ORDER BY " + fileKeys.joinToString(separator = " " + sortOrder.symbol + ", ", postfix = " " + sortOrder.symbol )
     }
 
+    ///////////////
     fun getReadSqlStatement(): Pair<String, List<String>>{
         checkPositioning()
         return Pair(getSQL(fileKeys.subList(0, lastPositioningInstruction!!.keys.size), Comparison.EQ, tableName), lastPositioningInstruction!!.keys)
     }
 
+    ///////////////
     fun getSQLSatement(): Pair<String, List<String>>{
         when(lastReadInstruction!!.method){
             ReadMethod.CHAIN ->{
@@ -193,7 +197,7 @@ class Native2SQL(val fileKeys: List<String>, val tableName: String) {
         }
     }
 
-
+    ///////////////
     private fun getCoherentSql(fullUnion: Boolean = false):Pair<String, List<String>>{
         checkPositioning()
         val queries = mutableListOf<String>()
@@ -217,6 +221,7 @@ class Native2SQL(val fileKeys: List<String>, val tableName: String) {
     }
 }
 
+///////////////
 private fun getSQL(keys: List<String>, comparison: Comparison, tableName: String): String{
     var value = ""
     keys.forEachIndexed { index, k ->

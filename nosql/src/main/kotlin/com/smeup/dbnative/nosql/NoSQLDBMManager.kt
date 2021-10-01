@@ -91,6 +91,8 @@ class NoSQLDBMManager (override val connectionConfig: ConnectionConfig) : DBMana
     }
 
     override fun closeFile(name: String) {
-        openedFile.remove(name)!!.close()
+        openedFile.
+        remove(name)?.
+        close()
     }
 }

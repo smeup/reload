@@ -43,13 +43,15 @@ fun FileMetadata.matchFileKeys(keys: List<RecordField>): Boolean {
     return result
 }
 
-fun FileMetadata.getField(name: String): Field? {
-    return if (fields.filter { it.name == name }.count() > 0) {
-        fields.first { it.name == name }
-    } else {
-        null
+fun FileMetadata.toRecordFields(values: List<String>): List<RecordField>{
+    require(values.size <= fileKeys.size){
+        "Values list size greater than filekeys size"
+    }
+    return fileKeys.mapIndexed { index, value ->
+        RecordField(value, values.get(index));
     }
 }
+
 
 fun FileMetadata.fieldsToProperties(): MutableList<Pair<String, String>>{
     val properties = mutableListOf<Pair<String, String>>()
