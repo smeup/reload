@@ -21,7 +21,7 @@
 
     <groupId>com.smeup.reload</groupId>
     <artifactId>reload</artifactId>
-    <version>1.2.0-SNAPSHOT</version>
+    <version>1.2.0</version>
 
     <modules>
         <module>base</module>
@@ -163,13 +163,13 @@
         <repository>
             <id>releases</id>
             <name>Internal Releases</name>
-            <url>http://mauer.smeup.com/nexus/content/repositories/releases</url>
+            <url>https://repo.smeup.cloud/nexus/content/repositories/releases</url>
         </repository>
 
         <snapshotRepository>
             <id>snapshots</id>
             <name>Internal Snapshots</name>
-            <url>http://mauer.smeup.com/nexus/content/repositories/snapshots</url>
+            <url>https://repo.smeup.cloud/nexus/content/repositories/snapshots</url>
         </snapshotRepository>
     </distributionManagement>
 

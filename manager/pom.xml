@@ -31,12 +31,12 @@
     <parent>
         <groupId>com.smeup.reload</groupId>
         <artifactId>reload</artifactId>
-        <version>1.2.0-SNAPSHOT</version>
+        <version>1.2.0</version>
     </parent>
 
     <groupId>com.smeup.reload</groupId>
     <artifactId>manager</artifactId>
-    <version>1.2.0-SNAPSHOT</version>
+    <version>1.2.0</version>
 
     <packaging>jar</packaging>
 
@@ -46,19 +46,19 @@
         <dependency>
             <groupId>com.smeup.reload</groupId>
             <artifactId>base</artifactId>
-            <version>1.2.0-SNAPSHOT</version>
+            <version>1.2.0</version>
         </dependency>
         <dependency>
             <groupId>com.smeup.reload</groupId>
             <artifactId>base</artifactId>
-            <version>1.2.0-SNAPSHOT</version>
+            <version>1.2.0</version>
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.smeup.reload</groupId>
             <artifactId>sql</artifactId>
-            <version>1.2.0-SNAPSHOT</version>
+            <version>1.2.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>
