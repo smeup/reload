@@ -24,7 +24,6 @@ import com.smeup.dbnative.model.FileMetadata
  * DBFile is an abstraction of table or view (in sql database) or document (in nosql database).
  * */
 interface DBFile: AutoCloseable {
-
     var name: String
     var fileMetadata: FileMetadata
     var logger: Logger?

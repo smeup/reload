@@ -1,7 +1,9 @@
+name: update-jitpack
+
 on:
   pull_request:
     branches:
-      - master
+      - development
     types: [closed]
 
 jobs:

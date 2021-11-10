@@ -31,8 +31,7 @@ import java.sql.PreparedStatement
 import java.sql.ResultSet
 import kotlin.system.measureTimeMillis
 
-class SQLDBFile(override var name: String,
-                override var fileMetadata: FileMetadata,
+class SQLDBFile(override var name: String, override var fileMetadata: FileMetadata,
                 var connection: Connection,
                 override var logger: Logger? = null) : DBFile {
 
@@ -48,20 +47,20 @@ class SQLDBFile(override var name: String,
     private var actualRecordToPop: Record? = null
     private var eof: Boolean = false
     private var lastOperationSet: Boolean = false
-    private var lastNativeMethod: NativeMethod? = null;
+    private var lastNativeMethod: NativeMethod? = null
 
 
     private val thisFileKeys: List<String> by lazy {
         // TODO: think about a right way (local file maybe?) to retrieve keylist
         var indexes = this.fileMetadata.fileKeys
         if(indexes.isEmpty()){
-            indexes = connection.primaryKeys(name)
+            indexes = connection.primaryKeys(fileMetadata.name)
         }
-        if (indexes.isEmpty()) connection.orderingFields(name) else indexes
+        if (indexes.isEmpty()) connection.orderingFields(fileMetadata.name) else indexes
     }
 
     private fun logEvent(loggingKey: LoggingKey, message: String, elapsedTime: Long? = null) =
-        logger?.logEvent(loggingKey, message, elapsedTime, lastNativeMethod, fileMetadata.tableName)
+        logger?.logEvent(loggingKey, message, elapsedTime, lastNativeMethod, fileMetadata.name)
 
     override fun setll(key: String): Boolean {
         return setll(mutableListOf(key))
@@ -74,14 +73,14 @@ class SQLDBFile(override var name: String,
         measureTimeMillis {
             lastOperationSet = true
 
-            var keyAsRecordField = keys.mapIndexed { index, value ->
-                val keyname = thisFileKeys.get(index)
+            val keyAsRecordField = keys.mapIndexed { index, value ->
+                val keyname = thisFileKeys[index]
                 RecordField(keyname, value)
             }
 
             checkAndStoreLastKeys(keyAsRecordField)
             movingForward = true
-            point = point(keyAsRecordField);
+            point = point(keyAsRecordField)
         }.apply {
             logEvent(LoggingKey.native_access_method, "setll executed", this)
         }
@@ -101,8 +100,8 @@ class SQLDBFile(override var name: String,
         measureTimeMillis {
             lastOperationSet = true
 
-            var keyAsRecordField = keys.mapIndexed { index, value ->
-                val keyname = thisFileKeys.get(index)
+            val keyAsRecordField = keys.mapIndexed { index, value ->
+                val keyname = thisFileKeys[index]
                 RecordField(keyname, value)
             }
 
@@ -127,15 +126,15 @@ class SQLDBFile(override var name: String,
         measureTimeMillis {
             lastOperationSet = false
 
-            var keyAsRecordField = keys.mapIndexed { index, value ->
-                val keyname = thisFileKeys.get(index)
+            val keyAsRecordField = keys.mapIndexed { index, value ->
+                val keyname = thisFileKeys[index]
                 RecordField(keyname, value)
             }
 
             checkAndStoreLastKeys(keyAsRecordField)
             movingForward = true
             calculateResultSet(keyAsRecordField)
-            read = readFromResultSetFilteringBy(keyAsRecordField)
+            read = readFirstFromResultSetFilteringBy(keyAsRecordField)
         }.apply {
             logEvent(LoggingKey.native_access_method, "chain executed", this)
         }
@@ -208,8 +207,8 @@ class SQLDBFile(override var name: String,
         measureTimeMillis {
             lastOperationSet = false
 
-            var keysAsRecordField = keys.mapIndexed { index, value ->
-                val keyname = thisFileKeys.get(index)
+            val keysAsRecordField = keys.mapIndexed { index, value ->
+                val keyname = thisFileKeys[index]
                 RecordField(keyname, value)
             }
 
@@ -244,13 +243,13 @@ class SQLDBFile(override var name: String,
 
     override fun readPreviousEqual(keys: List<String>): Result {
         lastNativeMethod = NativeMethod.readPreviousEqual
-        logEvent(LoggingKey.native_access_method, "Executing readPreviousEqual on keys ${keys}")
+        logEvent(LoggingKey.native_access_method, "Executing readPreviousEqual on keys $keys")
         val read: Result
         measureTimeMillis {
             lastOperationSet = false
 
-            var keyAsRecordField = keys.mapIndexed { index, value ->
-                val keyname = thisFileKeys.get(index)
+            val keyAsRecordField = keys.mapIndexed { index, value ->
+                val keyname = thisFileKeys[index]
                 RecordField(keyname, value)
             }
 
@@ -279,7 +278,7 @@ class SQLDBFile(override var name: String,
         lastOperationSet = false
         measureTimeMillis {
             // TODO: manage errors
-            val sql = name.insertSQL(record)
+            val sql = fileMetadata.tableName.insertSQL(record)
             connection.prepareStatement(sql).use { it ->
                 it.bind(record.values.map { it })
                 it.execute()
@@ -355,7 +354,7 @@ class SQLDBFile(override var name: String,
     }
 
     private fun pointAtUpperLL() {
-        val sql = "SELECT * FROM $name ${orderBySQL(thisFileKeys)}"
+        val sql = "SELECT * FROM ${fileMetadata.tableName} ${orderBySQL(thisFileKeys)}"
         executeQuery(sql, emptyList())
         readFromResultSet()
         actualRecordToPop = actualRecord
@@ -371,7 +370,7 @@ class SQLDBFile(override var name: String,
     // calculate the upper or the lower part of the ordered table given the input keys using an sql query (composed of selects in union if primary keys size > 1)
     private fun calculateResultSet(keys: List<RecordField>, withEquals: Boolean = true) {
         actualRecordToPop = null
-        val sqlAndValues = filePartSQLAndValues(name, movingForward, thisFileKeys, keys, withEquals)
+        val sqlAndValues = filePartSQLAndValues(fileMetadata.tableName, movingForward, thisFileKeys, keys, withEquals)
         val values = sqlAndValues.first
         val sql = sqlAndValues.second
         executeQuery(sql, values)
@@ -386,7 +385,7 @@ class SQLDBFile(override var name: String,
         // NOTE: NATIVE_ACCESS_MARKER can be avoided if you create and index a unique field key concordant with all the primary keys
         // NOTE: if using NATIVE_ACCESS_MARKER be careful with length (primary key fields must be of fixed length) and with dates, numbers or not string formats -> transform them into key strings
         val sql =
-            "SELECT * FROM (SELECT $name.*, ${createMarkerSQL(thisFileKeys)} FROM $name) AS NATIVE_ACCESS_WT ${markerWhereSQL(
+            "SELECT * FROM (SELECT ${fileMetadata.tableName}.*, ${createMarkerSQL(thisFileKeys)} FROM ${fileMetadata.tableName}) AS NATIVE_ACCESS_WT ${markerWhereSQL(
                 movingForward, withEquals
             )} ${orderBySQL(
                 thisFileKeys,
@@ -425,6 +424,15 @@ class SQLDBFile(override var name: String,
             logEvent(LoggingKey.read_data, "Record read $record", this)
         }
         return result
+    }
+
+    private fun readFirstFromResultSetFilteringBy(keys: List<RecordField>): Result {
+        val result = readFromResultSet()
+        if (result.record.matches(keys)) {
+            return result
+        } else {
+            return Result(indicatorHI = true)
+        }
     }
 
     private fun readFromResultSetFilteringBy(keys: List<RecordField>): Result {

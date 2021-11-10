@@ -25,7 +25,7 @@ import com.smeup.dbnative.ConnectionConfig
 import com.smeup.dbnative.DBManagerBaseImpl
 import com.smeup.dbnative.file.DBFile
 
-open class JT400DBMMAnager(final override val connectionConfig: ConnectionConfig) : DBManagerBaseImpl()  {
+open class JT400DBMManager(final override val connectionConfig: ConnectionConfig) : DBManagerBaseImpl()  {
 
     private var openedFile = mutableMapOf<String, JT400DBFile>()
 
