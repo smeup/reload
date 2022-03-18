@@ -19,9 +19,9 @@
 
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.smeup.reload</groupId>
+    <groupId>com.github.smeup.reload</groupId>
     <artifactId>reload</artifactId>
-    <version>1.3.0-SNAPSHOT</version>
+    <version>development-SNAPSHOT</version>
 
     <modules>
         <module>base</module>

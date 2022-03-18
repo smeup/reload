@@ -28,6 +28,7 @@ class DBFileFactoryTest {
         // Delete tmp file
         var tmpFile = File("src/test/resources/dds/properties/out/BRARTI0F.properties")
         if (tmpFile.exists()) tmpFile.delete()
+        tmpFile.parentFile.mkdirs()
 
         // Read metadata1 from properties
         var metadata1 = PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", "BRARTI0F")
