@@ -32,7 +32,6 @@
     <parent>
         <groupId>com.github.smeup.reload</groupId>
         <artifactId>reload</artifactId>
-        development
         <version>development-SNAPSHOT</version>
     </parent>
 
