@@ -19,11 +19,11 @@ fun Collection<TypedField>.fieldTypeList():List<FieldType>{
     return map({tf -> tf.type})
 }
 
-data class TypedMetadata(var tableName: String,
-                    var recordFormat: String,
+data class TypedMetadata(var name: String,
+                    var tableName: String,
                     var fields: List<TypedField>,
                     var fileKeys:List<String>){
-    fun fileMetadata(): FileMetadata = FileMetadata(tableName, recordFormat, fields.fieldList(), fileKeys);
+    fun fileMetadata(): FileMetadata = FileMetadata(name, tableName, fields.fieldList(), fileKeys);
 
     fun fieldsToProperties(): MutableList<Pair<String, String>>{
         val properties = mutableListOf<Pair<String, String>>()
@@ -103,7 +103,7 @@ fun propertiesToTypedMetadata(propertiesDirPath: String, fileName: String): Type
     }
 
     // FormatName
-    val recordFormat = mp.get("recordformat")!!
+    val tablename = mp.get("tablename")?:""
 
     // FieldKeys
     val fieldsKeys: MutableList<String> = ArrayList()
@@ -111,5 +111,5 @@ fun propertiesToTypedMetadata(propertiesDirPath: String, fileName: String): Type
         fieldsKeys.addAll((mp.get("filekeys")?.split(",")!!))
     }
 
-    return TypedMetadata(fileName, recordFormat, fields, fieldsKeys)
+    return TypedMetadata(fileName, tablename, fields, fieldsKeys)
 }

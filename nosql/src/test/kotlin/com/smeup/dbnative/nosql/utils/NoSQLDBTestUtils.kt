@@ -58,12 +58,12 @@ fun createAndPopulateTestTable(dbManager: NoSQLDBMManager) {
     val tMetadata = TypedMetadata(TSTAB_TABLE_NAME, "TSTREC", fields, keys)
     createFile(tMetadata, dbManager)
 
-    Assert.assertTrue(dbManager.existFile(tMetadata.tableName))
-    Assert.assertTrue(dbManager.metadataOf(tMetadata.tableName) == tMetadata.fileMetadata())
+    Assert.assertTrue(dbManager.existFile(tMetadata.name))
+    Assert.assertTrue(dbManager.metadataOf(tMetadata.name) == tMetadata.fileMetadata())
 
-    val dbfile: DBFile? = dbManager.openFile(tMetadata.tableName)
+    val dbfile: DBFile? = dbManager.openFile(tMetadata.name)
     dbfile!!.write(Record(RecordField("TSTFLDCHR", "XXX"), RecordField("TSTFLDNBR", "123.45")))
-    dbManager.closeFile(tMetadata.tableName)
+    dbManager.closeFile(tMetadata.name)
 }
 
 fun createAndPopulateMunicipalityTable(dbManager: NoSQLDBMManager) {
@@ -146,7 +146,7 @@ fun createFile(tMetadata: TypedMetadata, dbManager: NoSQLDBMManager) {
 
         // Create file index
         dbManager.mongoDatabase.runCommand(Document.parse(metadata.buildIndexCommand()))
-        dbManager.registerMetadata(metadata, true)
     }
+    dbManager.registerMetadata(metadata, true)
 
 }

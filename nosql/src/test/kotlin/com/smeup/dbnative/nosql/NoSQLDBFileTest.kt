@@ -21,10 +21,8 @@ import com.smeup.dbnative.file.DBFile
 import com.smeup.dbnative.nosql.utils.TSTAB_TABLE_NAME
 import com.smeup.dbnative.nosql.utils.createAndPopulateTestTable
 import com.smeup.dbnative.nosql.utils.dbManagerForTest
-import org.junit.After
+import org.junit.*
 import org.junit.Assert.assertTrue
-import org.junit.Before
-import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 
@@ -32,19 +30,28 @@ class NoSQLDBFileTest {
 
     private val tableName = TSTAB_TABLE_NAME
 
-    private lateinit var dbManager : NoSQLDBMManager
+    companion object {
+        private lateinit var dbManager : NoSQLDBMManager
 
-    @Before
-    fun initEnv() {
-        dbManager = dbManagerForTest()
-        createAndPopulateTestTable(dbManager)
+        @BeforeClass
+        @JvmStatic
+        fun initEnv() {
+            dbManager = dbManagerForTest()
+            createAndPopulateTestTable(dbManager)
+        }
+
+        @AfterClass
+        @JvmStatic
+        fun tearDown() {
+            dbManager.close()
+        }
     }
 
     @Test
     fun testChain() {
         // Search not existing record
-        val dbfile: DBFile? = dbManager.openFile(tableName)
-        assertTrue(dbfile!!.chain("XYZ").record.isEmpty())
+        val dbfile: DBFile = dbManager.openFile(tableName)
+        assertTrue(dbfile.chain("XYZ").record.isEmpty())
 
         // Search existing record and test contained fields
         val chainResult = dbfile.chain("XXX")
@@ -59,8 +66,8 @@ class NoSQLDBFileTest {
     @Test
     fun testRead() {
         // Search not existing record
-        val dbfile: DBFile? = dbManager.openFile(tableName)
-        assertFalse(dbfile!!.setll("XYZ"))
+        val dbfile: DBFile = dbManager.openFile(tableName)
+        assertFalse(dbfile.setll("XYZ"))
 
         // Search existing record and test contained fields
         val chainResult = dbfile.setll("XXX")
