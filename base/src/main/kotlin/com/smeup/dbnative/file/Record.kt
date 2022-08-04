@@ -35,4 +35,9 @@ class Record(vararg fields: RecordField) : LinkedHashMap<String, String>() {
     fun add(field: RecordField) {
         put(field.name, field.value)
     }
+
+    fun duplicate(): Record{
+        val thisMap = this
+        return Record().apply { this.putAll(thisMap) }
+    }
 }

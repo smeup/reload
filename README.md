@@ -66,7 +66,7 @@ If you use Maven, add these lines to your pom.xml in order to add the repository
 Then add the following dependencies for the core library:
 	
     <dependency>
-        <groupId>com.github.smeup</groupId>
+        <groupId>com.github.smeup.reload</groupId>
         <artifactId>reload</artifactId>
         <version>development-SNAPSHOT</version>
     </dependency>

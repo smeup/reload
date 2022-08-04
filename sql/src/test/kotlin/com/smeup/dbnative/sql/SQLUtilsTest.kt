@@ -33,7 +33,7 @@ class SQLUtilsTest {
     fun sqlForCreateTableTestWithPrimaryKeys() {
         val fileMetadata = TypedMetadata(
             "TSTTAB",
-            "TSTREC",
+            "TSTTAB",
             listOf(
                 "TSTFLDCHR" fieldByType CharacterType(5),
                 "TSTFLDNBR" fieldByType DecimalType(7, 2),
@@ -54,7 +54,7 @@ class SQLUtilsTest {
     fun sqlForCreateTableTestWithoutPrimaryKeys() {
         val fileMetadata = TypedMetadata(
             "TSTTAB",
-            "TSTREC",
+            "TSTTAB",
             listOf(
                 "TSTFLDCHR" fieldByType CharacterType(5),
                 "TSTFLDNBR" fieldByType DecimalType(7, 2),

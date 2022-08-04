@@ -32,11 +32,11 @@
 
             <!-- Now, select which projects to include in this module-set. -->
             <includes>
-                <include>com.smeup.reload:base</include>
-                <include>com.smeup.reload:sql</include>
-                <include>com.smeup.reload:nosql</include>
-                <include>com.smeup.reload:manager</include>
-                <include>com.smeup.reload:jt400</include>
+                <include>com.github.smeup.reload:base</include>
+                <include>com.github.smeup.reload:sql</include>
+                <include>com.github.smeup.reload:nosql</include>
+                <include>com.github.smeup.reload:manager</include>
+                <include>com.github.smeup.reload:jt400</include>
             </includes>
             <binaries>
                 <outputDirectory>modules/maven-assembly-plugin</outputDirectory>
