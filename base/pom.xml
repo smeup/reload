@@ -37,7 +37,7 @@
 
     <groupId>com.github.smeup.reload</groupId>
     <artifactId>base</artifactId>
-    <version>development-SNAPSHOT</version>
+    <version>1.3.0</version>
 
     <packaging>jar</packaging>
 
