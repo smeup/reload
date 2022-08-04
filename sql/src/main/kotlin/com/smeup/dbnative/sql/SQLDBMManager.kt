@@ -31,7 +31,7 @@ open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBMa
     private var openedFile = mutableMapOf<String, SQLDBFile>()
 
     val connection : Connection by lazy {
-        logger?.logEvent(LoggingKey.connection, "Opening SQL connection")
+        logger?.logEvent(LoggingKey.connection, "Opening SQL connection on url ${connectionConfig.url}")
         val conn: Connection
         measureTimeMillis {
             connectionConfig.driver?.let {
@@ -48,25 +48,10 @@ open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBMa
     }
 
     override fun close() {
+        openedFile.values.forEach { it.close()}
+        openedFile.clear()
         connection.close()
     }
-
-    /*
-    override fun metadataOf(name: String): FileMetadata {
-        require(openedFile.containsKey(name)) {
-            "File: $name doesn't exist."
-        }
-        return openedFile.get(name)!!.fileMetadata
-    }
-
-    override fun existFile(name: String): Boolean {
-        val dbm: DatabaseMetaData = connection.metaData
-        dbm.getTables(null, null, name, arrayOf("TABLE", "VIEW")).use {
-            return it.next()
-        }
-    }
-     */
-
 
     override fun openFile(name: String) = openedFile.getOrPut(name) {
         require(existFile(name)) {
@@ -77,7 +62,7 @@ open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBMa
 
 
     override fun closeFile(name: String) {
-        openedFile.remove(name)
+        openedFile.remove(name)?.close()
     }
 
     fun execute(sqlStatements: List<String>) {

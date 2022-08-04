@@ -42,7 +42,7 @@ const val TSTTAB_TABLE_NAME = "TSTTAB"
 const val TST2TAB_TABLE_NAME = "TSTTAB"
 const val MUNICIPALITY_TABLE_NAME = "MUNICIPALITY"
 const val TEST_LOG = false
-private val LOGGING_LEVEL = LoggingLevel.OFF
+private val LOGGING_LEVEL = LoggingLevel.ALL
 //do not change defaultValue
 //if you want to create sqlconnection against another db use function: dbManagerForTest(testSQLDBType: TestSQLDBType)
 private var defaultDbType = TestSQLDBType.HSQLDB
@@ -84,6 +84,17 @@ enum class TestSQLDBType(
             url = "jdbc:as400://$DB2_400_HOST/$DB2_400_LIBRARY_NAME;",
             user = "USER",
             password = "**********"),
+
+        //force no create connection for dba operations
+        dbaConnectionConfig = null
+    ),
+    DB2_400_DAT(ConnectionConfig(
+        fileName= "*",
+        driver = "com.ibm.as400.access.AS400JDBCDriver",
+        url = "jdbc:as400://$DB2_400_HOST/SMEUP_DAT",
+        user = "USER",
+        password = "**********"),
+
         //force no create connection for dba operations
         dbaConnectionConfig = null
     )
@@ -92,6 +103,18 @@ enum class TestSQLDBType(
 
 object DatabaseNameFactory {
     var COUNTER = AtomicInteger()
+}
+
+fun dbManagerDB2400ForTest(host: String, library:String): SQLDBMManager{
+    val dbManager = SQLDBMManager(ConnectionConfig(
+        fileName= "*",
+        driver = "com.ibm.as400.access.AS400JDBCDriver",
+        url = "jdbc:as400://$host/$library;",
+        user = "USER",
+        password = "**********"),
+    )
+    dbManager.logger = Logger.getSimpleInstance(LOGGING_LEVEL)
+    return dbManager
 }
 
 fun dbManagerForTest() = dbManagerForTest(defaultDbType)
@@ -133,7 +156,7 @@ fun createAndPopulateTstTable(dbManager: SQLDBMManager?) {
     )
 
 
-    createAndPopulateTable(dbManager, TSTTAB_TABLE_NAME, "TSTREC", fields, keys, "src/test/resources/csv/TstTab.csv")
+    createAndPopulateTable(dbManager, TSTTAB_TABLE_NAME, TSTTAB_TABLE_NAME, fields, keys, "src/test/resources/csv/TstTab.csv")
 }
 
 fun createAndPopulateTst2Table(dbManager: SQLDBMManager?) {
@@ -148,7 +171,7 @@ fun createAndPopulateTst2Table(dbManager: SQLDBMManager?) {
         "TSTFLDNBR"
     )
 
-    createAndPopulateTable(dbManager, TST2TAB_TABLE_NAME, "TSTREC", fields, keys,"src/test/resources/csv/Tst2Tab.csv")
+    createAndPopulateTable(dbManager, TST2TAB_TABLE_NAME, TST2TAB_TABLE_NAME, fields, keys,"src/test/resources/csv/Tst2Tab.csv")
 }
 
 fun createAndPopulateEmployeeTable(dbManager: SQLDBMManager?) {
@@ -164,7 +187,7 @@ fun createAndPopulateEmployeeTable(dbManager: SQLDBMManager?) {
         "EMPNO"
     )
 
-    createAndPopulateTable(dbManager, EMPLOYEE_TABLE_NAME, "TSTREC", fields, keys,"src/test/resources/csv/Employee.csv")
+    createAndPopulateTable(dbManager, EMPLOYEE_TABLE_NAME, EMPLOYEE_TABLE_NAME, fields, keys,"src/test/resources/csv/Employee.csv")
 }
 
 fun createAndPopulateXemp2View(dbManager: SQLDBMManager?) {
@@ -214,7 +237,7 @@ fun createAndPopulateMunicipalityTable(dbManager: SQLDBMManager?) {
     createAndPopulateTable(
         dbManager,
         MUNICIPALITY_TABLE_NAME,
-        "TSTREC",
+        MUNICIPALITY_TABLE_NAME,
         fields,
         keys,
         "src/test/resources/csv/Municipality.csv"
@@ -229,6 +252,10 @@ fun getMunicipalityName(record: Record): String {
     return (record["CITTA"]?.toString()?.trim() ?: "")
 }
 
+fun getMunicipalityProv(record: Record): String {
+    return (record["PROV"]?.toString()?.trim() ?: "")
+}
+
 fun testLog(message: String) {
     if (TEST_LOG) {
         println(message)
@@ -237,14 +264,14 @@ fun testLog(message: String) {
 
 private fun createAndPopulateTable(
     dbManager: SQLDBMManager?,
+    name: String,
     tableName: String,
-    formatName: String,
     fields: List<TypedField>,
     keys: List<String>,
     dataFilePath: String
 ) {
 
-    val tMetadata = TypedMetadata(tableName, formatName, fields, keys)
+    val tMetadata = TypedMetadata(name, tableName, fields, keys)
     createFile(tMetadata, dbManager!!)
     Assert.assertTrue(dbManager.existFile(tableName))
     val dbFile = dbManager.openFile(tableName)
