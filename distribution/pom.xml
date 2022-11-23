@@ -23,7 +23,7 @@
     <parent>
         <artifactId>reload</artifactId>
         <groupId>io.github.smeup.reload</groupId>
-        <version>v.1.3.1</version>
+        <version>v.1.4.1</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
