@@ -29,29 +29,26 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.github.smeup.reload</groupId>
+        <groupId>io.github.smeup.reload</groupId>
         <artifactId>reload</artifactId>
-        <version>development-SNAPSHOT</version>
+        <version>develop-SNAPSHOT</version>
     </parent>
 
-    <groupId>com.github.smeup.reload</groupId>
     <artifactId>jt400</artifactId>
-    <version>development-SNAPSHOT</version>
-
     <packaging>jar</packaging>
 
     <name>jt400</name>
 
     <dependencies>
         <dependency>
-            <groupId>com.github.smeup.reload</groupId>
+            <groupId>io.github.smeup.reload</groupId>
             <artifactId>base</artifactId>
-            <version>development-SNAPSHOT</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.github.smeup.reload</groupId>
+            <groupId>io.github.smeup.reload</groupId>
             <artifactId>base</artifactId>
-            <version>development-SNAPSHOT</version>
+            <version>${project.version}</version>
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>

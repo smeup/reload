@@ -20,41 +20,41 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    
     <parent>
         <artifactId>reload</artifactId>
-        <groupId>com.github.smeup.reload</groupId>
-        <version>development-SNAPSHOT</version>
+        <groupId>io.github.smeup.reload</groupId>
+        <version>develop-SNAPSHOT</version>
     </parent>
-
-    <modelVersion>4.0.0</modelVersion>
-
+    
     <artifactId>distribution</artifactId>
 
     <dependencies>
         <dependency>
-            <groupId>com.github.smeup.reload</groupId>
+            <groupId>io.github.smeup.reload</groupId>
             <artifactId>base</artifactId>
-            <version>development-SNAPSHOT</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.github.smeup.reload</groupId>
+            <groupId>io.github.smeup.reload</groupId>
             <artifactId>sql</artifactId>
-            <version>development-SNAPSHOT</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.github.smeup.reload</groupId>
+            <groupId>io.github.smeup.reload</groupId>
             <artifactId>nosql</artifactId>
-            <version>development-SNAPSHOT</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.github.smeup.reload</groupId>
+            <groupId>io.github.smeup.reload</groupId>
             <artifactId>jt400</artifactId>
-            <version>development-SNAPSHOT</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.github.smeup.reload</groupId>
+            <groupId>io.github.smeup.reload</groupId>
             <artifactId>manager</artifactId>
-            <version>development-SNAPSHOT</version>
+            <version>${project.version}</version>
         </dependency>
     </dependencies>
 
