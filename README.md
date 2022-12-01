@@ -1,7 +1,7 @@
 # Reload: a record level access library for modern databases 
 ![reload Logo](/images/logo-reload-small.png)  
 
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) [![](https://jitpack.io/v/smeup/reload.svg)](https://jitpack.io/#smeup/reload)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 
 
@@ -50,20 +50,11 @@ Reload has a modular architecture based on a common interface. You can use exiti
  
 ## How to use this code in your project
 
-At the moment, we use [Jitpack](https://jitpack.io/) to publish the [project](https://jitpack.io/#smeup/reload).
-See more details [here](docs/jitpack.md).
+We use [Maven Central](https://repo1.maven.org/maven2/.) to publish the [project](https://repo1.maven.org/maven2/io/github/smeup/reload/).
+See more details [here](docs/central.md).
 
 ### Maven
-If you use Maven, add these lines to your pom.xml in order to add the repository
-
-    <repositories>
-        <repository>
-            <id>jitpack.io</id>
-            <url>https://jitpack.io</url>
-        </repository>
-    </repositories>
-	
-Then add the following dependencies for the core library:
+If you use Maven, add the following dependencies for the core library:
 	
     <dependency>
         <groupId>com.github.smeup.reload</groupId>
@@ -74,12 +65,6 @@ Then add the following dependencies for the core library:
 ### Gradle
 Here are the configurationd to add to your build.gradle:
 ```
-allprojects {
-    repositories {
-        ...
-        maven { url 'https://jitpack.io' }
-    }
-}
 dependencies {
     ...
     implementation 'com.github.smeup:reload:-SNAPSHOT'
