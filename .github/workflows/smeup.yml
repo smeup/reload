@@ -36,7 +36,7 @@ jobs:
 
     
     - name: Publish to smeup nexus
-      run: mvn deploy
+      run: mvn deploy -DskipTests -Preload-nexus-deploy
       env: 
         NEXUS_USER: ${{ secrets.NEXUS_USER }}
         NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}

@@ -219,6 +219,23 @@
 				</plugins>
 			</build>
 		</profile>
+
+		<profile>
+			<id>reload-nexus-deploy</id>
+			<distributionManagement>
+				<repository>
+					<id>releases</id>
+					<name>Internal Releases</name>
+					<url>https://repo.smeup.cloud/nexus/content/repositories/releases</url>
+				</repository>
+
+				<snapshotRepository>
+					<id>snapshots</id>
+					<name>Internal Snapshots</name>
+					<url>https://repo.smeup.cloud/nexus/content/repositories/snapshots</url>
+				</snapshotRepository>
+			</distributionManagement>
+		</profile>
 	</profiles>
 
 	<distributionManagement>
