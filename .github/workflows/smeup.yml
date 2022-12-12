@@ -1,0 +1,44 @@
+name: Deploy to nexus
+on:
+  push:
+    branches: [master, develop]
+env: 
+  DISTRIBUTION: zulu
+  JAVA_VERSION: 8
+
+jobs:
+  deploy-jardis-server:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set smeup nexus settings for snapshots
+      if: ${{ github.ref == 'refs/heads/develop' }}
+      uses: actions/setup-java@v3
+      with:
+        distribution: ${{ env.DISTRIBUTION }}
+        java-version: ${{ env.JAVA_VERSION }}
+        server-id: snapshots
+        cache: 'maven'
+        server-username: NEXUS_USER
+        server-password: NEXUS_PASSWORD
+  
+    - name: Set smeup nexus settings for releases
+      if: ${{ github.ref == 'refs/heads/master' }}
+      uses: actions/setup-java@v3
+      with:
+        distribution: ${{ env.DISTRIBUTION }}
+        java-version: ${{ env.JAVA_VERSION }}
+        server-id: releases
+        cache: 'maven'
+        server-username: NEXUS_USER
+        server-password: NEXUS_PASSWORD
+
+    - name: Publish to smeup nexus
+      run: mvn deploy -DskipTests
+      env: 
+        NEXUS_USER: ${{ secrets.NEXUS_USER }}
+        NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
+
+  
