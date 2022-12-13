@@ -57,7 +57,7 @@ See more details [here](docs/central.md).
 If you use Maven, add the following dependencies for the core library:
 	
     <dependency>
-        <groupId>com.github.smeup.reload</groupId>
+        <groupId>io.github.smeup.reload</groupId>
         <artifactId>reload</artifactId>
         <version>development-SNAPSHOT</version>
     </dependency>
@@ -67,9 +67,22 @@ Here are the configurationd to add to your build.gradle:
 ```
 dependencies {
     ...
-    implementation 'com.github.smeup:reload:-SNAPSHOT'
+    implementation io.github.smeup.reload:reload:-SNAPSHOT'
 }
 ```
+
+or for a more specific module control:
+```
+dependencies {
+    ...
+    compile "io.github.smeup.reload:base:development-SNAPSHOT"
+    implementation "io.github.smeup.reload:sql:development-SNAPSHOT"
+    implementation "io.github.smeup.reload:nosql:development-SNAPSHOT"
+    implementation "io.github.smeup.reload:manager:development-SNAPSHOT"
+    implementation "io.github.smeup.reload:jt400:development-SNAPSHOT"
+}
+```
+
 
 ### Build a single jar file distribution
 
