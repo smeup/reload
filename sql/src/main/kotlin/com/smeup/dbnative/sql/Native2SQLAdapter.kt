@@ -1,6 +1,8 @@
 package com.smeup.dbnative.sql
 
 import com.smeup.dbnative.file.Record
+import com.smeup.dbnative.model.FileMetadata
+import com.smeup.dbnative.model.Field
 import java.lang.Exception
 
 enum class PositioningMethod {
@@ -33,7 +35,7 @@ class ReadInstruction(var method: ReadMethod, var keys: List<String>){
     fun admitEmptyKeys() = method == ReadMethod.READ || method == ReadMethod.READP
 }
 
-class Native2SQL(val fileKeys: List<String>, val tableName: String) {
+class Native2SQL(val fileMetadata: FileMetadata) {
     private var lastPositioningInstruction: PositioningInstruction? = null
     private var lastReadInstruction: ReadInstruction? = null
 
@@ -44,11 +46,11 @@ class Native2SQL(val fileKeys: List<String>, val tableName: String) {
     }
 
     private fun checkKeys(keys: List<String>){
-        require(fileKeys.size > 0){
+        require(fileMetadata.fileKeys.size > 0){
             "No keys specified in metadata"
         }
-        require(keys.size <= fileKeys.size){
-            "Number of metadata keys $fileKeys less than number of positioning/read keys $keys"
+        require(keys.size <= fileMetadata.fileKeys.size){
+            "Number of metadata keys $fileMetadata.fileKeys less than number of positioning/read keys $keys"
         }
     }
 
@@ -120,7 +122,7 @@ class Native2SQL(val fileKeys: List<String>, val tableName: String) {
             return true
         }
         lastReadInstruction!!.keys.mapIndexed { index, value ->
-            val keyname = fileKeys.get(index)
+            val keyname = fileMetadata.fileKeys.get(index)
             if(record[keyname]?.trim() != value.trim()){
                 return false
             }
@@ -168,19 +170,19 @@ class Native2SQL(val fileKeys: List<String>, val tableName: String) {
 
     private fun getSQLOrderByClause(): String{
         val sortOrder = getSortOrder()
-        return " ORDER BY " + fileKeys.joinToString(separator = " " + sortOrder.symbol + ", ", postfix = " " + sortOrder.symbol )
+        return " ORDER BY " + fileMetadata.fileKeys.joinToString(separator = " " + sortOrder.symbol + ", ", postfix = " " + sortOrder.symbol )
     }
 
     fun getReadSqlStatement(): Pair<String, List<String>>{
         checkPositioning()
-        return Pair(getSQL(fileKeys.subList(0, lastPositioningInstruction!!.keys.size), Comparison.EQ, tableName), lastPositioningInstruction!!.keys)
+        return Pair(getSQL(fileMetadata.fields, fileMetadata.fileKeys.subList(0, lastPositioningInstruction!!.keys.size), Comparison.EQ, fileMetadata.tableName), lastPositioningInstruction!!.keys)
     }
 
     fun getSQLSatement(): Pair<String, List<String>>{
         when(lastReadInstruction!!.method){
             ReadMethod.CHAIN ->{
                 checkReadKeys()
-                return Pair(getSQL(fileKeys.subList(0, lastReadInstruction!!.keys.size), Comparison.EQ, tableName), lastReadInstruction!!.keys)
+                return Pair(getSQL(fileMetadata.fields, fileMetadata.fileKeys.subList(0, lastReadInstruction!!.keys.size), Comparison.EQ, fileMetadata.tableName), lastReadInstruction!!.keys)
             }
             ReadMethod.READ,ReadMethod.READP -> {
                 checkRead()
@@ -203,13 +205,13 @@ class Native2SQL(val fileKeys: List<String>, val tableName: String) {
             "Empty positioning keys"
         }
         if(lastPositioningInstruction!!.keys.size == 1){
-            queries.add(getSQL(fileKeys.subList(0, 1), comparison.first, tableName))
+            queries.add(getSQL(fileMetadata.fields, fileMetadata.fileKeys.subList(0, 1), comparison.first, fileMetadata.tableName))
             replacements.addAll(lastPositioningInstruction!!.keys)
         }
         else {
             val limit = if(fullUnion)1 else 2
             for (i in lastPositioningInstruction!!.keys.size downTo limit) {
-                queries.add(getSQL(fileKeys.subList(0, i), if(i == lastPositioningInstruction!!.keys.size) comparison.first else comparison.second, tableName))
+                queries.add(getSQL(fileMetadata.fields, fileMetadata.fileKeys.subList(0, i), if(i == lastPositioningInstruction!!.keys.size) comparison.first else comparison.second, fileMetadata.tableName))
                 replacements.addAll(lastPositioningInstruction!!.keys.subList(0, i))
             }
         }
@@ -217,18 +219,28 @@ class Native2SQL(val fileKeys: List<String>, val tableName: String) {
     }
 }
 
-private fun getSQL(keys: List<String>, comparison: Comparison, tableName: String): String{
+private fun getSQL(fields: List<Field>, keys: List<String>, comparison: Comparison, tableName: String): String{
+    var columns = ""
+    fields.forEachIndexed { index, k ->
+        run {
+            columns += k.name + ", "
+        }
+    }
+
     var value = ""
     keys.forEachIndexed { index, k ->
         run {
             value += k + " " + (if (index < keys.size - 1) Comparison.EQ.symbol else  comparison.symbol) + " ? AND "
         }
     }
-    return "(SELECT * FROM $tableName WHERE " + value.removeSuffix("AND ") + ")"
+    return "(SELECT " + columns.removeSuffix(", ")+ " FROM $tableName WHERE " + value.removeSuffix("AND ") + ")"
 }
 
 fun main(){
-    val adapter = Native2SQL(listOf("Regione", "Provincia", "Comune"), "rld_comuni").apply{
+    var fields = listOf(Field("Regione", ""), Field("Provincia", ""), Field("Comune", ""))
+    var fieldsKeys = listOf("Regione", "Provincia", "Comune")
+    var metadata = FileMetadata("test", "rld_comuni", fields, fieldsKeys)
+    val adapter = Native2SQL(metadata).apply{
         setPositioning(PositioningMethod.SETLL, listOf("Lombardia", "Brescia", "Erbusco"))
         println(isCoherent(listOf("Lombardia", "Brescia", "Erbusco")))
         setRead(ReadMethod.READE, listOf("Lombardia", "Brescia", "Erbusco"))

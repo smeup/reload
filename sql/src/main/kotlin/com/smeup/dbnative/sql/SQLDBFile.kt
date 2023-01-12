@@ -56,7 +56,7 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
     //    if (indexes.isEmpty()) connection.orderingFields(fileMetadata.name) else indexes
     //}
 
-    private var adapter: Native2SQL = Native2SQL(this.fileMetadata.fileKeys, fileMetadata.tableName)
+    private var adapter: Native2SQL = Native2SQL(this.fileMetadata)
     private var eof:Boolean = false
 
     private fun logEvent(loggingKey: LoggingKey, message: String, elapsedTime: Long? = null) =
