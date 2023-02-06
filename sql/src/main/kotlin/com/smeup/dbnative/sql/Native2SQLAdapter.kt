@@ -223,14 +223,14 @@ private fun getSQL(fields: List<Field>, keys: List<String>, comparison: Comparis
     var columns = ""
     fields.forEachIndexed { index, k ->
         run {
-            columns += k.name + ", "
+            columns += "\"" + k.name + "\", "
         }
     }
 
     var value = ""
     keys.forEachIndexed { index, k ->
         run {
-            value += k + " " + (if (index < keys.size - 1) Comparison.EQ.symbol else  comparison.symbol) + " ? AND "
+            value += "\"" + k + "\" " + (if (index < keys.size - 1) Comparison.EQ.symbol else  comparison.symbol) + " ? AND "
         }
     }
     return "(SELECT " + columns.removeSuffix(", ")+ " FROM $tableName WHERE " + value.removeSuffix("AND ") + ")"
