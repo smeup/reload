@@ -22,13 +22,13 @@ import com.smeup.dbnative.file.RecordField
 
 
 fun String.insertSQL(record: Record): String {
-    val names = record.keys.joinToString { it }
+    val names = record.keys.joinToString { "\"" + it + "\"" }
     val questionMarks = record.keys.joinToString { "?" }
     return "INSERT INTO $this ($names) VALUES($questionMarks)"
 }
 
 fun String.updateSQL(record: Record): String {
-    val namesAndQuestionMarks = record.keys.joinToString { "$it = ?" }
+    val namesAndQuestionMarks = record.keys.joinToString { "\"$it\" = ?" }
     val wheres = record.keys.toList()
     val comparations = List(record.size) { Comparison.EQ }
     return "UPDATE $this SET $namesAndQuestionMarks ${whereSQL(wheres, comparations)}"
@@ -45,9 +45,9 @@ fun orderBySQL(keysNames: List<String>, reverse: Boolean = false): String =
         ""
     } else {
         if (reverse) {
-            "ORDER BY " + keysNames.joinToString(separator = " DESC, ", postfix = " DESC")
+            "ORDER BY " + keysNames.joinToString(separator = " DESC, ", postfix = " DESC") {"\"$it\""}
         } else {
-            "ORDER BY " + keysNames.joinToString()
+            "ORDER BY " + keysNames.joinToString {"\"$it\""}
         }
     }
 
@@ -56,7 +56,7 @@ fun whereSQL(wheres: List<String>, comparations: List<Comparison>): String {
         ""
     } else {
         var result = "WHERE "
-        wheres.forEachIndexed { index, _ -> result += wheres[index] + " " + comparations[index].symbol + " ? AND " }
+        wheres.forEachIndexed { index, _ -> result += "\"" + wheres[index] + "\" " + comparations[index].symbol + " ? AND " }
         return result.removeSuffix("AND ")
     }
 }
@@ -133,9 +133,9 @@ fun createMarkerSQL(keysNames: List<String>): String =
     } else {
         // in HSQLDB CONCAT needs at least two params!
         if (keysNames.size == 1) {
-            "CONCAT( " + keysNames.joinToString() + ", '') AS NATIVE_ACCESS_MARKER"
+            "CONCAT( " + keysNames.joinToString{"\"$it\""} + ", '') AS NATIVE_ACCESS_MARKER"
         } else {
-            "CONCAT( " + keysNames.joinToString() + ") AS NATIVE_ACCESS_MARKER"
+            "CONCAT( " + keysNames.joinToString{"\"$it\""} + ") AS NATIVE_ACCESS_MARKER"
         }
 
     }
