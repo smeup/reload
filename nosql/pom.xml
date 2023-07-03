@@ -26,7 +26,7 @@
 	<parent>
 		<groupId>io.github.smeup.reload</groupId>
 		<artifactId>reload</artifactId>
-		<version>v1.3.2</version>
+		<version>develop-SNAPSHOT</version>
 	</parent>
 
 	<artifactId>nosql</artifactId>
