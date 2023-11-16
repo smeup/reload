@@ -54,40 +54,35 @@ We use [Maven Central](https://repo1.maven.org/maven2/.) to publish the [project
 See more details [here](docs/central.md).
 
 ### Maven
-If you use Maven and if you want to work with sql and no-sql, add the following dependencies:
-
-        <dependency>
-            <groupId>io.github.smeup.reload</groupId>
-            <artifactId>base</artifactId>
-            <version>vx.y.z</version>
-        </dependency>
-        <dependency>
-            <groupId>io.github.smeup.reload</groupId>
-            <artifactId>manager</artifactId>
-            <version>vx.y.z</version>
-        </dependency>
-        <dependency>
-            <groupId>io.github.smeup.reload</groupId>
-            <artifactId>sql</artifactId>
-            <version>vx.y.z</version>
-        </dependency>
-        <dependency>
-            <groupId>io.github.smeup.reload</groupId>
-            <artifactId>nosql</artifactId>
-            <version>vx.y.z</version>
-        </dependency>
+If you use Maven, add the following dependencies for the core library:
+	
+    <dependency>
+        <groupId>io.github.smeup.reload</groupId>
+        <artifactId>reload</artifactId>
+        <version>development-SNAPSHOT</version>
+    </dependency>
 
 ### Gradle
-The gradle configuration could be like this:
+Here are the configurationd to add to your build.gradle:
 ```
 dependencies {
     ...
-    implementation "io.github.smeup.reload:base:vx.y.z"
-    implementation "io.github.smeup.reload:manager:vx.y.z"
-    implementation "io.github.smeup.reload:sql:vx.y.z"
-    implementation "io.github.smeup.reload:nosql:vx.y.z"
+    implementation io.github.smeup.reload:reload:-SNAPSHOT'
 }
 ```
+
+or for a more specific module control:
+```
+dependencies {
+    ...
+    compile "io.github.smeup.reload:base:development-SNAPSHOT"
+    implementation "io.github.smeup.reload:sql:development-SNAPSHOT"
+    implementation "io.github.smeup.reload:nosql:development-SNAPSHOT"
+    implementation "io.github.smeup.reload:manager:development-SNAPSHOT"
+    implementation "io.github.smeup.reload:jt400:development-SNAPSHOT"
+}
+```
+
 
 ### Build a single jar file distribution
 

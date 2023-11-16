@@ -110,6 +110,9 @@
 								<source>src/main/kotlin</source>
 								<source>src/main/resources</source>
 							</sourceDirs>
+							<jvmTarget>11</jvmTarget>
+							<languageVersion>1.6</languageVersion>
+							<apiVersion>1.6</apiVersion>
 						</configuration>
 					</execution>
 					<execution>

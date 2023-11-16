@@ -98,8 +98,8 @@ class Native2SQL(val fileMetadata: FileMetadata) {
                 executeQuery = true
             }
         }
-        require(lastReadInstruction == null || method == lastReadInstruction!!.method) {
-            "read operations are only allowed immediatly after positioning or after a same method read instruction"
+        require(lastReadInstruction == null || method == ReadMethod.CHAIN || method == lastReadInstruction!!.method) {
+            "read operation " + method + " is allowed immediatly after positioning or after a same method read instruction"
         }
         if(lastReadInstruction == null){
             executeQuery = true
