@@ -32,7 +32,7 @@ object PropertiesSerializer {
         propertiesDirPath: String,
         fileName: String,
     ): FileMetadata {
-        val propertiesFile = FileInputStream(File("$propertiesDirPath${File.separatorChar}${fileName.toUpperCase()}.properties"))
+        val propertiesFile = FileInputStream(File("$propertiesDirPath${File.separatorChar}${fileName.uppercase()}.properties"))
         // val properties = Properties()
         // properties.load(InputStreamReader(propertiesFile, Charset.forName("UTF-8")))
 
@@ -94,7 +94,7 @@ object PropertiesSerializer {
         val keys = fileMetadata.fileKeys.joinToString(",")
         properties.add(Pair("filekeys", keys))
 
-        val propertiesFilePath = "${propertiesDirPath}${File.separatorChar}${fileMetadata.name.toUpperCase()}.properties"
+        val propertiesFilePath = "${propertiesDirPath}${File.separatorChar}${fileMetadata.name.uppercase(Locale.getDefault())}.properties"
 
         val propertiesFile = File(propertiesFilePath)
 

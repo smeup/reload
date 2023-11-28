@@ -59,7 +59,7 @@ abstract class DBManagerBaseImpl : DBMManager {
     }
 
     override fun existFile(name: String): Boolean {
-        return getMetadataRegister().contains(name.toUpperCase())
+        return getMetadataRegister().contains(name.uppercase())
     }
 
     companion object {
