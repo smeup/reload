@@ -20,9 +20,14 @@ package com.smeup.dbnative.metadata
 import com.smeup.dbnative.model.FileMetadata
 
 interface MetadataRegister {
+    fun registerMetadata(
+        metadata: FileMetadata,
+        overwrite: Boolean,
+    )
 
-    fun registerMetadata(metadata: FileMetadata, overwrite: Boolean)
-    fun getMetadata(filename:String): FileMetadata
-    fun contains(fileName:String): Boolean
-    fun remove(fileName:String)
+    fun getMetadata(filename: String): FileMetadata
+
+    fun contains(fileName: String): Boolean
+
+    fun remove(fileName: String)
 }

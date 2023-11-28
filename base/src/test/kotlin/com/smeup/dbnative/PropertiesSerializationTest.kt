@@ -22,7 +22,6 @@ import org.junit.Test
 import java.io.File
 
 class DBFileFactoryTest {
-
     @Test
     fun loadAndSaveTest() {
         // Delete tmp file

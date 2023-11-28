@@ -31,190 +31,173 @@ enum class Type {
     TIME,
     DATE,
     BINARY,
-    VARBINARY
+    VARBINARY,
 }
 
 sealed class FieldType {
-
-        abstract val type: Type
-        abstract val size: Int
-        abstract val digits: Int
-    }
+    abstract val type: Type
+    abstract val size: Int
+    abstract val digits: Int
+}
 
 // Fixed length string
-    data class CharacterType(val length: Int) : FieldType() {
+data class CharacterType(val length: Int) : FieldType() {
+    override val type: Type
+        get() = Type.CHARACTER
 
-        override val type: Type
-            get() = Type.CHARACTER
+    override val size: Int
+        get() = length
 
-        override val size: Int
-            get() = length
-
-        override val digits: Int
-            get() = 0
-    }
+    override val digits: Int
+        get() = 0
+}
 
 // Varying length string (with max length)
-    data class VarcharType(val length: Int) : FieldType() {
+data class VarcharType(val length: Int) : FieldType() {
+    override val type: Type
+        get() = Type.VARCHAR
 
-        override val type: Type
-            get() = Type.VARCHAR
+    override val size: Int
+        get() = length
 
-        override val size: Int
-            get() = length
+    override val digits: Int
+        get() = 0
+}
 
-        override val digits: Int
-            get() = 0
-    }
+object IntegerType : FieldType() {
+    override val type: Type
+        get() = Type.INTEGER
 
-    object IntegerType : FieldType() {
+    override val size: Int
+        get() = 10
 
-        override val type: Type
-            get() = Type.INTEGER
+    override val digits: Int
+        get() = 0
+}
 
-        override val size: Int
-            get() = 10
+object SmallintType : FieldType() {
+    override val type: Type
+        get() = Type.SMALLINT
 
-        override val digits: Int
-            get() = 0
-    }
+    override val size: Int
+        get() = 5
 
-    object SmallintType : FieldType() {
+    override val digits: Int
+        get() = 0
+}
 
-        override val type: Type
-            get() = Type.SMALLINT
+object BigintType : FieldType() {
+    override val type: Type
+        get() = Type.BIGINT
 
-        override val size: Int
-            get() = 5
+    override val size: Int
+        get() = 19
 
-        override val digits: Int
-            get() = 0
-    }
+    override val digits: Int
+        get() = 0
+}
 
-    object BigintType : FieldType() {
+object BooleanType : FieldType() {
+    override val type: Type
+        get() = Type.BOOLEAN
 
-        override val type: Type
-            get() = Type.BIGINT
+    override val size: Int
+        get() = 1
 
-        override val size: Int
-            get() = 19
-
-        override val digits: Int
-            get() = 0
-    }
-
-    object BooleanType : FieldType() {
-
-        override val type: Type
-            get() = Type.BOOLEAN
-
-        override val size: Int
-            get() = 1
-
-        override val digits: Int
-            get() = 0
-    }
-
+    override val digits: Int
+        get() = 0
+}
 
 // Numeric with total length and number of digits (a.k.a. NUMERIC)
-    data class DecimalType(val length: Int, val precision: Int) : FieldType() {
+data class DecimalType(val length: Int, val precision: Int) : FieldType() {
+    override val type: Type
+        get() = Type.DECIMAL
 
-        override val type: Type
-            get() = Type.DECIMAL
+    override val size: Int
+        get() = length
 
-        override val size: Int
-            get() = length
+    override val digits: Int
+        get() = precision
+}
 
-        override val digits: Int
-            get() = precision
-    }
+object FloatType : FieldType() {
+    override val type: Type
+        get() = Type.FLOAT
 
-    object FloatType : FieldType() {
+    override val size: Int
+        get() = 19
 
-        override val type: Type
-            get() = Type.FLOAT
+    override val digits: Int
+        get() = 0
+}
 
-        override val size: Int
-            get() = 19
+object DoubleType : FieldType() {
+    override val type: Type
+        get() = Type.DOUBLE
 
-        override val digits: Int
-            get() = 0
-    }
+    override val size: Int
+        get() = 19
 
-    object DoubleType : FieldType() {
-
-        override val type: Type
-            get() = Type.DOUBLE
-
-        override val size: Int
-            get() = 19
-
-        override val digits: Int
-            get() = 0
-    }
+    override val digits: Int
+        get() = 0
+}
 
 // Year, month, day, hour, minutes, seconds
-    object TimeStampType : FieldType() {
+object TimeStampType : FieldType() {
+    override val type: Type
+        get() = Type.TIMESTAMP
 
-        override val type: Type
-            get() = Type.TIMESTAMP
+    override val size: Int
+        get() = 14
 
-        override val size: Int
-            get() = 14
-
-        override val digits: Int
-            get() = 0
-    }
+    override val digits: Int
+        get() = 0
+}
 
 // Year, month, day
-    object DateType : FieldType() {
+object DateType : FieldType() {
+    override val type: Type
+        get() = Type.DATE
 
-        override val type: Type
-            get() = Type.DATE
+    override val size: Int
+        get() = 8
 
-        override val size: Int
-            get() = 8
-
-        override val digits: Int
-            get() = 0
-
-    }
+    override val digits: Int
+        get() = 0
+}
 
 // hour, minutes, seconds
-    object TimeType : FieldType() {
+object TimeType : FieldType() {
+    override val type: Type
+        get() = Type.TIME
 
-        override val type: Type
-            get() = Type.TIME
+    override val size: Int
+        get() = 6
 
-        override val size: Int
-            get() = 6
-
-        override val digits: Int
-            get() = 0
-    }
+    override val digits: Int
+        get() = 0
+}
 
 // Binary with fixed length
-    data class BinaryType(val length: Int) : FieldType() {
+data class BinaryType(val length: Int) : FieldType() {
+    override val type: Type
+        get() = Type.BINARY
 
-        override val type: Type
-            get() = Type.BINARY
+    override val size: Int
+        get() = length
 
-        override val size: Int
-            get() = length
-
-        override val digits: Int
-            get() = 0
-    }
+    override val digits: Int
+        get() = 0
+}
 
 // Binary with varying length
-    data class VarbinaryType(val length: Int) : FieldType() {
+data class VarbinaryType(val length: Int) : FieldType() {
+    override val type: Type
+        get() = Type.VARBINARY
 
-        override val type: Type
-            get() = Type.VARBINARY
+    override val size: Int
+        get() = length
 
-        override val size: Int
-            get() = length
-
-        override val digits: Int
-            get() = 0
-    }
+    override val digits: Int
+        get() = 0
+}

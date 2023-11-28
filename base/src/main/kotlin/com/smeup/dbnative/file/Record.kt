@@ -24,19 +24,19 @@ class Record(vararg fields: RecordField) : LinkedHashMap<String, String>() {
         }
     }
 
-    fun matches(keyFields: List<RecordField>) = keyFields.all {
+    fun matches(keyFields: List<RecordField>) =
+        keyFields.all {
+            var value1 = this[it.name]?.trim()
+            var value2 = it.value.trim()
 
-        var value1 = this[it.name]?.trim()
-        var value2 = it.value.trim();
-
-        value1.equals(value2.trim())
-    }
+            value1.equals(value2.trim())
+        }
 
     fun add(field: RecordField) {
         put(field.name, field.value)
     }
 
-    fun duplicate(): Record{
+    fun duplicate(): Record {
         val thisMap = this
         return Record().apply { this.putAll(thisMap) }
     }

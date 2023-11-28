@@ -26,16 +26,24 @@ import com.smeup.dbnative.model.FileMetadata
  * A datasource can contains either only tables(views) or only documents.
  * File is an abstraction of table, view or document.
  * */
-interface DBMManager : AutoCloseable{
-    val connectionConfig : ConnectionConfig
-
+interface DBMManager : AutoCloseable {
+    val connectionConfig: ConnectionConfig
 
     fun existFile(name: String): Boolean
-    fun registerMetadata(metadata: FileMetadata, overwrite: Boolean)
+
+    fun registerMetadata(
+        metadata: FileMetadata,
+        overwrite: Boolean,
+    )
+
     fun metadataOf(name: String): FileMetadata
+
     fun openFile(name: String): DBFile
+
     fun closeFile(name: String)
+
     fun unregisterMetadata(name: String)
+
     /**
      * Validate connectionConfig. If validation fails, implementation has to throw an IllegalArgumentException
      * */

@@ -19,8 +19,8 @@ package com.smeup.dbnative
 
 import com.smeup.dbnative.log.Logger
 
-data class DBNativeAccessConfig (val connectionsConfig: List<ConnectionConfig>, val logger: Logger? = null){
-    constructor(connectionsConfig: List<ConnectionConfig>):this(connectionsConfig, null)
+data class DBNativeAccessConfig(val connectionsConfig: List<ConnectionConfig>, val logger: Logger? = null) {
+    constructor(connectionsConfig: List<ConnectionConfig>) : this(connectionsConfig, null)
 }
 
 /**
@@ -34,12 +34,12 @@ data class DBNativeAccessConfig (val connectionsConfig: List<ConnectionConfig>, 
  * @param impl DBMManager implementation. If doesn't specified is assumed by url
  * @param properties Others connection properties
  * */
-data class ConnectionConfig (
+data class ConnectionConfig(
     val fileName: String,
     val url: String,
     val user: String,
     val password: String,
     val driver: String? = null,
     val impl: String? = null,
-    val properties : Map<String, String> = mutableMapOf())
-
+    val properties: Map<String, String> = mutableMapOf(),
+)
