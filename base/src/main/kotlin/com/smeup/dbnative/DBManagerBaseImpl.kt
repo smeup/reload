@@ -21,6 +21,7 @@ import com.smeup.dbnative.log.Logger
 import com.smeup.dbnative.metadata.MetadataRegister
 import com.smeup.dbnative.metadata.file.FSMetadataRegisterImpl
 import com.smeup.dbnative.model.FileMetadata
+import java.util.*
 
 abstract class DBManagerBaseImpl : DBMManager {
     var logger: Logger? = null
@@ -33,7 +34,7 @@ abstract class DBManagerBaseImpl : DBMManager {
     */
 
     override fun metadataOf(name: String): FileMetadata {
-        return getMetadataRegister().getMetadata(name.toUpperCase())
+        return getMetadataRegister().getMetadata(name.uppercase(Locale.getDefault()))
     }
 
     override fun registerMetadata(

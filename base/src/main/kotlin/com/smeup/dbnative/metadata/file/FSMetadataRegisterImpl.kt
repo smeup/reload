@@ -26,9 +26,12 @@ object FSMetadataRegisterImpl : MetadataRegister {
 
     init {
 
-        propertiesDirPath = System.getenv("DBNATIVE_DDS_DIR") ?: "${System.getProperty("user.home")}${File.separatorChar}" +
-            "etc${File.separatorChar}" +
-            "dbnativeaccess${File.separatorChar}dds"
+        propertiesDirPath =
+            System.getenv("DBNATIVE_DDS_DIR") ?: (
+                "${System.getProperty("user.home")}${File.separatorChar}" +
+                    "etc${File.separatorChar}" +
+                    "dbnativeaccess${File.separatorChar}dds"
+            )
 
         if (File(propertiesDirPath).exists() == false) {
             File(propertiesDirPath).mkdirs()
@@ -51,7 +54,7 @@ object FSMetadataRegisterImpl : MetadataRegister {
     }
 
     override fun remove(fileName: String) {
-        var propertiesFile = File("${propertiesDirPath}${File.separatorChar}$fileName.properties")
+        val propertiesFile = File("${propertiesDirPath}${File.separatorChar}$fileName.properties")
         if (propertiesFile.exists()) propertiesFile.delete()
     }
 }

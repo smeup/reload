@@ -56,7 +56,7 @@ fun FileMetadata.fieldsToProperties(): MutableList<Pair<String, String>> {
         properties.add(
             Pair(
                 "field.${field.name}",
-                "${field.text}",
+                field.text,
             ),
         )
     }

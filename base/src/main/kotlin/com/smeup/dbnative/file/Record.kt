@@ -26,8 +26,8 @@ class Record(vararg fields: RecordField) : LinkedHashMap<String, String>() {
 
     fun matches(keyFields: List<RecordField>) =
         keyFields.all {
-            var value1 = this[it.name]?.trim()
-            var value2 = it.value.trim()
+            val value1 = this[it.name]?.trim()
+            val value2 = it.value.trim()
 
             value1.equals(value2.trim())
         }
