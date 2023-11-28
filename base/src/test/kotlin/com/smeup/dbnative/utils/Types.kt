@@ -56,7 +56,7 @@ fun String.getFieldTypeInstance(
     decimalDigits: Int,
 ): FieldType {
     val fieldTypeObject =
-        when (this.toUpperCase()) {
+        when (this.uppercase()) {
             "CHAR", "CHARACTER" -> CharacterType(columnSize)
             "VARCHAR" -> VarcharType(columnSize)
             "INT", "INTEGER" -> IntegerType
@@ -81,7 +81,7 @@ fun propertiesToTypedMetadata(
     propertiesDirPath: String,
     fileName: String,
 ): TypedMetadata {
-    val propertiesFile = FileInputStream(File("$propertiesDirPath${File.separatorChar}${fileName.toUpperCase()}.properties"))
+    val propertiesFile = FileInputStream(File("$propertiesDirPath${File.separatorChar}${fileName.uppercase()}.properties"))
     // val properties = Properties()
     // properties.load(InputStreamReader(propertiesFile, Charset.forName("UTF-8")))
 
