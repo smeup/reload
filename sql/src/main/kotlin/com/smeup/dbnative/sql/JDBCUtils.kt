@@ -23,6 +23,7 @@ import com.smeup.dbnative.model.*
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.ResultSet
+import java.util.*
 
 const val CONVENTIONAL_INDEX_SUFFIX = "_INDEX"
 
@@ -45,7 +46,7 @@ fun PreparedStatement.bind(values: List<Any>) {
     }
 }
 
-fun Connection.recordFormatName(tableName: String): String? =
+fun Connection.recordFormatName(tableName: String): String =
     this.metaData.getTables(null, null, tableName, null).use {
         if (it.next()) {
             val remarks = it.getString("REMARKS")
@@ -98,7 +99,7 @@ fun Connection.orderingFields(tableName: String): List<String> {
         it.executeQuery().use {
             if (it.next()) {
                 // TODO handle DESC and ASC keywords
-                val fields = it.getString(field).toUpperCase().substringAfter("ORDER BY").split(",")
+                val fields = it.getString(field).uppercase(Locale.getDefault()).substringAfter("ORDER BY").split(",")
                 result.addAll(fields.map { fl: String -> fl.substring(fl.lastIndexOf('.') + 1).trim('`', ' ') })
             }
         }

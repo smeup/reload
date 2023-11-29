@@ -66,7 +66,7 @@ public class SQLJAsinchLoggingTest {
     }
 
     private class AsynchronousLogger extends Logger{
-        private EventQueue queue;
+        private final EventQueue queue;
         public AsynchronousLogger(LoggingLevel level){
             super(level, null);
             queue = new EventQueue();
@@ -87,8 +87,8 @@ public class SQLJAsinchLoggingTest {
     }
 
     private class EventWrapper{
-        private LoggingEvent event;
-        private boolean poison;
+        private final LoggingEvent event;
+        private final boolean poison;
 
         public EventWrapper(LoggingEvent event){
             this(event, false);
@@ -119,7 +119,7 @@ public class SQLJAsinchLoggingTest {
     }
 
     private class EventConsumer implements Runnable{
-        private EventQueue queue;
+        private final EventQueue queue;
         public EventConsumer(EventQueue queue){
             this.queue = queue;
         }

@@ -63,11 +63,7 @@ class NoSQLDBFile(
         if (lastSetOperation == false || globalCursor == null) {
             return false
         } else {
-            if (matchKeys(globalCursor!!.next(), last_set_keys)) {
-                return true
-            } else {
-                return false
-            }
+            return matchKeys(globalCursor!!.next(), last_set_keys)
         }
     }
 
@@ -313,10 +309,9 @@ class NoSQLDBFile(
 
                 // when globalCursor is empty return result empty
                 val document = globalCursor!!.tryNext()
-                if (document == null)
-                    {
-                        result = Result(Record())
-                    } else {
+                if (document == null) {
+                    result = Result(Record())
+                } else {
                     if (matchKeys(document, keyAsRecordField)) {
                         val record = documentToRecord(document)
                         updateLastKeys(record)

@@ -21,7 +21,7 @@ enum class LoggingKey(val level: LoggingLevel) {
     connection(LoggingLevel.DEBUG),
 }
 
-enum class NativeMethod() {
+enum class NativeMethod {
     equal,
     setll,
     setgt,
@@ -81,7 +81,7 @@ open class Logger(
     ): LoggingEvent? {
         return if (eventKey.level.ordinal <= level.ordinal) {
             val caller =
-                Thread.currentThread().getStackTrace().getOrNull(2)?.let {
+                Thread.currentThread().stackTrace.getOrNull(2)?.let {
                     "${it.className} ${it.methodName}:${it.lineNumber}"
                 } ?: ""
             logEvent(LoggingEvent(eventKey, message, caller, elapsedTime, nativeMethodCall, fileName))

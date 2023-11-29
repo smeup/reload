@@ -31,7 +31,7 @@ object FSMetadataRegisterImpl : MetadataRegister {
                 "${System.getProperty("user.home")}${File.separatorChar}" +
                     "etc${File.separatorChar}" +
                     "dbnativeaccess${File.separatorChar}dds"
-            )
+                )
 
         if (File(propertiesDirPath).exists() == false) {
             File(propertiesDirPath).mkdirs()

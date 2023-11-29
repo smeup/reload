@@ -42,7 +42,7 @@ fun FileMetadata.matchFileKeys(keys: List<RecordField>): Boolean {
 }
 
 fun FileMetadata.getField(name: String): Field? {
-    return if (fields.filter { it.name == name }.count() > 0) {
+    return if (fields.any { it.name == name }) {
         fields.first { it.name == name }
     } else {
         null

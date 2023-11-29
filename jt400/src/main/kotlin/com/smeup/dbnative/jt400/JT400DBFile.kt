@@ -27,6 +27,7 @@ import com.smeup.dbnative.file.Result
 import com.smeup.dbnative.log.Logger
 import com.smeup.dbnative.model.FileMetadata
 import java.math.BigDecimal
+import java.util.*
 
 private enum class CursorAction {
     NONE,
@@ -329,7 +330,7 @@ class JT400DBFile(
     private fun handleAS400Error(e: AS400Exception) {
         // CPF5001 	End of file reached
         // CPF5006 	Record not found
-        val eid = as400ErrorID(e).toUpperCase()
+        val eid = as400ErrorID(e).uppercase(Locale.getDefault())
         if (eid.startsWith("CPF5001")) {
             this.eofReached = true
             return

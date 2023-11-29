@@ -44,7 +44,7 @@ class DB2400OperationsOnFilePerfTest {
             val fileMetadata =
                 PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", "VERAPG0L")
             it!!.registerMetadata(fileMetadata, false)
-            val dbFile = it!!.openFile("VERAPG0L")
+            val dbFile = it.openFile("VERAPG0L")
             for (i in 1..10) {
                 var record =
                     Record(
@@ -60,7 +60,7 @@ class DB2400OperationsOnFilePerfTest {
                     dbFile.delete(record)
                 }
             }
-            it!!.close()
+            it.close()
         }
     }
 
@@ -71,13 +71,13 @@ class DB2400OperationsOnFilePerfTest {
             val fileMetadata =
                 PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", "VERAPG0L")
             it!!.registerMetadata(fileMetadata, false)
-            val dbFile = it!!.openFile("VERAPG0L")
+            val dbFile = it.openFile("VERAPG0L")
 
             var record = dbFile.chain(arrayListOf("A3L00000X1")).record
             if (!dbFile.eof()) {
                 dbFile.delete(record)
             }
-            it!!.closeFile("VERAPG0L")
+            it.closeFile("VERAPG0L")
         }
     }
 
@@ -89,7 +89,7 @@ class DB2400OperationsOnFilePerfTest {
             val fileMetadata =
                 PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", "VERAPG0L")
             it!!.registerMetadata(fileMetadata, false)
-            val dbFile = it!!.openFile("VERAPG0L")
+            val dbFile = it.openFile("VERAPG0L")
 
             var record = dbFile.chain(arrayListOf("A3L0000001")).record
             if (dbFile.eof()) {
@@ -123,7 +123,7 @@ class DB2400OperationsOnFilePerfTest {
             val fileMetadata =
                 PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", "VERAPG9L")
             it!!.registerMetadata(fileMetadata, false)
-            val dbFile = it!!.openFile("VERAPG9L")
+            val dbFile = it.openFile("VERAPG9L")
             var keys = arrayListOf("20210117", "SMEGL.001      ")
             dbFile.setll(keys)
             dbFile.readEqual(keys)
@@ -137,7 +137,7 @@ class DB2400OperationsOnFilePerfTest {
             val fileMetadata =
                 PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", "BRARTI0L")
             it!!.registerMetadata(fileMetadata, false)
-            val dbFile = it!!.openFile("BRARTI0L")
+            val dbFile = it.openFile("BRARTI0L")
             var keys = arrayListOf("ASACC0001")
             doChain(keys, dbFile)
 
@@ -153,7 +153,7 @@ class DB2400OperationsOnFilePerfTest {
             keys = arrayListOf("ASACC0005")
             doChain(keys, dbFile)
 
-            it!!.closeFile("BRARTI0L")
+            it.closeFile("BRARTI0L")
         }
     }
 

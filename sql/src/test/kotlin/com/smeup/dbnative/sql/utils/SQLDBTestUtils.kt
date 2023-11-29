@@ -62,19 +62,19 @@ enum class TestSQLDBType(
 ) {
     MY_SQL(
         connectionConfig =
-            ConnectionConfig(
-                fileName = "*",
-                url = "jdbc:mysql://localhost:3306/$DATABASE_NAME",
-                user = "root",
-                password = "root",
-            ),
+        ConnectionConfig(
+            fileName = "*",
+            url = "jdbc:mysql://localhost:3306/$DATABASE_NAME",
+            user = "root",
+            password = "root",
+        ),
         dbaConnectionConfig =
-            ConnectionConfig(
-                fileName = "*",
-                url = "jdbc:mysql://localhost:3306/",
-                user = "root",
-                password = "root",
-            ),
+        ConnectionConfig(
+            fileName = "*",
+            url = "jdbc:mysql://localhost:3306/",
+            user = "root",
+            password = "root",
+        ),
         createDatabase = { dbaConnection -> dbaConnection.prepareStatement("CREATE DATABASE $DATABASE_NAME").use { it.execute() } },
         destroyDatabase = { dbaConnection -> dbaConnection.prepareStatement("DROP DATABASE  $DATABASE_NAME").use { it.execute() } },
     ),

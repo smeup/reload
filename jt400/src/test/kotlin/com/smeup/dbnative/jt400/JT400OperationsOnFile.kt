@@ -219,7 +219,7 @@ class JT400OperationsOnFile {
     }
 
     @Test
-    fun multipleUpdateOnReadE()  {
+    fun multipleUpdateOnReadE() {
         // TEST FLOW
         // Step1: write 100 records with "currentTimeMillis" as unique key
         // Step2: read above written records and update A§DEA2 field

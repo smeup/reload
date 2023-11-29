@@ -40,23 +40,23 @@ private enum class TestConnectionConfig(
 ) {
     DEFAULT(
         connectionConfig =
-            ConnectionConfig(
-                fileName = "*",
-                url = "jdbc:hsqldb:mem:TEST",
-                user = "",
-                password = "",
-                driver = "org.hsqldb.jdbcDriver",
-            ),
+        ConnectionConfig(
+            fileName = "*",
+            url = "jdbc:hsqldb:mem:TEST",
+            user = "",
+            password = "",
+            driver = "org.hsqldb.jdbcDriver",
+        ),
     ),
     STARTS_WITH_TEST(
         connectionConfig =
-            ConnectionConfig(
-                fileName = "TEST*",
-                url = "jdbc:hsqldb:mem:TEST",
-                user = "",
-                password = "",
-                driver = "org.hsqldb.jdbcDriver",
-            ),
+        ConnectionConfig(
+            fileName = "TEST*",
+            url = "jdbc:hsqldb:mem:TEST",
+            user = "",
+            password = "",
+            driver = "org.hsqldb.jdbcDriver",
+        ),
     ),
     MUNICIPALITY(
         ConnectionConfig(

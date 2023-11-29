@@ -63,7 +63,7 @@ fun createAndPopulateTestTable(dbManager: NoSQLDBMManager) {
     Assert.assertTrue(dbManager.existFile(tMetadata.name))
     Assert.assertTrue(dbManager.metadataOf(tMetadata.name) == tMetadata.fileMetadata())
 
-    val dbfile: DBFile? = dbManager.openFile(tMetadata.name)
+    val dbfile: DBFile = dbManager.openFile(tMetadata.name)
     dbfile!!.write(Record(RecordField("TSTFLDCHR", "XXX"), RecordField("TSTFLDNBR", "123.45")))
     dbManager.closeFile(tMetadata.name)
 }

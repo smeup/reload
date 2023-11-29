@@ -24,6 +24,8 @@ import com.smeup.dbnative.DBNativeAccessConfig
 import com.smeup.dbnative.file.DBFile
 import com.smeup.dbnative.log.Logger
 import com.smeup.dbnative.model.FileMetadata
+import java.util.*
+import kotlin.Comparator
 
 /**
  * Factory for DBFile.
@@ -104,8 +106,9 @@ fun findConnectionConfigFor(
 ): ConnectionConfig {
     val configList =
         connectionsConfig.filter {
-            it.fileName.toUpperCase() == fileName.toUpperCase() || it.fileName == "*" ||
-                fileName.toUpperCase().matches(Regex(it.fileName.toUpperCase().replace("*", ".*")))
+            it.fileName.uppercase(Locale.getDefault()) == fileName.uppercase(Locale.getDefault()) || it.fileName == "*" ||
+                fileName.uppercase(Locale.getDefault())
+                    .matches(Regex(it.fileName.uppercase(Locale.getDefault()).replace("*", ".*")))
         }
     require(configList.isNotEmpty()) {
         "Wrong configuration. Not found a ConnectionConfig entry matching name: $fileName"
@@ -125,10 +128,9 @@ private fun createDBManager(
     return clazz?.let {
         val constructor = it.getConstructor(ConnectionConfig::class.java)
         val dbmManager = constructor.newInstance(config)
-        if (dbmManager is DBManagerBaseImpl)
-            {
-                dbmManager.logger = logger
-            }
+        if (dbmManager is DBManagerBaseImpl) {
+            dbmManager.logger = logger
+        }
         return dbmManager
     }!!
 }
