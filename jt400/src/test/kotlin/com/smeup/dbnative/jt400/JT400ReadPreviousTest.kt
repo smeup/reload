@@ -25,6 +25,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class JT400ReadPreviousTest {
+
     private lateinit var dbManager: JT400DBMManager
 
     @Before
@@ -79,4 +80,6 @@ class JT400ReadPreviousTest {
         assertEquals("SALLY KWAN", getEmployeeName(dbFile.read().record))
         dbManager.closeFile(EMPLOYEE_TABLE_NAME)
     }
+
+
 }

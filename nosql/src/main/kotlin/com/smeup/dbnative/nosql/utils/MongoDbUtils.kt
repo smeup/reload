@@ -20,16 +20,14 @@ package com.smeup.dbnative.nosql.utils
 import com.smeup.dbnative.file.Record
 import com.smeup.dbnative.model.FileMetadata
 
-fun FileMetadata.buildInsertCommand(
-    filename: String,
-    record: Record,
-): String {
-    // TODO: insert controls beetwen metadata and record format
-    println("Build insert command from $filename metadata")
+
+fun FileMetadata.buildInsertCommand(filename: String, record: Record): String {
+    //TODO: insert controls beetwen metadata and record format
+    println("Build insert command from ${filename} metadata")
 
     val documents = StringBuilder()
 
-    record.toList().joinTo(documents, separator = ",", prefix = "{", postfix = "}") {
+    record.toList().joinTo(documents, separator=",", prefix="{", postfix="}") {
         "\"${it.first}\": \"${it.second}\""
     }
 
@@ -43,7 +41,9 @@ fun FileMetadata.buildInsertCommand(
     println(result)
 
     return result
+
 }
+
 
 /*
 Expected command format:
@@ -74,10 +74,11 @@ Expected command format:
 
  */
 
-fun FileMetadata.buildIndexCommand(): String  {
+fun FileMetadata.buildIndexCommand(): String{
+
     val keys = StringBuilder()
 
-    this.fileKeys.joinTo(keys, separator = ",", prefix = "{", postfix = "}") {
+    this.fileKeys.joinTo(keys, separator=",", prefix="{", postfix="}") {
         "\"${it}\": 1"
     }
 
@@ -86,7 +87,7 @@ fun FileMetadata.buildIndexCommand(): String  {
         createIndexes: "${this.tableName.toUpperCase()}",
         indexes: [
         {
-            key: $keys,
+            key: ${keys},
             name: "${this.tableName.toUpperCase()}_index",
             unique: false
         }
@@ -97,4 +98,6 @@ fun FileMetadata.buildIndexCommand(): String  {
     println(result)
 
     return result
+
 }
+

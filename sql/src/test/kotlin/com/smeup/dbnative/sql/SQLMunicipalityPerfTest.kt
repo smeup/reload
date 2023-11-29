@@ -27,8 +27,11 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFails
 import kotlin.test.assertTrue
 
+
 class SQLMunicipalityPerfTest {
+
     companion object {
+
         private lateinit var dbManager: SQLDBMManager
 
         @BeforeClass
@@ -49,11 +52,11 @@ class SQLMunicipalityPerfTest {
     fun read() {
         val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
         assertTrue(dbFile.setll(buildMunicipalityKey("IT", "LOM", "BS", "ERBUSCO")))
-        for (index in 0..138) {
-            var result = dbFile.read()
-            assertTrue { !dbFile.eof() }
-            if (index == 138) {
-                assertEquals("CO", getMunicipalityProv(result.record))
+        for(index in 0..138){
+            var result = dbFile.read();
+            assertTrue{!dbFile.eof()}
+            if(index == 138) {
+                assertEquals("CO" , getMunicipalityProv(result.record))
             }
         }
         dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
@@ -157,7 +160,7 @@ class SQLMunicipalityPerfTest {
         recordFields.add(RecordField("PREF", "1234"))
         recordFields.add(RecordField("COMUNE", "A99"))
         recordFields.add(RecordField("ISTAT", "999999"))
-        dbFile.write(Record(*recordFields.toTypedArray()))
+        dbFile.write(Record(*recordFields.toTypedArray()));
 
         // Read new record for control
         var chainResult = dbFile.chain(buildMunicipalityKey("IT", "LOM", "BG", "TOPOLINIA"))
@@ -213,7 +216,7 @@ class SQLMunicipalityPerfTest {
         recordFields.add(RecordField("PREF", "4321"))
         recordFields.add(RecordField("COMUNE", "A99"))
         recordFields.add(RecordField("ISTAT", "999999"))
-        dbFile.write(Record(*recordFields.toTypedArray()))
+        dbFile.write(Record(*recordFields.toTypedArray()));
 
         // Read new record
         dbFile.setll(buildMunicipalityKey("IT", "LOM", "BG", "PAPEROPOLI"))
@@ -221,7 +224,7 @@ class SQLMunicipalityPerfTest {
         assertEquals("PAPEROPOLI", getMunicipalityName(readResult.record))
 
         // Delete added record
-        var chainResult = dbFile.chain(buildMunicipalityKey("IT", "LOM", "BG", "PAPEROPOLI"))
+        var chainResult= dbFile.chain(buildMunicipalityKey("IT", "LOM", "BG", "PAPEROPOLI"))
         dbFile.delete(chainResult.record)
         chainResult = dbFile.chain(buildMunicipalityKey("IT", "LOM", "BG", "PAPEROPOLI"))
         assertTrue(dbFile.eof())
@@ -243,7 +246,7 @@ class SQLMunicipalityPerfTest {
     fun usupportedUncoherentKeys() {
         val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
         dbFile.setll(buildMunicipalityKey("IT", "LOM", "BS", "ZONE"))
-        assertFails { dbFile.readEqual(buildMunicipalityKey("IT", "LOM", "CO")) }
+        assertFails {dbFile.readEqual(buildMunicipalityKey("IT", "LOM", "CO"))}
         dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
 
@@ -252,14 +255,14 @@ class SQLMunicipalityPerfTest {
         val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
         dbFile.setll(buildMunicipalityKey("IT", "LOM", "BS", "ZONE"))
         dbFile.readEqual(buildMunicipalityKey("IT", "LOM", "BS"))
-        assertFails { dbFile.read() }
+        assertFails {dbFile.read()}
         dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
 
     @Test
     fun usupportedUnpositioning() {
         val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
-        assertFails { dbFile.readEqual(buildMunicipalityKey("IT", "LOM", "BS")) }
+        assertFails {dbFile.readEqual(buildMunicipalityKey("IT", "LOM", "BS"))}
         dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
 
@@ -268,7 +271,7 @@ class SQLMunicipalityPerfTest {
         val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
         dbFile.setll(buildMunicipalityKey("IT", "LOM", "BS", "ZONE"))
         dbFile.readEqual(buildMunicipalityKey("IT", "LOM", "BS"))
-        assertFails { dbFile.readPrevious() }
+        assertFails {dbFile.readPrevious()}
         dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
 
@@ -280,3 +283,4 @@ class SQLMunicipalityPerfTest {
         usupportedReadChangeDirection()
     }
 }
+

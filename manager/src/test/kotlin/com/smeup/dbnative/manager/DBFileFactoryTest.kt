@@ -32,57 +32,51 @@ import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
-
 private val LOGGING_LEVEL = LoggingLevel.OFF
 
 private enum class TestConnectionConfig(
-    val connectionConfig: ConnectionConfig,
+    val connectionConfig: ConnectionConfig
 ) {
     DEFAULT(
-        connectionConfig =
-            ConnectionConfig(
-                fileName = "*",
-                url = "jdbc:hsqldb:mem:TEST",
-                user = "",
-                password = "",
-                driver = "org.hsqldb.jdbcDriver",
-            ),
+        connectionConfig = ConnectionConfig(
+            fileName= "*",
+            url = "jdbc:hsqldb:mem:TEST",
+            user = "",
+            password = "",
+            driver = "org.hsqldb.jdbcDriver"
+        )
     ),
     STARTS_WITH_TEST(
-        connectionConfig =
-            ConnectionConfig(
-                fileName = "TEST*",
-                url = "jdbc:hsqldb:mem:TEST",
-                user = "",
-                password = "",
-                driver = "org.hsqldb.jdbcDriver",
-            ),
+        connectionConfig = ConnectionConfig(
+            fileName= "TEST*",
+            url = "jdbc:hsqldb:mem:TEST",
+            user = "",
+            password = "",
+            driver = "org.hsqldb.jdbcDriver"
+        )
     ),
     MUNICIPALITY(
         ConnectionConfig(
-            fileName = "MUNICIPALITY",
+            fileName= "MUNICIPALITY",
             url = "mongodb://localhost:27017/W_TEST",
             user = "",
-            password = "",
-        ),
-    ),
+            password = "")
+    )
 }
 
 class DBFileFactoryTest {
-    private lateinit var config: DBNativeAccessConfig
+
+    private lateinit var config : DBNativeAccessConfig
     private lateinit var manager: SQLDBMManager
 
     @Before
     fun setUp() {
-        config =
-            DBNativeAccessConfig(
-                mutableListOf(
-                    TestConnectionConfig.DEFAULT.connectionConfig,
-                    TestConnectionConfig.STARTS_WITH_TEST.connectionConfig,
-                    TestConnectionConfig.MUNICIPALITY.connectionConfig,
-                ),
-                Logger.getSimpleInstance(LOGGING_LEVEL),
-            )
+        config = DBNativeAccessConfig(mutableListOf(
+            TestConnectionConfig.DEFAULT.connectionConfig,
+            TestConnectionConfig.STARTS_WITH_TEST.connectionConfig,
+            TestConnectionConfig.MUNICIPALITY.connectionConfig
+        ),
+        Logger.getSimpleInstance(LOGGING_LEVEL))
         manager = SQLDBMManager(TestConnectionConfig.STARTS_WITH_TEST.connectionConfig)
         manager.connection.createStatement().use {
             it.executeUpdate("CREATE TABLE TEST1F (NAME CHAR(20))")
@@ -100,36 +94,31 @@ class DBFileFactoryTest {
         testFields.add("NAME" fieldByType CharacterType(20))
         val testTableMetadata = FileMetadata("TEST1L", "TEST1F", testFields.fieldList(), listOf("NAME"))
         manager.registerMetadata(testTableMetadata, true)
+
     }
 
     @Test
     fun findConnectionForPIPPO() {
-        assertEquals(
-            TestConnectionConfig.DEFAULT.connectionConfig,
-            findConnectionConfigFor("PIPPO/PLUTO", config.connectionsConfig),
-        )
+        assertEquals(TestConnectionConfig.DEFAULT.connectionConfig,
+            findConnectionConfigFor("PIPPO/PLUTO", config.connectionsConfig))
     }
 
     @Test
     fun findConnectionForTESTXXX() {
-        assertEquals(
-            TestConnectionConfig.STARTS_WITH_TEST.connectionConfig,
-            findConnectionConfigFor("TEST3L", config.connectionsConfig),
-        )
+        assertEquals(TestConnectionConfig.STARTS_WITH_TEST.connectionConfig,
+            findConnectionConfigFor("TEST3L", config.connectionsConfig))
     }
 
     @Test
     fun findConnectionForMUNICIPALITY() {
-        assertEquals(
-            TestConnectionConfig.MUNICIPALITY.connectionConfig,
-            findConnectionConfigFor("MUNICIPALITY", config.connectionsConfig),
-        )
+        assertEquals(TestConnectionConfig.MUNICIPALITY.connectionConfig,
+            findConnectionConfigFor("MUNICIPALITY", config.connectionsConfig))
     }
 
-    // test ok if no throw exception
+    //test ok if no throw exception
     @Test
     fun openExistingTables() {
-        DBFileFactory(config).use { dbFileFactory ->
+        DBFileFactory(config).use {dbFileFactory ->
             // Open a file already registered
             dbFileFactory.open("TEST1L", null)
 
@@ -154,9 +143,9 @@ class DBFileFactoryTest {
         DBFileFactory(config).use { dbFileFactory ->
             val dbFile = dbFileFactory.open("TEST1L", null)
             var result = dbFile.chain("MARCO")
-            assertTrue(result.record["NAME"]?.trim().equals("MARCO"))
+            assertTrue (result.record["NAME"]?.trim().equals("MARCO"))
             result = dbFile.chain("DARIO")
-            assertTrue(result.record["NAME"]?.trim().equals("DARIO"))
+            assertTrue (result.record["NAME"]?.trim().equals("DARIO"))
 
             dbFile.close()
         }
@@ -171,12 +160,12 @@ class DBFileFactoryTest {
 
     @Test
     fun reopenClosedFile() {
-        DBFileFactory(config).use { dbFileFactory ->
+        DBFileFactory(config).use {dbFileFactory ->
             val dbFile = dbFileFactory.open("TEST1L", null)
             dbFile.setll("DARIO")
             dbFile.read()
             dbFile.close()
-            assertTrue(dbFile.runCatching { read() }.isFailure)
+            assertTrue (dbFile.runCatching { read() }.isFailure)
         }
     }
 
@@ -195,4 +184,5 @@ class DBFileFactoryTest {
         manager.unregisterMetadata("TEST2L")
         manager.unregisterMetadata("TEST3L")
     }
+
 }
