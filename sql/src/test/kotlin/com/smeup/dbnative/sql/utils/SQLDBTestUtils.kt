@@ -43,11 +43,13 @@ const val TST2TAB_TABLE_NAME = "TSTTAB"
 const val MUNICIPALITY_TABLE_NAME = "MUNICIPALITY"
 const val TEST_LOG = false
 private val LOGGING_LEVEL = LoggingLevel.ALL
-//do not change defaultValue
-//if you want to create sqlconnection against another db use function: dbManagerForTest(testSQLDBType: TestSQLDBType)
+
+// do not change defaultValue
+// if you want to create sqlconnection against another db use function: dbManagerForTest(testSQLDBType: TestSQLDBType)
 private var defaultDbType = TestSQLDBType.HSQLDB
-//private var defaultDbType = TestSQLDBType.MY_SQL
-//private var defaultDbType = TestSQLDBType.DB2_400
+
+// private var defaultDbType = TestSQLDBType.MY_SQL
+// private var defaultDbType = TestSQLDBType.DB2_400
 const val DATABASE_NAME = "TEST"
 const val DB2_400_HOST = "SRVLAB01.SMEUP.COM"
 const val DB2_400_LIBRARY_NAME = "W_PARFRA"
@@ -55,71 +57,85 @@ const val DB2_400_LIBRARY_NAME = "W_PARFRA"
 enum class TestSQLDBType(
     val connectionConfig: ConnectionConfig,
     val dbaConnectionConfig: ConnectionConfig? = connectionConfig,
-    val createDatabase : (dbaConnection: Connection) -> Unit = {},
-    val destroyDatabase: (dbaConnection: Connection) -> Unit = {}) {
+    val createDatabase: (dbaConnection: Connection) -> Unit = {},
+    val destroyDatabase: (dbaConnection: Connection) -> Unit = {},
+) {
     MY_SQL(
-        connectionConfig = ConnectionConfig(
-            fileName= "*",
-            url = "jdbc:mysql://localhost:3306/$DATABASE_NAME",
-            user = "root",
-            password = "root"),
-        dbaConnectionConfig = ConnectionConfig(
-            fileName= "*",
-            url = "jdbc:mysql://localhost:3306/",
-            user = "root",
-            password = "root"),
-        createDatabase = { dbaConnection -> dbaConnection.prepareStatement("CREATE DATABASE $DATABASE_NAME").use { it.execute() }  },
-        destroyDatabase = { dbaConnection -> dbaConnection.prepareStatement("DROP DATABASE  $DATABASE_NAME").use { it.execute() }  }
+        connectionConfig =
+            ConnectionConfig(
+                fileName = "*",
+                url = "jdbc:mysql://localhost:3306/$DATABASE_NAME",
+                user = "root",
+                password = "root",
+            ),
+        dbaConnectionConfig =
+            ConnectionConfig(
+                fileName = "*",
+                url = "jdbc:mysql://localhost:3306/",
+                user = "root",
+                password = "root",
+            ),
+        createDatabase = { dbaConnection -> dbaConnection.prepareStatement("CREATE DATABASE $DATABASE_NAME").use { it.execute() } },
+        destroyDatabase = { dbaConnection -> dbaConnection.prepareStatement("DROP DATABASE  $DATABASE_NAME").use { it.execute() } },
     ),
-    HSQLDB(ConnectionConfig(
-        fileName= "*",
-        url = "jdbc:hsqldb:mem:$DATABASE_NAME",
-        user = "sa",
-        password = "root"),
-        destroyDatabase = { dbaConnection -> dbaConnection.prepareStatement("DROP SCHEMA PUBLIC CASCADE").use { it.execute() }  }
+    HSQLDB(
+        ConnectionConfig(
+            fileName = "*",
+            url = "jdbc:hsqldb:mem:$DATABASE_NAME",
+            user = "sa",
+            password = "root",
+        ),
+        destroyDatabase = { dbaConnection -> dbaConnection.prepareStatement("DROP SCHEMA PUBLIC CASCADE").use { it.execute() } },
     ),
-    DB2_400(ConnectionConfig(
-            fileName= "*",
+    DB2_400(
+        ConnectionConfig(
+            fileName = "*",
             driver = "com.ibm.as400.access.AS400JDBCDriver",
             url = "jdbc:as400://$DB2_400_HOST/$DB2_400_LIBRARY_NAME;",
             user = "USER",
-            password = "**********"),
-
-        //force no create connection for dba operations
-        dbaConnectionConfig = null
+            password = "**********",
+        ),
+        // force no create connection for dba operations
+        dbaConnectionConfig = null,
     ),
-    DB2_400_DAT(ConnectionConfig(
-        fileName= "*",
-        driver = "com.ibm.as400.access.AS400JDBCDriver",
-        url = "jdbc:as400://$DB2_400_HOST/SMEUP_DAT",
-        user = "USER",
-        password = "**********"),
-
-        //force no create connection for dba operations
-        dbaConnectionConfig = null
-    )
-
+    DB2_400_DAT(
+        ConnectionConfig(
+            fileName = "*",
+            driver = "com.ibm.as400.access.AS400JDBCDriver",
+            url = "jdbc:as400://$DB2_400_HOST/SMEUP_DAT",
+            user = "USER",
+            password = "**********",
+        ),
+        // force no create connection for dba operations
+        dbaConnectionConfig = null,
+    ),
 }
 
 object DatabaseNameFactory {
     var COUNTER = AtomicInteger()
 }
 
-fun dbManagerDB2400ForTest(host: String, library:String): SQLDBMManager{
-    val dbManager = SQLDBMManager(ConnectionConfig(
-        fileName= "*",
-        driver = "com.ibm.as400.access.AS400JDBCDriver",
-        url = "jdbc:as400://$host/$library;",
-        user = "USER",
-        password = "**********"),
-    )
+fun dbManagerDB2400ForTest(
+    host: String,
+    library: String,
+): SQLDBMManager {
+    val dbManager =
+        SQLDBMManager(
+            ConnectionConfig(
+                fileName = "*",
+                driver = "com.ibm.as400.access.AS400JDBCDriver",
+                url = "jdbc:as400://$host/$library;",
+                user = "USER",
+                password = "**********",
+            ),
+        )
     dbManager.logger = Logger.getSimpleInstance(LOGGING_LEVEL)
     return dbManager
 }
 
 fun dbManagerForTest() = dbManagerForTest(defaultDbType)
 
-fun dbManagerForTest(testSQLDBType: TestSQLDBType) : SQLDBMManager {
+fun dbManagerForTest(testSQLDBType: TestSQLDBType): SQLDBMManager {
     testLog("Creating SQLDBManager with db type = $testSQLDBType")
 
     val dbManager = SQLDBMManager(testSQLDBType.connectionConfig)
@@ -146,68 +162,74 @@ fun destroyDatabase(testSQLDBType: TestSQLDBType) {
 }
 
 fun createAndPopulateTstTable(dbManager: SQLDBMManager?) {
-    val fields = listOf(
-        "TSTFLDCHR" fieldByType CharacterType(3),
-        "TSTFLDNBR" fieldByType DecimalType(5, 2)
-    )
+    val fields =
+        listOf(
+            "TSTFLDCHR" fieldByType CharacterType(3),
+            "TSTFLDNBR" fieldByType DecimalType(5, 2),
+        )
 
-    val keys = listOf(
-        "TSTFLDCHR"
-    )
-
+    val keys =
+        listOf(
+            "TSTFLDCHR",
+        )
 
     createAndPopulateTable(dbManager, TSTTAB_TABLE_NAME, TSTTAB_TABLE_NAME, fields, keys, "src/test/resources/csv/TstTab.csv")
 }
 
 fun createAndPopulateTst2Table(dbManager: SQLDBMManager?) {
-    val fields = listOf(
-        "TSTFLDCHR" fieldByType VarcharType(3),
-        "TSTFLDNBR" fieldByType DecimalType(5, 2),
-        "DESTST" fieldByType VarcharType(40)
-    )
+    val fields =
+        listOf(
+            "TSTFLDCHR" fieldByType VarcharType(3),
+            "TSTFLDNBR" fieldByType DecimalType(5, 2),
+            "DESTST" fieldByType VarcharType(40),
+        )
 
-    val keys = listOf(
-        "TSTFLDCHR",
-        "TSTFLDNBR"
-    )
+    val keys =
+        listOf(
+            "TSTFLDCHR",
+            "TSTFLDNBR",
+        )
 
-    createAndPopulateTable(dbManager, TST2TAB_TABLE_NAME, TST2TAB_TABLE_NAME, fields, keys,"src/test/resources/csv/Tst2Tab.csv")
+    createAndPopulateTable(dbManager, TST2TAB_TABLE_NAME, TST2TAB_TABLE_NAME, fields, keys, "src/test/resources/csv/Tst2Tab.csv")
 }
 
 fun createAndPopulateEmployeeTable(dbManager: SQLDBMManager?) {
-    val fields = listOf(
-        "EMPNO"     fieldByType CharacterType(6),
-        "FIRSTNME"  fieldByType VarcharType(12),
-        "MIDINIT"   fieldByType VarcharType(1),
-        "LASTNAME"  fieldByType VarcharType(15),
-        "WORKDEPT"  fieldByType CharacterType(3)
-    )
+    val fields =
+        listOf(
+            "EMPNO" fieldByType CharacterType(6),
+            "FIRSTNME" fieldByType VarcharType(12),
+            "MIDINIT" fieldByType VarcharType(1),
+            "LASTNAME" fieldByType VarcharType(15),
+            "WORKDEPT" fieldByType CharacterType(3),
+        )
 
-    val keys = listOf(
-        "EMPNO"
-    )
+    val keys =
+        listOf(
+            "EMPNO",
+        )
 
-    createAndPopulateTable(dbManager, EMPLOYEE_TABLE_NAME, EMPLOYEE_TABLE_NAME, fields, keys,"src/test/resources/csv/Employee.csv")
+    createAndPopulateTable(dbManager, EMPLOYEE_TABLE_NAME, EMPLOYEE_TABLE_NAME, fields, keys, "src/test/resources/csv/Employee.csv")
 }
 
 fun createAndPopulateXemp2View(dbManager: SQLDBMManager?) {
     // create view executing sql -> TODO: insert a createView method in DBMManager and use it
     fun createXEMP2() = "CREATE VIEW $XEMP2_VIEW_NAME AS SELECT * FROM EMPLOYEE ORDER BY WORKDEPT, EMPNO"
 
-    fun createXEMP2Index() =
-        "CREATE INDEX $XEMP2_VIEW_NAME$CONVENTIONAL_INDEX_SUFFIX ON EMPLOYEE (WORKDEPT ASC, EMPNO ASC)"
+    fun createXEMP2Index() = "CREATE INDEX $XEMP2_VIEW_NAME$CONVENTIONAL_INDEX_SUFFIX ON EMPLOYEE (WORKDEPT ASC, EMPNO ASC)"
 
-    val fields = listOf(
-        "EMPNO"     fieldByType CharacterType(6),
-        "FIRSTNME"  fieldByType VarcharType(12),
-        "MIDINIT"   fieldByType VarcharType(1),
-        "LASTNAME"  fieldByType VarcharType(15),
-        "WORKDEPT"  fieldByType CharacterType(3)
-    )
+    val fields =
+        listOf(
+            "EMPNO" fieldByType CharacterType(6),
+            "FIRSTNME" fieldByType VarcharType(12),
+            "MIDINIT" fieldByType VarcharType(1),
+            "LASTNAME" fieldByType VarcharType(15),
+            "WORKDEPT" fieldByType CharacterType(3),
+        )
 
-    val keys = listOf(
-        "WORKDEPT"
-    )
+    val keys =
+        listOf(
+            "WORKDEPT",
+        )
 
     val metadata = FileMetadata("$XEMP2_VIEW_NAME", "EMPLOYEE", fields.fieldList(), keys)
     dbManager!!.registerMetadata(metadata, true)
@@ -215,24 +237,25 @@ fun createAndPopulateXemp2View(dbManager: SQLDBMManager?) {
 }
 
 fun createAndPopulateMunicipalityTable(dbManager: SQLDBMManager?) {
-    val fields = listOf(
-        "NAZ"   fieldByType CharacterType(2),
-        "REG"   fieldByType CharacterType(3),
-        "PROV"  fieldByType CharacterType(2),
-        "CITTA" fieldByType VarcharType(35),
-        "CAP"   fieldByType CharacterType(5),
-        "PREF"  fieldByType CharacterType(4),
-        "COMUNE" fieldByType CharacterType(4),
-        "ISTAT" fieldByType CharacterType(6)
-    )
+    val fields =
+        listOf(
+            "NAZ" fieldByType CharacterType(2),
+            "REG" fieldByType CharacterType(3),
+            "PROV" fieldByType CharacterType(2),
+            "CITTA" fieldByType VarcharType(35),
+            "CAP" fieldByType CharacterType(5),
+            "PREF" fieldByType CharacterType(4),
+            "COMUNE" fieldByType CharacterType(4),
+            "ISTAT" fieldByType CharacterType(6),
+        )
 
-    val keys = listOf(
-        "NAZ",
-        "REG",
-        "PROV",
-        "CITTA"
-    )
-
+    val keys =
+        listOf(
+            "NAZ",
+            "REG",
+            "PROV",
+            "CITTA",
+        )
 
     createAndPopulateTable(
         dbManager,
@@ -240,7 +263,7 @@ fun createAndPopulateMunicipalityTable(dbManager: SQLDBMManager?) {
         MUNICIPALITY_TABLE_NAME,
         fields,
         keys,
-        "src/test/resources/csv/Municipality.csv"
+        "src/test/resources/csv/Municipality.csv",
     )
 }
 
@@ -268,9 +291,8 @@ private fun createAndPopulateTable(
     tableName: String,
     fields: List<TypedField>,
     keys: List<String>,
-    dataFilePath: String
+    dataFilePath: String,
 ) {
-
     val tMetadata = TypedMetadata(name, tableName, fields, keys)
     createFile(tMetadata, dbManager!!)
     Assert.assertTrue(dbManager.existFile(tableName))
@@ -294,15 +316,18 @@ fun buildMunicipalityKey(vararg values: String): List<String> {
     val keyValues = mutableListOf<String>()
     val keys = arrayOf("NAZ", "REG", "PROV", "CITTA")
     for ((index, value) in values.withIndex()) {
-        if (keys.size> index) {
+        if (keys.size > index) {
             keyValues.add(value)
         }
     }
     return keyValues
 }
 
-fun createFile(tMetadata: TypedMetadata, dbManager: SQLDBMManager) {
-    val metadata: FileMetadata = tMetadata.fileMetadata();
+fun createFile(
+    tMetadata: TypedMetadata,
+    dbManager: SQLDBMManager,
+) {
+    val metadata: FileMetadata = tMetadata.fileMetadata()
     dbManager.connection.createStatement().use {
         it.execute(tMetadata.toSQL())
     }
@@ -310,7 +335,6 @@ fun createFile(tMetadata: TypedMetadata, dbManager: SQLDBMManager) {
 }
 
 fun TypedMetadata.toSQL(): String = "CREATE TABLE ${this.tableName} (${this.fields.toSQL(this)})"
-
 
 fun Collection<TypedField>.toSQL(tMetadata: TypedMetadata): String {
     val primaryKeys = tMetadata.fileKeys.joinToString { it }
@@ -344,14 +368,16 @@ fun sql2Type(metadataResultSet: ResultSet): FieldType {
     return sql2Type(sqlType, columnSize, decimalDigits)
 }
 
-
-
 /**
  * Convert SQL type in FieldType
  */
-fun sql2Type(sqlType: String, columnSize: Int, decimalDigits: Int): FieldType =
+fun sql2Type(
+    sqlType: String,
+    columnSize: Int,
+    decimalDigits: Int,
+): FieldType =
     when (sqlType) {
-        "CHAR","CHARACTER","NCHAR" -> CharacterType(columnSize)
+        "CHAR", "CHARACTER", "NCHAR" -> CharacterType(columnSize)
         "VARCHAR" -> VarcharType(columnSize)
         "INT", "INTEGER" -> IntegerType
         "SMALLINT" -> SmallintType

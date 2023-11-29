@@ -21,22 +21,27 @@ import com.smeup.dbnative.metadata.MetadataRegister
 import com.smeup.dbnative.model.FileMetadata
 import java.io.File
 
-object FSMetadataRegisterImpl: MetadataRegister{
-
+object FSMetadataRegisterImpl : MetadataRegister {
     var propertiesDirPath: String
 
     init {
 
-        propertiesDirPath = System.getenv("DBNATIVE_DDS_DIR") ?:"${System.getProperty("user.home")}${File.separatorChar}" +
-                "etc${File.separatorChar}" +
-                "dbnativeaccess${File.separatorChar}dds"
+        propertiesDirPath =
+            System.getenv("DBNATIVE_DDS_DIR") ?: (
+                "${System.getProperty("user.home")}${File.separatorChar}" +
+                    "etc${File.separatorChar}" +
+                    "dbnativeaccess${File.separatorChar}dds"
+            )
 
         if (File(propertiesDirPath).exists() == false) {
             File(propertiesDirPath).mkdirs()
         }
     }
 
-    override fun registerMetadata(metadata: FileMetadata, overwrite: Boolean) {
+    override fun registerMetadata(
+        metadata: FileMetadata,
+        overwrite: Boolean,
+    ) {
         PropertiesSerializer.metadataToProperties(propertiesDirPath, metadata, true)
     }
 
@@ -45,11 +50,11 @@ object FSMetadataRegisterImpl: MetadataRegister{
     }
 
     override fun contains(fileName: String): Boolean {
-        return File("${propertiesDirPath}${File.separatorChar}${fileName}.properties").exists()
+        return File("${propertiesDirPath}${File.separatorChar}$fileName.properties").exists()
     }
 
     override fun remove(fileName: String) {
-        var propertiesFile = File("${propertiesDirPath}${File.separatorChar}${fileName}.properties")
+        val propertiesFile = File("${propertiesDirPath}${File.separatorChar}$fileName.properties")
         if (propertiesFile.exists()) propertiesFile.delete()
     }
 }

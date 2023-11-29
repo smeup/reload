@@ -21,12 +21,10 @@ import com.smeup.dbnative.file.RecordField
 import com.smeup.dbnative.model.Field
 import com.smeup.dbnative.model.FileMetadata
 
-
 /*
     Return true if passed keys are all primary fields in metadata
-     */
+ */
 fun FileMetadata.matchFileKeys(keys: List<RecordField>): Boolean {
-
     val keysAsString = mutableListOf<String>()
 
     keys.forEach {
@@ -51,16 +49,16 @@ fun FileMetadata.getField(name: String): Field? {
     }
 }
 
-fun FileMetadata.fieldsToProperties(): MutableList<Pair<String, String>>{
+fun FileMetadata.fieldsToProperties(): MutableList<Pair<String, String>> {
     val properties = mutableListOf<Pair<String, String>>()
 
     for (field in fields.iterator()) {
         properties.add(
             Pair(
                 "field.${field.name}",
-                "${field.text}"
-            )
+                field.text,
+            ),
         )
     }
-    return properties;
+    return properties
 }

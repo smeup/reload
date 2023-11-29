@@ -22,23 +22,22 @@ import org.junit.Test
 import java.io.File
 
 class DBFileFactoryTest {
-
     @Test
     fun loadAndSaveTest() {
         // Delete tmp file
-        var tmpFile = File("src/test/resources/dds/properties/out/BRARTI0F.properties")
+        val tmpFile = File("src/test/resources/dds/properties/out/BRARTI0F.properties")
         if (tmpFile.exists()) tmpFile.delete()
         tmpFile.parentFile.mkdirs()
 
         // Read metadata1 from properties
-        var metadata1 = PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", "BRARTI0F")
+        val metadata1 = PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", "BRARTI0F")
         println(metadata1)
 
         // Save metadata1 to tmp properties file
         PropertiesSerializer.metadataToProperties("src/test/resources/dds/properties/out", metadata1, true)
 
         // Read metadata2 from tmp properties file
-        var metadata2 = PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/out/", "BRARTI0F")
+        val metadata2 = PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/out/", "BRARTI0F")
 
         // Compare metadatas class
         assert(metadata2.equals(metadata1))

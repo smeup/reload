@@ -28,9 +28,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class SQLChain1KeyTest {
-
     companion object {
-
         private var dbManager: SQLDBMManager? = null
         private var libName: String? = null
 
@@ -63,6 +61,4 @@ class SQLChain1KeyTest {
         assertTrue(dbFile.chain("XYZ").record.isEmpty())
         dbManager!!.closeFile(TSTTAB_TABLE_NAME)
     }
-
 }
-

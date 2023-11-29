@@ -15,13 +15,13 @@
  *
  */
 
-
 package com.smeup.dbnative
 
 import com.smeup.dbnative.log.Logger
 import com.smeup.dbnative.metadata.MetadataRegister
 import com.smeup.dbnative.metadata.file.FSMetadataRegisterImpl
 import com.smeup.dbnative.model.FileMetadata
+import java.util.*
 
 abstract class DBManagerBaseImpl : DBMManager {
     var logger: Logger? = null
@@ -34,14 +34,20 @@ abstract class DBManagerBaseImpl : DBMManager {
     */
 
     override fun metadataOf(name: String): FileMetadata {
-        return getMetadataRegister().getMetadata(name.toUpperCase())
+        return getMetadataRegister().getMetadata(name.uppercase(Locale.getDefault()))
     }
 
-    override fun registerMetadata(metadata: FileMetadata, overwrite: Boolean) {
+    override fun registerMetadata(
+        metadata: FileMetadata,
+        overwrite: Boolean,
+    ) {
         if (getMetadataRegister().contains(metadata.name)) {
-            if (overwrite) getMetadataRegister().remove(metadata.name)
-            else return
-            //TODO: send exception (existent metadata and no overwrite)
+            if (overwrite) {
+                getMetadataRegister().remove(metadata.name)
+            } else {
+                return
+            }
+            // TODO: send exception (existent metadata and no overwrite)
         }
 
         getMetadataRegister().registerMetadata(metadata, overwrite)
@@ -54,11 +60,10 @@ abstract class DBManagerBaseImpl : DBMManager {
     }
 
     override fun existFile(name: String): Boolean {
-        return getMetadataRegister().contains(name.toUpperCase())
+        return getMetadataRegister().contains(name.uppercase())
     }
 
     companion object {
-
         val register: MetadataRegister
             get() {
                 return FSMetadataRegisterImpl
@@ -68,11 +73,17 @@ abstract class DBManagerBaseImpl : DBMManager {
             return register
         }
 
-        fun staticRegisterMetadata(metadata: FileMetadata, overwrite: Boolean) {
+        fun staticRegisterMetadata(
+            metadata: FileMetadata,
+            overwrite: Boolean,
+        ) {
             if (getMetadataRegister().contains(metadata.name)) {
-                if (overwrite) getMetadataRegister().remove(metadata.name)
-                else return
-                //TODO: send exception (existent metadata and no overwrite)
+                if (overwrite) {
+                    getMetadataRegister().remove(metadata.name)
+                } else {
+                    return
+                }
+                // TODO: send exception (existent metadata and no overwrite)
             }
 
             getMetadataRegister().registerMetadata(metadata, overwrite)
@@ -85,7 +96,7 @@ abstract class DBManagerBaseImpl : DBMManager {
         }
 
         fun staticGetMetadata(name: String): FileMetadata {
-            return getMetadataRegister().getMetadata(name);
+            return getMetadataRegister().getMetadata(name)
         }
     }
 }

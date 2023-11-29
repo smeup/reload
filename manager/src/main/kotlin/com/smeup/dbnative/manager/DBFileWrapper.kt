@@ -24,8 +24,7 @@ import com.smeup.dbnative.file.Result
 import com.smeup.dbnative.log.Logger
 import com.smeup.dbnative.model.FileMetadata
 
-class DBFileWrapper (private val dbFile: DBFile, private val dbmManager: DBMManager): DBFile {
-
+class DBFileWrapper(private val dbFile: DBFile, private val dbmManager: DBMManager) : DBFile {
     private var closed = false
 
     override var name: String
@@ -37,7 +36,9 @@ class DBFileWrapper (private val dbFile: DBFile, private val dbmManager: DBMMana
         set(value) {}
     override var logger: Logger?
         get() = dbFile.logger
-        set(value) {dbFile.logger = value}
+        set(value) {
+            dbFile.logger = value
+        }
 
     override fun eof(): Boolean {
         return dbFile.eof()

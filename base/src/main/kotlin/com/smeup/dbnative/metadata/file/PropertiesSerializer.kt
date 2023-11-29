@@ -27,18 +27,22 @@ import java.nio.charset.Charset
 import java.util.*
 import kotlin.collections.ArrayList
 
-
 object PropertiesSerializer {
-
-    fun propertiesToMetadata(propertiesDirPath: String, fileName: String): FileMetadata{
-        val propertiesFile = FileInputStream(File("$propertiesDirPath${File.separatorChar}${fileName.toUpperCase()}.properties"))
-        //val properties = Properties()
-        //properties.load(InputStreamReader(propertiesFile, Charset.forName("UTF-8")))
+    fun propertiesToMetadata(
+        propertiesDirPath: String,
+        fileName: String,
+    ): FileMetadata {
+        val propertiesFile = FileInputStream(File("$propertiesDirPath${File.separatorChar}${fileName.uppercase()}.properties"))
+        // val properties = Properties()
+        // properties.load(InputStreamReader(propertiesFile, Charset.forName("UTF-8")))
 
         val mp: MutableMap<String, String> = LinkedHashMap()
         object : Properties() {
             @Synchronized
-            override fun put(key: Any, value: Any): Any? {
+            override fun put(
+                key: Any,
+                value: Any,
+            ): Any? {
                 return mp.put(key as String, value as String)
             }
         }.load(InputStreamReader(propertiesFile, Charset.forName("UTF-8")))
@@ -63,7 +67,7 @@ object PropertiesSerializer {
 
         // FieldKeys
         val fieldsKeys: MutableList<String> = ArrayList()
-        if(!(mp["filekeys"]).isNullOrEmpty()){
+        if (!(mp["filekeys"]).isNullOrEmpty()) {
             fieldsKeys.addAll((mp["filekeys"]?.split(",")!!))
         }
 
@@ -71,27 +75,30 @@ object PropertiesSerializer {
         return FileMetadata(fileName, tableName, fields, fieldsKeys)
     }
 
-
-    fun metadataToProperties(propertiesDirPath: String, fileMetadata: FileMetadata, overwrite: Boolean){
+    fun metadataToProperties(
+        propertiesDirPath: String,
+        fileMetadata: FileMetadata,
+        overwrite: Boolean,
+    ) {
         metadataToPropertiesImpl(propertiesDirPath, fileMetadata, fileMetadata.fieldsToProperties(), overwrite)
     }
 
-
-    private fun metadataToPropertiesImpl(propertiesDirPath: String,
-                                      fileMetadata: FileMetadata,
-                                      properties: MutableList<Pair<String, String>>,
-                                      overwrite: Boolean){
+    private fun metadataToPropertiesImpl(
+        propertiesDirPath: String,
+        fileMetadata: FileMetadata,
+        properties: MutableList<Pair<String, String>>,
+        overwrite: Boolean,
+    ) {
         properties.add(Pair("tablename", fileMetadata.tableName))
 
         val keys = fileMetadata.fileKeys.joinToString(",")
         properties.add(Pair("filekeys", keys))
 
-
-        val propertiesFilePath = "${propertiesDirPath}${File.separatorChar}${fileMetadata.name.toUpperCase()}.properties"
+        val propertiesFilePath = "${propertiesDirPath}${File.separatorChar}${fileMetadata.name.uppercase(Locale.getDefault())}.properties"
 
         val propertiesFile = File(propertiesFilePath)
 
-        if (overwrite && propertiesFile.exists())  {
+        if (overwrite && propertiesFile.exists()) {
             propertiesFile.delete()
         }
 
@@ -103,6 +110,5 @@ object PropertiesSerializer {
         }
         writer.flush()
         writer.close()
-
     }
 }

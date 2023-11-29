@@ -40,7 +40,8 @@ fun ResultSet.joinToString(separator: String = " - "): String {
 
 fun PreparedStatement.bind(values: List<Any>) {
     values.forEachIndexed {
-        i, value -> this.setObject(i + 1, value)
+            i, value ->
+        this.setObject(i + 1, value)
     }
 }
 
@@ -55,7 +56,8 @@ fun Connection.recordFormatName(tableName: String): String? =
         return@use tableName
     }
 
-private fun ResultSet.indexId() = "${this.getString("TABLE_CAT")}." +
+private fun ResultSet.indexId() =
+    "${this.getString("TABLE_CAT")}." +
         "${this.getString("TABLE_SCHEM")}.${this.getString("INDEX_NAME")}"
 
 private fun ResultSet.isUnique() = this.getInt("NON_UNIQUE") == 0
@@ -67,10 +69,10 @@ fun Connection.primaryKeys(tableName: String): List<String> {
             result.add(it.getString("COLUMN_NAME"))
         }
     }
-    //if primary key is not defined i will get it by first unique index
+    // if primary key is not defined i will get it by first unique index
     if (result.isEmpty()) {
         var indexId: String? = null
-        //a row for every field in the indexes
+        // a row for every field in the indexes
         this.metaData.getIndexInfo(null, null, tableName, true, false).use {
             while (it.next()) {
                 if (indexId == null) {
@@ -78,8 +80,7 @@ fun Connection.primaryKeys(tableName: String): List<String> {
                 }
                 if (it.indexId() != indexId) {
                     break
-                }
-                else {
+                } else {
                     result.add(it.getString("COLUMN_NAME"))
                 }
             }
@@ -98,7 +99,7 @@ fun Connection.orderingFields(tableName: String): List<String> {
             if (it.next()) {
                 // TODO handle DESC and ASC keywords
                 val fields = it.getString(field).toUpperCase().substringAfter("ORDER BY").split(",")
-                result.addAll(fields.map { fl: String -> fl.substring(fl.lastIndexOf('.') + 1).trim('`', ' ')  })
+                result.addAll(fields.map { fl: String -> fl.substring(fl.lastIndexOf('.') + 1).trim('`', ' ') })
             }
         }
     }
@@ -110,7 +111,8 @@ fun ResultSet?.closeIfOpen() {
     if (this != null) {
         try {
             this.close()
-        } catch (t: Throwable) {}
+        } catch (t: Throwable) {
+        }
     }
 }
 
@@ -136,6 +138,3 @@ fun ResultSet?.currentRecordToValues(): Record {
     }
     return result
 }
-
-
-
