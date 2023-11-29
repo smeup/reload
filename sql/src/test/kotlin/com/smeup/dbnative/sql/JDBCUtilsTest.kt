@@ -25,7 +25,6 @@ import org.junit.Test
 import kotlin.test.assertEquals
 
 class JDBCUtilsTest {
-
     private lateinit var dbManager: SQLDBMManager
 
     @Before
@@ -37,7 +36,9 @@ class JDBCUtilsTest {
     fun primaryKeysTest() {
         dbManager.connection.use {
             it.createStatement()
-                .execute("CREATE TABLE TSTTAB00 (TSTFLDCHR CHAR (5) NOT NULL, TSTFLDNBR DECIMAL (7, 2) NOT NULL, TSTFLDNB2 DECIMAL (2, 0) NOT NULL, PRIMARY KEY(TSTFLDCHR, TSTFLDNBR))")
+                .execute(
+                    "CREATE TABLE TSTTAB00 (TSTFLDCHR CHAR (5) NOT NULL, TSTFLDNBR DECIMAL (7, 2) NOT NULL, TSTFLDNB2 DECIMAL (2, 0) NOT NULL, PRIMARY KEY(TSTFLDCHR, TSTFLDNBR))",
+                )
             assertEquals(listOf("TSTFLDCHR", "TSTFLDNBR"), it.primaryKeys("TSTTAB00"))
         }
     }
@@ -46,7 +47,9 @@ class JDBCUtilsTest {
     fun orderingFieldsTest() {
         dbManager.connection.use {
             it.createStatement()
-                .execute("CREATE TABLE TSTTAB00 (TSTFLDCHR CHAR (5) NOT NULL, TSTFLDNBR DECIMAL (7, 2) NOT NULL, TSTFLDNB2 DECIMAL (2, 0) NOT NULL, PRIMARY KEY(TSTFLDCHR, TSTFLDNBR))")
+                .execute(
+                    "CREATE TABLE TSTTAB00 (TSTFLDCHR CHAR (5) NOT NULL, TSTFLDNBR DECIMAL (7, 2) NOT NULL, TSTFLDNB2 DECIMAL (2, 0) NOT NULL, PRIMARY KEY(TSTFLDCHR, TSTFLDNBR))",
+                )
             it.createStatement().execute("CREATE VIEW TSTVIEW AS SELECT * FROM TSTTAB00 ORDER BY TSTFLDNB2, TSTFLDNBR")
             it.createStatement()
                 .execute("CREATE INDEX TSTVIEW$CONVENTIONAL_INDEX_SUFFIX ON TSTTAB00 (TSTFLDNB2, TSTFLDNBR)")

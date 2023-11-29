@@ -28,7 +28,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class JT400Chain2KeysTest {
-
     private lateinit var dbManager: JT400DBMManager
 
     @Before
@@ -48,10 +47,11 @@ class JT400Chain2KeysTest {
     @Test
     fun findRecordsIfChainWithExistingKey() {
         val dbFile = dbManager.openFile(TST2TAB_TABLE_NAME)
-        val key2 = listOf(
-            "ABC",
-            "12.00"
-        )
+        val key2 =
+            listOf(
+                "ABC",
+                "12.00",
+            )
         val chainResult = dbFile.chain(key2)
         assertEquals("ABC", chainResult.record["TSTFLDCHR"])
         assertEquals("12.00", chainResult.record["TSTFLDNBR"])
@@ -62,14 +62,12 @@ class JT400Chain2KeysTest {
     @Test
     fun doesNotFindRecordsIfChainWithNotExistingKey() {
         val dbFile = dbManager.openFile(TST2TAB_TABLE_NAME)
-        val key2 = listOf(
-             "ZZZ",
-             "12"
-        )
+        val key2 =
+            listOf(
+                "ZZZ",
+                "12",
+            )
         assertTrue(dbFile.chain(key2).record.isEmpty())
         dbManager.closeFile(TST2TAB_TABLE_NAME)
     }
-
-
 }
-

@@ -32,7 +32,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class JT400OperationsOnFile {
-
     private lateinit var dbManager: JT400DBMManager
 
     @Before
@@ -194,7 +193,7 @@ class JT400OperationsOnFile {
         var chainResult = dbFile.chain(keyList)
         assertEquals(0, chainResult.record.size)
 
-        //Set field values and write record
+        // Set field values and write record
         chainResult.record["A§ARTI"] = key
         chainResult.record["A§DEAR"] = "Kotlin DBNativeAccess Write        "
         chainResult.record["A§TIAR"] = "ART  "
@@ -202,17 +201,17 @@ class JT400OperationsOnFile {
 
         dbFile.write(chainResult.record)
 
-        //Must exists correct write
+        // Must exists correct write
         chainResult = dbFile.chain(keyList)
         assertEquals(key, chainResult.record["A§ARTI"])
         assertEquals("ART  ", chainResult.record["A§TIAR"])
         assertEquals("Kotlin DBNativeAccess Write        ", chainResult.record["A§DEAR"])
         assertEquals("0  ", chainResult.record["A§TPAR"])
 
-        //Delete record
+        // Delete record
         dbFile.delete(chainResult.record)
 
-        //Check delete success
+        // Check delete success
         chainResult = dbFile.chain(keyList)
         assertEquals(0, chainResult.record.size)
 
@@ -220,7 +219,7 @@ class JT400OperationsOnFile {
     }
 
     @Test
-    fun multipleUpdateOnReadE(){
+    fun multipleUpdateOnReadE()  {
         // TEST FLOW
         // Step1: write 100 records with "currentTimeMillis" as unique key
         // Step2: read above written records and update A§DEA2 field
@@ -235,7 +234,7 @@ class JT400OperationsOnFile {
 
         // Create list of items to write into A§ARTI field
         val items = mutableListOf<String>()
-        repeat(numberOfRecordsToHandle){
+        repeat(numberOfRecordsToHandle) {
             items.add(System.currentTimeMillis().toString() + "  ")
             Thread.sleep(5)
         }
@@ -246,19 +245,21 @@ class JT400OperationsOnFile {
         val dea2Key = "Kotlin DBNativeAccess TEST-UPDATED "
 
         // WRITE
-        repeat(numberOfRecordsToHandle){
+        repeat(numberOfRecordsToHandle) {
             val record = Record()
-            repeat(fieldsNumber){ index ->
+            repeat(fieldsNumber) { index ->
                 val name: String = dbFile.fileMetadata.fields[index].name
-                //print(dbFile.fileMetadata.getField(name)?.type)
-                val value = when(name){
-                    "A§ARTI" -> items[it]
-                    "A§DEAR" -> dearKey
-                    else -> when(tMetadata.getField(name)?.type){
-                        is DecimalType -> "0"
-                        else -> ""
+                // print(dbFile.fileMetadata.getField(name)?.type)
+                val value =
+                    when (name) {
+                        "A§ARTI" -> items[it]
+                        "A§DEAR" -> dearKey
+                        else ->
+                            when (tMetadata.getField(name)?.type) {
+                                is DecimalType -> "0"
+                                else -> ""
+                            }
                     }
-                }
 
                 val recordField = RecordField(name, value)
                 record.add(recordField)
@@ -270,7 +271,7 @@ class JT400OperationsOnFile {
         // Read records with same description (A§DEAR) and update field named 'secondary description' (A§DEA2)
         val keyList = listOf(dearKey)
         assertTrue(dbFile.setll(keyList))
-        //dbFile.positionCursorBefore(keyList) //TODO rivedere
+        // dbFile.positionCursorBefore(keyList) //TODO rivedere
         // Update
         repeat(numberOfRecordsToHandle) {
             val readEResult = dbFile.readEqual(keyList)
@@ -283,7 +284,7 @@ class JT400OperationsOnFile {
         // READ AND CHECK
         // Check all records are updated as expected
         assertTrue(dbFile.setll(keyList))
-        //dbFile.positionCursorBefore(keyList)  //TODO rivedere
+        // dbFile.positionCursorBefore(keyList)  //TODO rivedere
         repeat(numberOfRecordsToHandle) {
             val readEResult = dbFile.readEqual(keyList)
             println("[READ AND CHECK]: " + readEResult.record["A§ARTI"])
@@ -292,14 +293,13 @@ class JT400OperationsOnFile {
 
         // DELETE
         assertTrue(dbFile.setll(keyList))
-        //dbFile.positionCursorBefore(keyList)  //TODO rivedere
+        // dbFile.positionCursorBefore(keyList)  //TODO rivedere
         repeat(numberOfRecordsToHandle) {
             val readEResult = dbFile.readEqual(keyList)
             assertEquals(dea2Key, readEResult.record["A§DEA2"])
-            //Delete record
+            // Delete record
             dbFile.delete(readEResult.record)
         }
-
     }
 
     @Test
@@ -345,7 +345,7 @@ class JT400OperationsOnFile {
         dbManager.registerMetadata(fileMetadata, false)
         val dbFile = dbManager.openFile("VERAPG1L")
 
-        //keys: V£DATA, V£NOME, V£IDOJ
+        // keys: V£DATA, V£NOME, V£IDOJ
         val data = "20200901"
         val nome = "BNUNCA         "
         val idoj = "0002003070"
@@ -449,6 +449,4 @@ class JT400OperationsOnFile {
         dbManager.closeFile("BRARTI0L")
     }
      */
-
 }
-

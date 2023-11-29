@@ -35,8 +35,9 @@ const val TSTTAB_TABLE_NAME = "TSTTAB"
 const val TST2TAB_TABLE_NAME = "TST2TAB"
 const val MUNICIPALITY_TABLE_NAME = "MUNIC0000B"
 const val TEST_LOG = false
-//do not change defaultValue
-//if you want to create sqlconnection against another db use function: dbManagerForTest(testSQLDBType: TestSQLDBType)
+
+// do not change defaultValue
+// if you want to create sqlconnection against another db use function: dbManagerForTest(testSQLDBType: TestSQLDBType)
 private var defaultDbType = TestSQLDBType.DB2_400
 const val DB2_400_HOST = "SRVLAB01.SMEUP.COM"
 const val DB2_400_LIBRARY_NAME = "W_PARFRA"
@@ -46,32 +47,34 @@ const val CONVENTIONAL_INDEX_SUFFIX = "_INDEX"
 enum class TestSQLDBType(
     val connectionConfig: ConnectionConfig,
     val dbaConnectionConfig: ConnectionConfig? = connectionConfig,
-    val createDatabase : (dbaConnection: AS400) -> Unit = {},
-    val destroyDatabase: (dbaConnection: AS400) -> Unit = {}) {
-    DB2_400(ConnectionConfig(
-            fileName= "*",
+    val createDatabase: (dbaConnection: AS400) -> Unit = {},
+    val destroyDatabase: (dbaConnection: AS400) -> Unit = {},
+) {
+    DB2_400(
+        ConnectionConfig(
+            fileName = "*",
             driver = "com.ibm.as400.access.AS400JDBCDriver",
             url = "jdbc:as400://$DB2_400_HOST/$DB2_400_LIBRARY_NAME;",
             user = "USER",
-            password = "*********"),
-        //force no create connection for dba operations
-        dbaConnectionConfig = null
-    )
-
+            password = "*********",
+        ),
+        // force no create connection for dba operations
+        dbaConnectionConfig = null,
+    ),
 }
 
 fun dbManagerForTest() = dbManagerForTest(defaultDbType)
 
-fun dbManagerForTest(testSQLDBType: TestSQLDBType) : JT400DBMManager {
+fun dbManagerForTest(testSQLDBType: TestSQLDBType): JT400DBMManager {
     testLog("Creating SQLDBManager with db type = $testSQLDBType")
 
     val dbManager = JT400DBMManager(testSQLDBType.connectionConfig)
     if (testSQLDBType.dbaConnectionConfig != null) {
-        //JT400DBMMAnager(testSQLDBType.dbaConnectionConfig).connection.use {
+        // JT400DBMMAnager(testSQLDBType.dbaConnectionConfig).connection.use {
         //    testSQLDBType.createDatabase(it)
-        //}
+        // }
     }
-    //dbManager.setSQLLog(TEST_LOG)
+    // dbManager.setSQLLog(TEST_LOG)
     return dbManager
 }
 
@@ -81,117 +84,121 @@ fun destroyDatabase() {
 
 fun destroyDatabase(testSQLDBType: TestSQLDBType) {
     if (testSQLDBType.dbaConnectionConfig != null) {
-        //JT400DBMMAnager(testSQLDBType.dbaConnectionConfig).connection.use {
+        // JT400DBMMAnager(testSQLDBType.dbaConnectionConfig).connection.use {
         //    testSQLDBType.destroyDatabase(it)
-        //}
+        // }
     }
 }
 
 fun createAndPopulateMunicipalityTable(dbManager: JT400DBMManager?) {
-    val fields = listOf(
-        "NAZ"   fieldByType CharacterType(2),
-        "REG"   fieldByType CharacterType(3),
-        "PROV"  fieldByType CharacterType(2),
-        "CITTA" fieldByType VarcharType(35),
-        "CAP"   fieldByType CharacterType(5),
-        "PREF"  fieldByType CharacterType(4),
-        "COMUNE" fieldByType CharacterType(4),
-        "ISTAT" fieldByType CharacterType(6)
-    )
+    val fields =
+        listOf(
+            "NAZ" fieldByType CharacterType(2),
+            "REG" fieldByType CharacterType(3),
+            "PROV" fieldByType CharacterType(2),
+            "CITTA" fieldByType VarcharType(35),
+            "CAP" fieldByType CharacterType(5),
+            "PREF" fieldByType CharacterType(4),
+            "COMUNE" fieldByType CharacterType(4),
+            "ISTAT" fieldByType CharacterType(6),
+        )
 
-    val keys = listOf(
-        "NAZ",
-        "REG",
-        "PROV",
-        "CITTA"
-    )
+    val keys =
+        listOf(
+            "NAZ",
+            "REG",
+            "PROV",
+            "CITTA",
+        )
 
-
-    //createAndPopulateTable( /* ci mette tantissimo >20min, la teniamo fissa già creata */
+    // createAndPopulateTable( /* ci mette tantissimo >20min, la teniamo fissa già creata */
     registerTable(
         dbManager,
         MUNICIPALITY_TABLE_NAME,
         "TSTREC",
         fields,
         keys,
-        "src/test/resources/csv/Municipality.csv"
+        "src/test/resources/csv/Municipality.csv",
     )
-     /**/
+    //
 }
 
 fun createAndPopulateTestTable(dbManager: JT400DBMManager?) {
-    val fields = listOf(
-        "TSTFLDCHR"   fieldByType CharacterType(3),
-        "TSTFLDNBR"   fieldByType DecimalType(5, 2)
-    )
+    val fields =
+        listOf(
+            "TSTFLDCHR" fieldByType CharacterType(3),
+            "TSTFLDNBR" fieldByType DecimalType(5, 2),
+        )
 
-    val keys = listOf(
-        "TSTFLDCHR",
-        "TSTFLDNBR"
-    )
+    val keys =
+        listOf(
+            "TSTFLDCHR",
+            "TSTFLDNBR",
+        )
 
-
-    //createAndPopulateTable( /* ci mette tantissimo >20min, la teniamo fissa già creata */
+    // createAndPopulateTable( /* ci mette tantissimo >20min, la teniamo fissa già creata */
     registerTable(
         dbManager,
         TSTTAB_TABLE_NAME,
         "TSTREC",
         fields,
         keys,
-        "src/test/resources/csv/TstTab.csv"
+        "src/test/resources/csv/TstTab.csv",
     )
-    /**/
+    //
 }
 
 fun createAndPopulateTest2Table(dbManager: JT400DBMManager?) {
-    val fields = listOf(
-        "TSTFLDCHR"   fieldByType CharacterType(3),
-        "TSTFLDNBR"   fieldByType DecimalType(5, 2),
-        "DESTST"   fieldByType CharacterType(10),
-    )
+    val fields =
+        listOf(
+            "TSTFLDCHR" fieldByType CharacterType(3),
+            "TSTFLDNBR" fieldByType DecimalType(5, 2),
+            "DESTST" fieldByType CharacterType(10),
+        )
 
-    val keys = listOf(
-        "TSTFLDCHR",
-        "TSTFLDNBR"
-    )
+    val keys =
+        listOf(
+            "TSTFLDCHR",
+            "TSTFLDNBR",
+        )
 
-
-    //createAndPopulateTable( /* ci mette tantissimo >20min, la teniamo fissa già creata */
+    // createAndPopulateTable( /* ci mette tantissimo >20min, la teniamo fissa già creata */
     registerTable(
         dbManager,
         TST2TAB_TABLE_NAME,
         "TSTREC",
         fields,
         keys,
-        "src/test/resources/csv/TstTab.csv"
+        "src/test/resources/csv/TstTab.csv",
     )
-    /**/
+    //
 }
 
 fun createAndPopulateEmployeeTable(dbManager: JT400DBMManager?) {
-    val fields = listOf(
-        "EMPNO"   fieldByType CharacterType(6),
-        "FIRSTNME"   fieldByType CharacterType(20),
-        "MIDINIT"   fieldByType CharacterType(1),
-        "LASTNAME"   fieldByType CharacterType(20),
-        "WORKDEPT"   fieldByType CharacterType(3),
-    )
+    val fields =
+        listOf(
+            "EMPNO" fieldByType CharacterType(6),
+            "FIRSTNME" fieldByType CharacterType(20),
+            "MIDINIT" fieldByType CharacterType(1),
+            "LASTNAME" fieldByType CharacterType(20),
+            "WORKDEPT" fieldByType CharacterType(3),
+        )
 
-    val keys = listOf(
-        "EMPNO"
-    )
+    val keys =
+        listOf(
+            "EMPNO",
+        )
 
-
-    //createAndPopulateTable( /* ci mette tantissimo >20min, la teniamo fissa già creata */
+    // createAndPopulateTable( /* ci mette tantissimo >20min, la teniamo fissa già creata */
     registerTable(
         dbManager,
         EMPLOYEE_TABLE_NAME,
         "TSTREC",
         fields,
         keys,
-        "src/test/resources/csv/Employee.csv"
+        "src/test/resources/csv/Employee.csv",
     )
-    /**/
+    //
 }
 
 fun getEmployeeName(record: Record): String {
@@ -214,7 +221,7 @@ private fun registerTable(
     formatName: String,
     fields: List<TypedField>,
     keys: List<String>,
-    dataFilePath: String
+    dataFilePath: String,
 ) {
     val metadata = TypedMetadata(tableName, formatName, fields, keys).fileMetadata()
     dbManager!!.registerMetadata(metadata, true)
@@ -261,7 +268,7 @@ fun buildMunicipalityKey(vararg values: String): List<String> {
     val recordFields = mutableListOf<String>()
     val keys = arrayOf("NAZ", "REG", "PROV", "CITTA")
     for ((index, value) in values.withIndex()) {
-        if (keys.size> index) {
+        if (keys.size > index) {
             recordFields.add(value)
         }
     }
@@ -290,5 +297,3 @@ fun connectJDBC() : Connection {
     return DriverManager.getConnection(connectionConfig.url, connectionConfig.user, connectionConfig.password)
 }
  */
-
-
