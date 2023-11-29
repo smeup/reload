@@ -23,5 +23,5 @@ enum class Comparison(val symbol: String) {
     GT(">"),
     GE(">="),
     LT("<"),
-    LE("<="),
+    LE("<=");
 }

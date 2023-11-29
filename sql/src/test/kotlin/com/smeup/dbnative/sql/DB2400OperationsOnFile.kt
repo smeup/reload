@@ -31,9 +31,11 @@ import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-// @Ignore
+//@Ignore
 class DB2400OperationsOnFile {
+
     companion object {
+
         private var dbManager: SQLDBMManager? = null
 
         @BeforeClass
@@ -47,7 +49,7 @@ class DB2400OperationsOnFile {
         }
     }
 
-    // Ignored fields in metadata not necessary
+    //Ignored fields in metadata not necessary
     @Ignore
     @Test
     fun open() {
@@ -201,7 +203,7 @@ class DB2400OperationsOnFile {
         var chainResult = dbFile.chain(key)
         assertEquals(0, chainResult.record.size)
 
-        // Set field values and write record
+        //Set field values and write record
         chainResult.record["A§ARTI"] = key
         chainResult.record["A§DEAR"] = "Kotlin DBNativeAccess Write        "
         chainResult.record["A§TIAR"] = "ART  "
@@ -209,17 +211,17 @@ class DB2400OperationsOnFile {
 
         dbFile.write(chainResult.record)
 
-        // Must exists correct write
+        //Must exists correct write
         chainResult = dbFile.chain(key)
         assertEquals(key, chainResult.record["A§ARTI"])
         assertEquals("ART  ", chainResult.record["A§TIAR"])
         assertEquals("Kotlin DBNativeAccess Write        ", chainResult.record["A§DEAR"])
         assertEquals("0  ", chainResult.record["A§TPAR"])
 
-        // Delete record
+        //Delete record
         dbFile.delete(chainResult.record)
 
-        // Check delete success
+        //Check delete success
         chainResult = dbFile.chain(key)
         assertEquals(0, chainResult.record.size)
 
@@ -229,7 +231,7 @@ class DB2400OperationsOnFile {
     // Ignore, fields in metadata non necessary
     @Ignore
     @Test
-    fun multipleUpdateOnReadE() {
+    fun multipleUpdateOnReadE(){
         // TEST FLOW
         // Step1: write 100 records with "currentTimeMillis" as unique key
         // Step2: read above written records and update A§DEA2 field
@@ -244,7 +246,7 @@ class DB2400OperationsOnFile {
 
         // Create list of items to write into A§ARTI field
         val items = mutableListOf<String>()
-        repeat(numberOfRecordsToHandle) {
+        repeat(numberOfRecordsToHandle){
             items.add(System.currentTimeMillis().toString() + "  ")
             Thread.sleep(5)
         }
@@ -255,21 +257,19 @@ class DB2400OperationsOnFile {
         val dea2Key = "Kotlin DBNativeAccess TEST-UPDATED "
 
         // WRITE
-        repeat(numberOfRecordsToHandle) {
+        repeat(numberOfRecordsToHandle){
             var record = Record()
-            repeat(fieldsNumber) { index ->
+            repeat(fieldsNumber){ index ->
                 var name: String = dbFile.fileMetadata.fields[index].name
                 print(tMetadata.getField(name)?.type)
-                var value =
-                    when (name) {
-                        "A§ARTI" -> items[it]
-                        "A§DEAR" -> dearKey
-                        else ->
-                            when (tMetadata.getField(name)?.type) {
-                                is DecimalType -> "0"
-                                else -> ""
-                            }
+                var value = when(name){
+                    "A§ARTI" -> items[it]
+                    "A§DEAR" -> dearKey
+                    else -> when(tMetadata.getField(name)?.type){
+                        is DecimalType -> "0"
+                        else -> ""
                     }
+                }
 
                 var recordField: RecordField = RecordField(name, value)
                 record.add(recordField)
@@ -303,9 +303,10 @@ class DB2400OperationsOnFile {
         repeat(numberOfRecordsToHandle) {
             var readEResult = dbFile.readEqual(dearKey)
             assertEquals(dea2Key, readEResult.record["A§DEA2"])
-            // Delete record
+            //Delete record
             dbFile.delete(readEResult.record)
         }
+
     }
 
     @Test
@@ -351,7 +352,7 @@ class DB2400OperationsOnFile {
         dbManager!!.registerMetadata(fileMetadata, false)
         var dbFile = dbManager!!.openFile("VERAPG1L")
 
-        // keys: V£DATA, V£NOME, V£IDOJ
+        //keys: V£DATA, V£NOME, V£IDOJ
         val data = "20200901"
         val nome = "BNUNCA         "
         val idoj = "0002003070"
@@ -377,7 +378,7 @@ class DB2400OperationsOnFile {
     }
 
     @Test
-    fun resultSetCursorMovements() {
+    fun resultSetCursorMovements(){
         val fileMetadata = PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", "BRARTI0L")
         dbManager!!.registerMetadata(fileMetadata, false)
         var dbFile = dbManager!!.openFile("BRARTI0L")
@@ -401,7 +402,7 @@ class DB2400OperationsOnFile {
     }
 
     @Test
-    fun resultSetCursorUpdate() {
+    fun resultSetCursorUpdate(){
         val fileMetadata = PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", "BRARTI0L")
         dbManager!!.registerMetadata(fileMetadata, false)
         var dbFile = dbManager!!.openFile("BRARTI0L")
@@ -438,4 +439,6 @@ class DB2400OperationsOnFile {
 
         dbManager!!.closeFile("BRARTI0L")
     }
+
 }
+

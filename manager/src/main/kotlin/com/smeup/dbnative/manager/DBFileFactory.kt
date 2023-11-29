@@ -40,9 +40,10 @@ import com.smeup.dbnative.model.FileMetadata
  * */
 class DBFileFactory(
     private val config: DBNativeAccessConfig,
-    private val fileNameNormalizer: (String) -> String = { it },
+    private val fileNameNormalizer: (String) -> String = {it}
 ) : AutoCloseable {
-    private val managers = mutableMapOf<ConnectionConfig, DBMManager>()
+
+    private val managers = mutableMapOf<ConnectionConfig, DBMManager> ()
 
     /**
      * Open the file named fileName. A file can only be opened after registration of its metadata.
@@ -53,13 +54,10 @@ class DBFileFactory(
      * @param fileName file to open
      * @param fileMetadata metadata to register. If passed, file metadata is registered before file opening
      * */
-    fun open(
-        fileName: String,
-        fileMetadata: FileMetadata?,
-    ): DBFile {
+    fun open(fileName: String, fileMetadata: FileMetadata?) : DBFile {
         val fileNameNormalized = fileNameNormalizer(fileName)
         val configMatch = findConnectionConfigFor(fileNameNormalized, config.connectionsConfig)
-        val dbmManager = managers.getOrPut(configMatch) { createDBManager(configMatch, config.logger).apply { validateConfig() } }
+        val dbmManager = managers.getOrPut(configMatch) {createDBManager(configMatch, config.logger).apply { validateConfig() }}
 
         if (fileMetadata != null) {
             dbmManager.registerMetadata(fileMetadata, true)
@@ -89,7 +87,7 @@ class DBFileFactory(
     }
 
     override fun close() {
-        managers.values.forEach { it.close() }
+        managers.values.forEach {it.close()}
     }
 }
 
@@ -98,42 +96,34 @@ class DBFileFactory(
  * @param fileName file name
  * @param connectionsConfig ConnectionConfig entries
  * */
-fun findConnectionConfigFor(
-    fileName: String,
-    connectionsConfig: List<ConnectionConfig>,
-): ConnectionConfig {
-    val configList =
-        connectionsConfig.filter {
-            it.fileName.toUpperCase() == fileName.toUpperCase() || it.fileName == "*" ||
+fun findConnectionConfigFor(fileName: String, connectionsConfig: List<ConnectionConfig>) : ConnectionConfig {
+    val configList = connectionsConfig.filter {
+        it.fileName.toUpperCase() == fileName.toUpperCase() || it.fileName == "*" ||
                 fileName.toUpperCase().matches(Regex(it.fileName.toUpperCase().replace("*", ".*")))
-        }
+    }
     require(configList.isNotEmpty()) {
         "Wrong configuration. Not found a ConnectionConfig entry matching name: $fileName"
     }
-    // At the top of the list we have ConnectionConfig whose property file does not have wildcards
+    //At the top of the list we have ConnectionConfig whose property file does not have wildcards
     return configList.sortedWith(DBFileFactory.COMPARATOR)[0]
 }
 
-private fun createDBManager(
-    config: ConnectionConfig,
-    logger: Logger? = null,
-): DBMManager {
+private fun createDBManager(config: ConnectionConfig, logger: Logger? = null): DBMManager {
     val impl = getImplByUrl(config)
 
-    val clazz: Class<DBMManager>? = Class.forName(impl) as Class<DBMManager>?
+    val clazz :Class<DBMManager>? = Class.forName(impl) as Class<DBMManager>?
 
     return clazz?.let {
         val constructor = it.getConstructor(ConnectionConfig::class.java)
         val dbmManager = constructor.newInstance(config)
-        if (dbmManager is DBManagerBaseImpl)
-            {
-                dbmManager.logger = logger
-            }
+        if(dbmManager is DBManagerBaseImpl){
+            dbmManager.logger = logger
+        }
         return dbmManager
     }!!
 }
 
-private fun getImplByUrl(config: ConnectionConfig): String {
+private fun getImplByUrl(config: ConnectionConfig) : String {
     return when {
         config.impl != null && config.impl!!.trim().isEmpty() -> config.impl!!
         config.url.startsWith("jdbc:") -> "com.smeup.dbnative.sql.SQLDBMManager"
@@ -143,12 +133,10 @@ private fun getImplByUrl(config: ConnectionConfig): String {
     }
 }
 
-// ConnectionConfig.file with wildcards at the bottom
+//ConnectionConfig.file with wildcards at the bottom
 class ConnectionConfigComparator : Comparator<ConnectionConfig> {
-    override fun compare(
-        o1: ConnectionConfig?,
-        o2: ConnectionConfig?,
-    ): Int {
+
+    override fun compare(o1: ConnectionConfig?, o2: ConnectionConfig?): Int {
         require(o1 != null)
         require(o2 != null)
         return when {

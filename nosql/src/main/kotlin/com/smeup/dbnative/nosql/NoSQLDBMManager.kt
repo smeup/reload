@@ -17,11 +17,14 @@
 
 package com.smeup.dbnative.nosql
 
+import com.mongodb.BasicDBObject
 import com.mongodb.MongoClient
+import com.mongodb.client.MongoCollection
 import com.mongodb.client.MongoDatabase
 import com.smeup.dbnative.ConnectionConfig
 import com.smeup.dbnative.DBManagerBaseImpl
 import com.smeup.dbnative.file.DBFile
+import org.bson.Document
 
 /**
  *  Assign table:
@@ -31,23 +34,24 @@ import com.smeup.dbnative.file.DBFile
  *  Record --> Object in collection
  */
 
-class NoSQLDBMManager(override val connectionConfig: ConnectionConfig) : DBManagerBaseImpl() {
+class NoSQLDBMManager (override val connectionConfig: ConnectionConfig) : DBManagerBaseImpl() {
+
     private val match = Regex("mongodb://((?:\\w|\\.)+):(\\d+)/(\\w+)").find(connectionConfig.url)
-    private val host: String by lazy {
+    private val host : String by lazy {
         match!!.destructured.component1()
     }
-    private val port: Int by lazy {
+    private val port : Int by lazy {
         match!!.destructured.component2().toInt()
     }
-    private val dataBase: String by lazy {
+    private val dataBase : String by lazy {
         match!!.destructured.component3()
     }
 
-    private val mongoClient: MongoClient by lazy {
+    private val mongoClient : MongoClient by lazy {
         MongoClient(host, port)
     }
 
-    val mongoDatabase: MongoDatabase by lazy {
+    val mongoDatabase : MongoDatabase by lazy {
         mongoClient.getDatabase(dataBase)
     }
 
@@ -60,12 +64,13 @@ class NoSQLDBMManager(override val connectionConfig: ConnectionConfig) : DBManag
     }
 
     override fun close() {
-        openedFile.values.forEach { it.close() }
+        openedFile.values.forEach { it.close()}
         openedFile.clear()
         mongoClient.close()
     }
 
     override fun openFile(name: String): DBFile {
+
         require(existFile(name)) {
             "Cannot open unregistered file $name"
         }

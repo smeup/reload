@@ -28,6 +28,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class JT400Chain1KeyTest {
+
     private lateinit var dbManager: JT400DBMManager
 
     @Before
@@ -59,4 +60,6 @@ class JT400Chain1KeyTest {
         assertTrue(dbFile.chain("XYZ").record.isEmpty())
         dbManager.closeFile(TSTTAB_TABLE_NAME)
     }
+
 }
+

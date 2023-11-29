@@ -29,6 +29,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class NoSQLMunicipalityTest {
+
     private lateinit var dbManager: NoSQLDBMManager
 
     @Before
@@ -73,11 +74,11 @@ class NoSQLMunicipalityTest {
         assertTrue(dbFile.setll(buildMunicipalityKey("IT", "LOM", "BS", "ERBUSCO")))
         assertEquals(
             "EDOLO",
-            getMunicipalityName(dbFile.readPreviousEqual(buildMunicipalityKey("IT", "LOM", "BS")).record),
+            getMunicipalityName(dbFile.readPreviousEqual(buildMunicipalityKey("IT", "LOM", "BS")).record)
         )
         assertEquals(
             "DESENZANO DEL GARDA",
-            getMunicipalityName(dbFile.readPreviousEqual(buildMunicipalityKey("IT", "LOM", "BS")).record),
+            getMunicipalityName(dbFile.readPreviousEqual(buildMunicipalityKey("IT", "LOM", "BS")).record)
         )
         dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
@@ -90,6 +91,7 @@ class NoSQLMunicipalityTest {
         assertEquals("DESENZANO DEL GARDA", getMunicipalityName(dbFile.readPrevious().record))
         dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
+
 
     @Test
     fun t04_findLastOfBergamoWithSetll4AndReadPE2() {
@@ -400,16 +402,20 @@ class NoSQLMunicipalityTest {
 
     @After
     fun destroyEnv() {
+
     }
+
 
     private fun buildMunicipalityKey(vararg values: String): List<String> {
         val keyValues = mutableListOf<String>()
         val keys = arrayOf("£NAZ", "§REG", "PROV", "CITTA")
         for ((index, value) in values.withIndex()) {
-            if (keys.size > index) {
+            if (keys.size> index) {
                 keyValues.add(value)
             }
         }
         return keyValues
     }
+
 }
+

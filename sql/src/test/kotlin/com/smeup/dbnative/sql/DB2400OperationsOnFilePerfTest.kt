@@ -22,18 +22,21 @@ import com.smeup.dbnative.file.Record
 import com.smeup.dbnative.file.RecordField
 import com.smeup.dbnative.metadata.file.PropertiesSerializer
 import com.smeup.dbnative.sql.utils.*
+import org.junit.AfterClass
+import org.junit.BeforeClass
 import org.junit.Ignore
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertTrue
+
 
 class DB2400OperationsOnFilePerfTest {
+
+
     private var dbManager: SQLDBMManager? = null
 
-    fun initDbManager(
-        host: String = DB2_400_HOST,
-        library: String = DB2_400_LIBRARY_NAME,
-    ) {
+    fun initDbManager(host: String = DB2_400_HOST, library: String = DB2_400_LIBRARY_NAME) {
         dbManager = dbManagerDB2400ForTest(host, library)
     }
 
@@ -45,15 +48,12 @@ class DB2400OperationsOnFilePerfTest {
                 PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", "VERAPG0L")
             it!!.registerMetadata(fileMetadata, false)
             val dbFile = it!!.openFile("VERAPG0L")
-            for (i in 1..10) {
-                var record =
-                    Record(
-                        RecordField("V£IDOJ", "A3L00000X1"),
-                        RecordField("V£DATA", "20210117"),
-                        RecordField("V£NOME", "BUSFIO2        "),
-                        RecordField("V£CDC", "SMEGL.001      "),
-                        RecordField("V£COD1", "ERB            "),
-                    )
+            for(i in 1..10) {
+                var record = Record(RecordField("V£IDOJ", "A3L00000X1"),
+                    RecordField("V£DATA", "20210117"),
+                    RecordField("V£NOME", "BUSFIO2        "),
+                    RecordField("V£CDC", "SMEGL.001      "),
+                    RecordField("V£COD1", "ERB            "))
                 dbFile.write(record)
                 record = dbFile.chain(arrayListOf("A3L00000X1")).record
                 if (!dbFile.eof()) {
@@ -93,14 +93,11 @@ class DB2400OperationsOnFilePerfTest {
 
             var record = dbFile.chain(arrayListOf("A3L0000001")).record
             if (dbFile.eof()) {
-                record =
-                    Record(
-                        RecordField("V£IDOJ", "A3L0000001"),
-                        RecordField("V£DATA", "20210117"),
-                        RecordField("V£NOME", "BUSFIO         "),
-                        RecordField("V£CDC", "SMEGL.001      "),
-                        RecordField("V£COD1", "ERB            "),
-                    )
+                record = Record(RecordField("V£IDOJ", "A3L0000001"),
+                    RecordField("V£DATA", "20210117"),
+                    RecordField("V£NOME", "BUSFIO         "),
+                    RecordField("V£CDC", "SMEGL.001      "),
+                    RecordField("V£COD1", "ERB            "))
                 dbFile.write(record)
                 record = dbFile.chain(arrayListOf("A3L0000001")).record
                 assertFalse { dbFile.eof() }
@@ -113,6 +110,7 @@ class DB2400OperationsOnFilePerfTest {
             record = dbFile.chain(arrayListOf("A3L0000001")).record
             assertEquals(record["V£ATV0"], "2")
             dbFile.delete(record)
+
         }
     }
 
@@ -157,11 +155,11 @@ class DB2400OperationsOnFilePerfTest {
         }
     }
 
-    private fun doChain(
-        keys: List<String>,
-        dbFile: DBFile,
-    ) {
+    private fun doChain(keys: List<String>, dbFile: DBFile){
         val chainResult = dbFile.chain(keys)
         assertEquals(keys[0], chainResult.record["A§ARTI"]?.trim())
     }
+
+
 }
+
