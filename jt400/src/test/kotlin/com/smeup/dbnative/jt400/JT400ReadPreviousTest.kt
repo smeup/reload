@@ -80,6 +80,4 @@ class JT400ReadPreviousTest {
         assertEquals("SALLY KWAN", getEmployeeName(dbFile.read().record))
         dbManager.closeFile(EMPLOYEE_TABLE_NAME)
     }
-
-
 }

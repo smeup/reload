@@ -17,7 +17,6 @@
 
 package com.smeup.dbnative.sql
 
-
 import com.smeup.dbnative.file.DBFile
 import com.smeup.dbnative.file.Record
 import com.smeup.dbnative.file.RecordField
@@ -31,15 +30,18 @@ import java.sql.PreparedStatement
 import java.sql.ResultSet
 import kotlin.system.measureTimeMillis
 
-class SQLDBFileNoPerf(override var name: String,
-                      override var fileMetadata: FileMetadata,
-                      var connection: Connection,
-                      override var logger: Logger? = null) : DBFile {
+class SQLDBFileNoPerf(
+    override var name: String,
+    override var fileMetadata: FileMetadata,
+    var connection: Connection,
+    override var logger: Logger? = null,
+) : DBFile {
 
     constructor(
         name: String,
         fileMetadata: FileMetadata,
-        connection: Connection): this(name, fileMetadata, connection, null)
+        connection: Connection,
+    ) : this(name, fileMetadata, connection, null)
 
     private var resultSet: ResultSet? = null
     private var movingForward = true
@@ -48,14 +50,12 @@ class SQLDBFileNoPerf(override var name: String,
     private var actualRecordToPop: Record? = null
     private var eof: Boolean = false
     private var lastOperationSet: Boolean = false
-    private var lastNativeMethod: NativeMethod? = null;
-
-
+    private var lastNativeMethod: NativeMethod? = null
 
     private val thisFileKeys: List<String> by lazy {
         // TODO: think about a right way (local file maybe?) to retrieve keylist
         var indexes = this.fileMetadata.fileKeys
-        if(indexes.isEmpty()){
+        if (indexes.isEmpty()) {
             indexes = connection.primaryKeys(fileMetadata.name)
         }
         if (indexes.isEmpty()) connection.orderingFields(fileMetadata.name) else indexes
@@ -82,7 +82,7 @@ class SQLDBFileNoPerf(override var name: String,
 
             checkAndStoreLastKeys(keyAsRecordField)
             movingForward = true
-            point = point(keyAsRecordField);
+            point = point(keyAsRecordField)
         }.apply {
             logEvent(LoggingKey.native_access_method, "setll executed", this)
         }
@@ -91,7 +91,6 @@ class SQLDBFileNoPerf(override var name: String,
     }
 
     override fun setgt(key: String): Boolean {
-
         return setgt(mutableListOf(key))
     }
 
@@ -151,7 +150,6 @@ class SQLDBFileNoPerf(override var name: String,
         measureTimeMillis {
             lastOperationSet = false
 
-
             if (resultSet == null) {
                 pointAtUpperLL()
             }
@@ -197,8 +195,6 @@ class SQLDBFileNoPerf(override var name: String,
     }
 
     override fun readEqual(key: String): Result {
-
-
         return readEqual(mutableListOf(key))
     }
 
@@ -231,7 +227,6 @@ class SQLDBFileNoPerf(override var name: String,
     }
 
     override fun readPreviousEqual(): Result {
-
         val lastKeysAsList = lastKeys.map {
             it.value
         }
@@ -245,7 +240,7 @@ class SQLDBFileNoPerf(override var name: String,
 
     override fun readPreviousEqual(keys: List<String>): Result {
         lastNativeMethod = NativeMethod.readPreviousEqual
-        logEvent(LoggingKey.native_access_method, "Executing readPreviousEqual on keys ${keys}")
+        logEvent(LoggingKey.native_access_method, "Executing readPreviousEqual on keys $keys")
         val read: Result
         measureTimeMillis {
             lastOperationSet = false
@@ -276,7 +271,7 @@ class SQLDBFileNoPerf(override var name: String,
 
     override fun write(record: Record): Result {
         lastNativeMethod = NativeMethod.write
-        logEvent(LoggingKey.native_access_method, "Executing write for record ${record}")
+        logEvent(LoggingKey.native_access_method, "Executing write for record $record")
         lastOperationSet = false
         measureTimeMillis {
             // TODO: manage errors
@@ -294,7 +289,7 @@ class SQLDBFileNoPerf(override var name: String,
 
     override fun update(record: Record): Result {
         lastNativeMethod = NativeMethod.update
-        logEvent(LoggingKey.native_access_method, "Executing update for record ${record}")
+        logEvent(LoggingKey.native_access_method, "Executing update for record $record")
         lastOperationSet = false
         measureTimeMillis {
             // record before update is "actualRecord"
@@ -302,12 +297,12 @@ class SQLDBFileNoPerf(override var name: String,
             var atLeastOneFieldChanged = false
             actualRecord?.forEach {
                 var fieldValue = record.getValue(it.key)
-                if(fieldValue != it.value){
+                if (fieldValue != it.value) {
                     atLeastOneFieldChanged = true
                     this.getResultSet()?.updateObject(it.key, fieldValue)
                 }
             }
-            if(atLeastOneFieldChanged){
+            if (atLeastOneFieldChanged) {
                 this.getResultSet()?.updateRow()
             }
         }.apply {
@@ -319,7 +314,7 @@ class SQLDBFileNoPerf(override var name: String,
 
     override fun delete(record: Record): Result {
         lastNativeMethod = NativeMethod.delete
-        logEvent(LoggingKey.native_access_method, "Executing delete for record ${record}")
+        logEvent(LoggingKey.native_access_method, "Executing delete for record $record")
         lastOperationSet = false
         measureTimeMillis {
             this.getResultSet()?.deleteRow()
@@ -329,7 +324,6 @@ class SQLDBFileNoPerf(override var name: String,
         lastNativeMethod = null
         return Result(record)
     }
-
 
     private fun executeQuery(sql: String, values: List<String>) {
         resultSet.closeIfOpen()
@@ -410,7 +404,7 @@ class SQLDBFileNoPerf(override var name: String,
     }
 
     private fun readFromResultSetFilteringBy(keys: List<RecordField>): Result {
-        logEvent(LoggingKey.search_data, "Searching record for keys: ${keys}")
+        logEvent(LoggingKey.search_data, "Searching record for keys: $keys")
         var result: Result
         var counter = 0
         measureTimeMillis {
@@ -419,7 +413,7 @@ class SQLDBFileNoPerf(override var name: String,
                 counter++
             } while (!result.record.matches(keys) && resultSet.hasRecords() && !eof())
         }.apply {
-            logEvent(LoggingKey.search_data, "Search stops after $counter ResultSet iterations. Is eof: ${eof()}. Current row number is ${resultSet?.row?:" undefined"}}", this)
+            logEvent(LoggingKey.search_data, "Search stops after $counter ResultSet iterations. Is eof: ${eof()}. Current row number is ${resultSet?.row ?: " undefined"}}", this)
         }
         return result
     }
@@ -430,7 +424,6 @@ class SQLDBFileNoPerf(override var name: String,
     }
 
     override fun eof(): Boolean = resultSet?.isAfterLast ?: true
-
 
     override fun equal(): Boolean {
         lastNativeMethod = NativeMethod.equal

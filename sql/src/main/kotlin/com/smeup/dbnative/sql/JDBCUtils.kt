@@ -40,7 +40,8 @@ fun ResultSet.joinToString(separator: String = " - "): String {
 
 fun PreparedStatement.bind(values: List<Any>) {
     values.forEachIndexed {
-        i, value -> this.setObject(i + 1, value)
+            i, value ->
+        this.setObject(i + 1, value)
     }
 }
 
@@ -56,7 +57,7 @@ fun Connection.recordFormatName(tableName: String): String? =
     }
 
 private fun ResultSet.indexId() = "${this.getString("TABLE_CAT")}." +
-        "${this.getString("TABLE_SCHEM")}.${this.getString("INDEX_NAME")}"
+    "${this.getString("TABLE_SCHEM")}.${this.getString("INDEX_NAME")}"
 
 private fun ResultSet.isUnique() = this.getInt("NON_UNIQUE") == 0
 
@@ -78,8 +79,7 @@ fun Connection.primaryKeys(tableName: String): List<String> {
                 }
                 if (it.indexId() != indexId) {
                     break
-                }
-                else {
+                } else {
                     result.add(it.getString("COLUMN_NAME"))
                 }
             }
@@ -98,7 +98,7 @@ fun Connection.orderingFields(tableName: String): List<String> {
             if (it.next()) {
                 // TODO handle DESC and ASC keywords
                 val fields = it.getString(field).toUpperCase().substringAfter("ORDER BY").split(",")
-                result.addAll(fields.map { fl: String -> fl.substring(fl.lastIndexOf('.') + 1).trim('`', ' ')  })
+                result.addAll(fields.map { fl: String -> fl.substring(fl.lastIndexOf('.') + 1).trim('`', ' ') })
             }
         }
     }
@@ -136,6 +136,3 @@ fun ResultSet?.currentRecordToValues(): Record {
     }
     return result
 }
-
-
-

@@ -23,7 +23,7 @@ import com.smeup.dbnative.model.FileMetadata
 /**
  * DBFile is an abstraction of table or view (in sql database) or document (in nosql database).
  * */
-interface DBFile: AutoCloseable {
+interface DBFile : AutoCloseable {
     var name: String
     var fileMetadata: FileMetadata
     var logger: Logger?
@@ -37,7 +37,6 @@ interface DBFile: AutoCloseable {
     fun setll(keys: List<String>): Boolean
     fun setgt(key: String): Boolean
     fun setgt(keys: List<String>): Boolean
-
 
     // Read functions
     fun chain(key: String): Result

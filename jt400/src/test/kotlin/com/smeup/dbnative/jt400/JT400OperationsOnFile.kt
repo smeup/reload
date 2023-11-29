@@ -220,7 +220,7 @@ class JT400OperationsOnFile {
     }
 
     @Test
-    fun multipleUpdateOnReadE(){
+    fun multipleUpdateOnReadE() {
         // TEST FLOW
         // Step1: write 100 records with "currentTimeMillis" as unique key
         // Step2: read above written records and update A§DEA2 field
@@ -235,7 +235,7 @@ class JT400OperationsOnFile {
 
         // Create list of items to write into A§ARTI field
         val items = mutableListOf<String>()
-        repeat(numberOfRecordsToHandle){
+        repeat(numberOfRecordsToHandle) {
             items.add(System.currentTimeMillis().toString() + "  ")
             Thread.sleep(5)
         }
@@ -246,15 +246,15 @@ class JT400OperationsOnFile {
         val dea2Key = "Kotlin DBNativeAccess TEST-UPDATED "
 
         // WRITE
-        repeat(numberOfRecordsToHandle){
+        repeat(numberOfRecordsToHandle) {
             val record = Record()
-            repeat(fieldsNumber){ index ->
+            repeat(fieldsNumber) { index ->
                 val name: String = dbFile.fileMetadata.fields[index].name
                 //print(dbFile.fileMetadata.getField(name)?.type)
-                val value = when(name){
+                val value = when (name) {
                     "A§ARTI" -> items[it]
                     "A§DEAR" -> dearKey
-                    else -> when(tMetadata.getField(name)?.type){
+                    else -> when (tMetadata.getField(name)?.type) {
                         is DecimalType -> "0"
                         else -> ""
                     }
@@ -299,7 +299,6 @@ class JT400OperationsOnFile {
             //Delete record
             dbFile.delete(readEResult.record)
         }
-
     }
 
     @Test
@@ -449,6 +448,4 @@ class JT400OperationsOnFile {
         dbManager.closeFile("BRARTI0L")
     }
      */
-
 }
-

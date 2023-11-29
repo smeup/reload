@@ -35,10 +35,12 @@ import com.smeup.dbnative.utils.matchFileKeys
 import org.bson.Document
 import kotlin.system.measureTimeMillis
 
-class NoSQLDBFile(override var name: String,
-                  override var fileMetadata: FileMetadata,
-                  private val database: MongoDatabase,
-                  override var logger: Logger? = null): DBFile {
+class NoSQLDBFile(
+    override var name: String,
+    override var fileMetadata: FileMetadata,
+    private val database: MongoDatabase,
+    override var logger: Logger? = null,
+) : DBFile {
 
     private var globalCursor: MongoCursor<Document>? = null
     private var up_direction: Boolean = true
@@ -67,7 +69,6 @@ class NoSQLDBFile(override var name: String,
         }
     }
 
-
     override fun setll(key: String): Boolean {
         return setll(mutableListOf(key))
     }
@@ -93,7 +94,6 @@ class NoSQLDBFile(override var name: String,
             if (fileMetadata.matchFileKeys(keyAsRecordField) == false) {
                 return false
             }
-
 
             /*
             Find syntax
@@ -233,7 +233,6 @@ class NoSQLDBFile(override var name: String,
             }
             */
 
-
             /*
             Sort sintax:
 
@@ -273,14 +272,13 @@ class NoSQLDBFile(override var name: String,
             last_set_keys = keyAsRecordField
             IncludeFirst = false
         }.apply {
-          logEvent(LoggingKey.native_access_method, "setgt executed", this)
+            logEvent(LoggingKey.native_access_method, "setgt executed", this)
         }
         lastNativeMethod = null
         return result
     }
 
     override fun chain(key: String): Result {
-
         return chain(mutableListOf(key))
     }
 
@@ -300,10 +298,8 @@ class NoSQLDBFile(override var name: String,
             Passed keys are not primary key for DBFile
              */
             if (fileMetadata.matchFileKeys(keyAsRecordField) == false) {
-                result =  Result(record = Record(), indicatorLO = true)
-            }
-            else {
-
+                result = Result(record = Record(), indicatorLO = true)
+            } else {
                 val cursor = calculateCursor(keyAsRecordField, true, true)
 
                 globalCursor = cursor.iterator()
@@ -312,16 +308,16 @@ class NoSQLDBFile(override var name: String,
 
                 //when globalCursor is empty return result empty
                 val document = globalCursor!!.tryNext()
-                if(document == null){
-                    result =  Result(Record())
-                }
-                else
-                if (matchKeys(document, keyAsRecordField)) {
-                    val record = documentToRecord(document)
-                    updateLastKeys(record)
-                    result = Result(record)
-                } else {
+                if (document == null) {
                     result = Result(Record())
+                } else {
+                    if (matchKeys(document, keyAsRecordField)) {
+                        val record = documentToRecord(document)
+                        updateLastKeys(record)
+                        result = Result(record)
+                    } else {
+                        result = Result(Record())
+                    }
                 }
             }
         }.apply {
@@ -341,7 +337,7 @@ class NoSQLDBFile(override var name: String,
             if (globalCursor == null) {
                 return Result(
                     indicatorLO = true,
-                    errorMsg = "Cursor not defined. Call SETLL or SETGT before invoke READ command"
+                    errorMsg = "Cursor not defined. Call SETLL or SETGT before invoke READ command",
                 )
             }
 
@@ -356,7 +352,6 @@ class NoSQLDBFile(override var name: String,
             IncludeFirst = true
 
             if (globalCursor != null) {
-
                 if (globalCursor!!.hasNext()) {
                     val record = documentToRecord(globalCursor!!.next())
                     if (globalCursor!!.hasNext()) {
@@ -426,7 +421,6 @@ class NoSQLDBFile(override var name: String,
 
             while (true) {
                 if (globalCursor!!.hasNext()) {
-
                     val document = globalCursor!!.next()
                     val record = documentToRecord(document)
 
@@ -457,7 +451,7 @@ class NoSQLDBFile(override var name: String,
             if (globalCursor == null) {
                 return Result(
                     indicatorLO = true,
-                    errorMsg = "Cursor not defined. Call SETLL or SETGT before invoke READ command"
+                    errorMsg = "Cursor not defined. Call SETLL or SETGT before invoke READ command",
                 )
             }
 
@@ -472,7 +466,6 @@ class NoSQLDBFile(override var name: String,
             IncludeFirst = true
 
             if (globalCursor != null) {
-
                 if (globalCursor!!.hasNext()) {
                     val record = documentToRecord(globalCursor!!.next())
                     if (globalCursor!!.hasNext()) {
@@ -514,7 +507,7 @@ class NoSQLDBFile(override var name: String,
             if (globalCursor == null) {
                 return Result(
                     indicatorLO = true,
-                    errorMsg = "Cursor not defined. Call SETLL or SETGT before invoke READ command"
+                    errorMsg = "Cursor not defined. Call SETLL or SETGT before invoke READ command",
                 )
             }
 
@@ -536,10 +529,8 @@ class NoSQLDBFile(override var name: String,
 
             IncludeFirst = true
 
-
             while (true) {
                 if (globalCursor!!.hasNext()) {
-
                     val document = globalCursor!!.next()
                     val record = documentToRecord(document)
 
@@ -562,7 +553,6 @@ class NoSQLDBFile(override var name: String,
         }
         lastNativeMethod = null
     }
-
 
     override fun write(record: Record): Result {
         lastNativeMethod = NativeMethod.write
@@ -592,7 +582,6 @@ class NoSQLDBFile(override var name: String,
     Evaluate matching between values of passed keys and relative values in document
      */
     private fun matchKeys(document: Document, keys: List<RecordField>): Boolean {
-
         var match = true
 
         keys.forEach({
@@ -602,9 +591,7 @@ class NoSQLDBFile(override var name: String,
         })
 
         return match
-
     }
-
 
     private fun documentToRecord(document: Document?): Record {
         val result = Record()
@@ -692,24 +679,21 @@ class NoSQLDBFile(override var name: String,
             }
         }
 
-
         val filter = StringBuilder()
 
         filter.append("{\$or:[")
 
         val orContent = StringBuilder()
 
-
         // Add first line
         val line = StringBuilder()
 
         line.append("{\$and:[")
 
-        keyFields.forEachIndexed{index: Int, dbField: Field ->
-            if (index != keyFields.size-1) {
+        keyFields.forEachIndexed { index: Int, dbField: Field ->
+            if (index != keyFields.size - 1) {
                 line.append("{ \"${dbField.name}\": {${operator3.symbol} \"${keys.get(keys.indexOfFirst { recordField -> recordField.name == dbField.name }).value}\" } }, ")
-            }
-            else {
+            } else {
                 line.append("{ \"${dbField.name}\": {${operator1.symbol} \"${keys.get(keys.indexOfFirst { recordField -> recordField.name == dbField.name }).value}\" } }")
             }
         }
@@ -720,22 +704,19 @@ class NoSQLDBFile(override var name: String,
 
         // Add other lines
         if (keyFields.size > 1) {
-
             var while_index = keyFields.size
 
             while (while_index > 1) {
-
                 val tempLine = StringBuilder()
 
                 tempLine.append(", {\$and:[")
 
-                val subList = keyFields.subList(0, while_index-1)
+                val subList = keyFields.subList(0, while_index - 1)
 
-                subList.forEachIndexed{index: Int, dbField: Field ->
-                    if (index != subList.size-1) {
+                subList.forEachIndexed { index: Int, dbField: Field ->
+                    if (index != subList.size - 1) {
                         tempLine.append("{ \"${dbField.name}\": {${operator3.symbol} \"${keys.get(keys.indexOfFirst { recordField -> recordField.name == dbField.name }).value}\" } }, ")
-                    }
-                    else {
+                    } else {
                         tempLine.append("{ \"${dbField.name}\": {${operator2.symbol} \"${keys.get(keys.indexOfFirst { recordField -> recordField.name == dbField.name }).value}\" } }")
                     }
                 }
@@ -752,7 +733,6 @@ class NoSQLDBFile(override var name: String,
 
         filter.append("] }")
 
-
         /*
         Sort sintax:
 
@@ -762,7 +742,7 @@ class NoSQLDBFile(override var name: String,
 
         val sort = StringBuilder()
 
-        keyFields.joinTo(sort, separator= ",", prefix= "{", postfix = "}") {
+        keyFields.joinTo(sort, separator = ",", prefix = "{", postfix = "}") {
             if (up_direction) {
                 "\"${it.name}\": 1"
             } else {
@@ -779,7 +759,6 @@ class NoSQLDBFile(override var name: String,
     }
 
     private fun updateLastKeys(record: Record) {
-
         val lastKeys = mutableListOf<RecordField>()
         fileMetadata.fileKeys.forEach {
             lastKeys.add(RecordField(it, record.getValue(it)))
@@ -793,8 +772,6 @@ class NoSQLDBFile(override var name: String,
         GT("\$gt:"),
         GE("\$gte:"),
         LT("\$lt:"),
-        LE("\$lte:")
+        LE("\$lte:"),
     }
-
 }
-

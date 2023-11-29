@@ -20,7 +20,6 @@ package com.smeup.dbnative.sql
 import com.smeup.dbnative.file.Record
 import com.smeup.dbnative.file.RecordField
 
-
 fun String.insertSQL(record: Record): String {
     val names = record.keys.joinToString { "\"" + it + "\"" }
     val questionMarks = record.keys.joinToString { "?" }
@@ -45,9 +44,9 @@ fun orderBySQL(keysNames: List<String>, reverse: Boolean = false): String =
         ""
     } else {
         if (reverse) {
-            "ORDER BY " + keysNames.joinToString(separator = " DESC, ", postfix = " DESC") {"\"$it\""}
+            "ORDER BY " + keysNames.joinToString(separator = " DESC, ", postfix = " DESC") { "\"$it\"" }
         } else {
-            "ORDER BY " + keysNames.joinToString {"\"$it\""}
+            "ORDER BY " + keysNames.joinToString { "\"$it\"" }
         }
     }
 
@@ -66,9 +65,8 @@ fun filePartSQLAndValues(
     movingForward: Boolean,
     fileKeys: List<String>,
     keys: List<RecordField>,
-    withEquals: Boolean
+    withEquals: Boolean,
 ): Pair<MutableList<String>, String> {
-
     val queries = mutableListOf<String>()
     val values = mutableListOf<String>()
 
@@ -76,7 +74,6 @@ fun filePartSQLAndValues(
     val keys2Size = keys2.size
 
     do {
-
         var lastComparison = if (movingForward) {
             Comparison.GT
         } else {
@@ -101,18 +98,17 @@ fun filePartSQLAndValues(
 
         val sql = "(SELECT * FROM $tableName ${whereSQL(
             keys2.map { it.name },
-            comparisons
+            comparisons,
         )})"
 
         values.addAll(keys2.map { it.value.toString() })
         queries.add(sql)
         keys2 = keys2.subList(0, keys2.size - 1)
-
     } while (keys2.isNotEmpty())
 
     val sql = queries.joinToString(" UNION ") + " " + orderBySQL(
         fileKeys,
-        reverse = !movingForward
+        reverse = !movingForward,
     )
 
     return Pair(values, sql)
@@ -124,7 +120,7 @@ enum class Comparison(val symbol: String) {
     GT(">"),
     GE(">="),
     LT("<"),
-    LE("<=");
+    LE("<="),
 }
 
 fun createMarkerSQL(keysNames: List<String>): String =
@@ -133,17 +129,16 @@ fun createMarkerSQL(keysNames: List<String>): String =
     } else {
         // in HSQLDB CONCAT needs at least two params!
         if (keysNames.size == 1) {
-            "CONCAT( " + keysNames.joinToString{"\"$it\""} + ", '') AS NATIVE_ACCESS_MARKER"
+            "CONCAT( " + keysNames.joinToString { "\"$it\"" } + ", '') AS NATIVE_ACCESS_MARKER"
         } else {
-            "CONCAT( " + keysNames.joinToString{"\"$it\""} + ") AS NATIVE_ACCESS_MARKER"
+            "CONCAT( " + keysNames.joinToString { "\"$it\"" } + ") AS NATIVE_ACCESS_MARKER"
         }
-
     }
 
 fun calculateMarkerValue(
     keys: List<RecordField>,
     movingForward: Boolean = true,
-    withEquals: Boolean = true
+    withEquals: Boolean = true,
 ): String =
     if (keys.isEmpty()) {
         ""
@@ -158,7 +153,6 @@ fun calculateMarkerValue(
             keys.joinToString("") { it.value }.padEnd(100, padChar)
         } else {
             keys.joinToString("") { it.value }
-
         }
     }
 
@@ -174,9 +168,3 @@ fun markerWhereSQL(movingForward: Boolean, withEquals: Boolean): String {
     }
     return " WHERE NATIVE_ACCESS_MARKER ${comparison.symbol} ? "
 }
-
-
-
-
-
-

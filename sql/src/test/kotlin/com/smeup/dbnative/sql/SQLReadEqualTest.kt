@@ -30,7 +30,7 @@ class SQLReadEqualTest {
     companion object {
 
         private lateinit var dbManager: SQLDBMManager
-        
+
         @BeforeClass
         @JvmStatic
         fun setUp() {
@@ -67,7 +67,7 @@ class SQLReadEqualTest {
     @Test
     fun findRecordsIfChainAndReadEExistingKey() {
         val dbFile = dbManager.openFile(XEMP2_VIEW_NAME)
-        val chainResult = dbFile.chain( "C01")
+        val chainResult = dbFile.chain("C01")
         assertEquals("SALLY KWAN", getEmployeeName(chainResult.record))
         assertEquals("DELORES QUINTANA", getEmployeeName(dbFile.readEqual().record))
         assertEquals("HEATHER NICHOLLS", getEmployeeName(dbFile.readEqual().record))
@@ -79,8 +79,8 @@ class SQLReadEqualTest {
     @Test
     fun readUntilEof() {
         val dbFile = dbManager.openFile(XEMP2_VIEW_NAME)
-        val chainResult = dbFile.chain( "C01")
-        var readed = 0;
+        val chainResult = dbFile.chain("C01")
+        var readed = 0
         while (dbFile.eof() == false) {
             var readResult = dbFile.readEqual("C01")
             readed++
@@ -92,11 +92,10 @@ class SQLReadEqualTest {
     @Test
     fun equals() {
         val dbFile = dbManager.openFile(XEMP2_VIEW_NAME)
-        val chainResult = dbFile.setll( "C01")
-        assertTrue (dbFile.equal())
+        val chainResult = dbFile.setll("C01")
+        assertTrue(dbFile.equal())
         dbManager.closeFile(XEMP2_VIEW_NAME)
     }
-
 
     @Test
     fun findRecordsIfReadEWithKeyExistingKey() {
@@ -128,6 +127,4 @@ class SQLReadEqualTest {
         assertEquals(0, dbFile.readEqual("C01").record.size)
         dbManager.closeFile(XEMP2_VIEW_NAME)
     }
-
 }
-

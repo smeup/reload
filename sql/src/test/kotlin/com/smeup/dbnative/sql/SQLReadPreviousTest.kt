@@ -29,7 +29,7 @@ class SQLReadPreviousTest {
     companion object {
 
         private lateinit var dbManager: SQLDBMManager
-        
+
         @BeforeClass
         @JvmStatic
         fun setUp() {
@@ -62,5 +62,4 @@ class SQLReadPreviousTest {
         assertEquals("MICHELLE SPRINGER", getEmployeeName(dbFile.readPrevious().record))
         dbManager.closeFile(EMPLOYEE_TABLE_NAME)
     }
-
 }

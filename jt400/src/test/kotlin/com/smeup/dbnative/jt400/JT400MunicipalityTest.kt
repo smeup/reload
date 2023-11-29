@@ -25,7 +25,6 @@ import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-
 class JT400MunicipalityTest {
 
     private lateinit var dbManager: JT400DBMManager
@@ -80,11 +79,11 @@ class JT400MunicipalityTest {
         assertTrue(dbFile.setll(buildMunicipalityKey("IT", "LOM", "BS", "ERBUSCO")))
         assertEquals(
             "EDOLO",
-            getMunicipalityName(dbFile.readPreviousEqual(buildMunicipalityKey("IT", "LOM", "BS")).record)
+            getMunicipalityName(dbFile.readPreviousEqual(buildMunicipalityKey("IT", "LOM", "BS")).record),
         )
         assertEquals(
             "DESENZANO DEL GARDA",
-            getMunicipalityName(dbFile.readPreviousEqual(buildMunicipalityKey("IT", "LOM", "BS")).record)
+            getMunicipalityName(dbFile.readPreviousEqual(buildMunicipalityKey("IT", "LOM", "BS")).record),
         )
         dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
@@ -414,7 +413,4 @@ class JT400MunicipalityTest {
         assertEquals(32, count)
         dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
-
-
 }
-

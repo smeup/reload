@@ -31,7 +31,7 @@ class NoSQLDBFileTest {
     private val tableName = TSTAB_TABLE_NAME
 
     companion object {
-        private lateinit var dbManager : NoSQLDBMManager
+        private lateinit var dbManager: NoSQLDBMManager
 
         @BeforeClass
         @JvmStatic
@@ -84,8 +84,5 @@ class NoSQLDBFileTest {
 
     @After
     fun destroyEnv() {
-
     }
-
 }
-

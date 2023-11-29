@@ -37,16 +37,16 @@ class SQLUtilsTest {
             listOf(
                 "TSTFLDCHR" fieldByType CharacterType(5),
                 "TSTFLDNBR" fieldByType DecimalType(7, 2),
-                "TSTFLDNB2" fieldByType DecimalType(2, 0)
+                "TSTFLDNB2" fieldByType DecimalType(2, 0),
             ),
             listOf(
                 "TSTFLDCHR",
-                "TSTFLDNBR"
-            )
+                "TSTFLDNBR",
+            ),
         )
         assertEquals(
             "CREATE TABLE TSTTAB (TSTFLDCHR CHAR(5) DEFAULT '' NOT NULL, TSTFLDNBR DECIMAL(7,2) DEFAULT 0 NOT NULL, TSTFLDNB2 DECIMAL(2,0) DEFAULT 0 NOT NULL, PRIMARY KEY(TSTFLDCHR, TSTFLDNBR))",
-            fileMetadata.toSQL()
+            fileMetadata.toSQL(),
         )
     }
 
@@ -58,13 +58,13 @@ class SQLUtilsTest {
             listOf(
                 "TSTFLDCHR" fieldByType CharacterType(5),
                 "TSTFLDNBR" fieldByType DecimalType(7, 2),
-                "TSTFLDNB2" fieldByType DecimalType(2, 0)
+                "TSTFLDNB2" fieldByType DecimalType(2, 0),
             ),
-            listOf()
+            listOf(),
         )
         assertEquals(
             "CREATE TABLE TSTTAB (TSTFLDCHR CHAR(5) DEFAULT '' NOT NULL, TSTFLDNBR DECIMAL(7,2) DEFAULT 0 NOT NULL, TSTFLDNB2 DECIMAL(2,0) DEFAULT 0 NOT NULL)",
-            fileMetadata.toSQL()
+            fileMetadata.toSQL(),
         )
     }
 
@@ -72,7 +72,7 @@ class SQLUtilsTest {
     fun sqlForInsertTest() {
         val record = Record(
             RecordField("TSTFLDCHR", "XXX"),
-            RecordField("TSTFLDNBR", "123.45")
+            RecordField("TSTFLDNBR", "123.45"),
         )
         assertEquals("INSERT INTO TSTTAB (TSTFLDCHR, TSTFLDNBR) VALUES(?, ?)", "TSTTAB".insertSQL(record))
     }

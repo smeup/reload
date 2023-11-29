@@ -60,6 +60,4 @@ class JT400Chain1KeyTest {
         assertTrue(dbFile.chain("XYZ").record.isEmpty())
         dbManager.closeFile(TSTTAB_TABLE_NAME)
     }
-
 }
-

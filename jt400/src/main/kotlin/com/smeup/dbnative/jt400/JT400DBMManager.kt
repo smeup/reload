@@ -25,21 +25,21 @@ import com.smeup.dbnative.ConnectionConfig
 import com.smeup.dbnative.DBManagerBaseImpl
 import com.smeup.dbnative.file.DBFile
 
-open class JT400DBMManager(final override val connectionConfig: ConnectionConfig) : DBManagerBaseImpl()  {
+open class JT400DBMManager(final override val connectionConfig: ConnectionConfig) : DBManagerBaseImpl() {
 
     private var openedFile = mutableMapOf<String, JT400DBFile>()
 
     //   as400://SRVLAB01.SMEUP.COM/W_SCAARM
     private val match = Regex("as400://((?:\\w|\\.)+)/(\\w+)").find(connectionConfig.url)
-    private val host : String by lazy {
+    private val host: String by lazy {
         match!!.destructured.component1()
     }
 
-    private val library : String by lazy {
+    private val library: String by lazy {
         match!!.destructured.component2()
     }
 
-    private val connection : AS400 by lazy {
+    private val connection: AS400 by lazy {
         val as400 = AS400(host, connectionConfig.user, connectionConfig.password)
         as400.isGuiAvailable = false
         //as400.addConnectionListener
@@ -47,7 +47,7 @@ open class JT400DBMManager(final override val connectionConfig: ConnectionConfig
         as400
     }
 
-    override fun openFile(name: String) : DBFile {
+    override fun openFile(name: String): DBFile {
         require(existFile(name)) {
             "Cannot open unregistered file $name"
         }
@@ -67,7 +67,6 @@ open class JT400DBMManager(final override val connectionConfig: ConnectionConfig
         val jt400File = JT400DBFile(name, metadataOf(name), file, logger)
         openedFile.putIfAbsent(name, jt400File)
         return jt400File
-
     }
 
     override fun closeFile(name: String) {
@@ -84,5 +83,4 @@ open class JT400DBMManager(final override val connectionConfig: ConnectionConfig
     override fun close() {
         connection.disconnectAllServices()
     }
-
 }

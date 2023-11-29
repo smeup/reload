@@ -33,7 +33,6 @@ class SQLChain2KeysTest {
 
         private lateinit var dbManager: SQLDBMManager
 
-
         @BeforeClass
         @JvmStatic
         fun setUp() {
@@ -53,7 +52,7 @@ class SQLChain2KeysTest {
         val dbFile = dbManager.openFile(TST2TAB_TABLE_NAME)
         val key2 = listOf(
             "ABC",
-            "12.00"
+            "12.00",
         )
         val chainResult = dbFile.chain(key2)
         assertEquals("ABC", chainResult.record["TSTFLDCHR"])
@@ -66,13 +65,10 @@ class SQLChain2KeysTest {
     fun doesNotFindRecordsIfChainWithNotExistingKey() {
         val dbFile = dbManager.openFile(TST2TAB_TABLE_NAME)
         val key2 = listOf(
-             "ZZZ",
-             "12"
+            "ZZZ",
+            "12",
         )
         assertTrue(dbFile.chain(key2).record.isEmpty())
         dbManager.closeFile(TST2TAB_TABLE_NAME)
     }
-
-
 }
-

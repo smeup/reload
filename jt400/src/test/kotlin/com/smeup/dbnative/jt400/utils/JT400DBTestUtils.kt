@@ -35,6 +35,7 @@ const val TSTTAB_TABLE_NAME = "TSTTAB"
 const val TST2TAB_TABLE_NAME = "TST2TAB"
 const val MUNICIPALITY_TABLE_NAME = "MUNIC0000B"
 const val TEST_LOG = false
+
 //do not change defaultValue
 //if you want to create sqlconnection against another db use function: dbManagerForTest(testSQLDBType: TestSQLDBType)
 private var defaultDbType = TestSQLDBType.DB2_400
@@ -46,23 +47,25 @@ const val CONVENTIONAL_INDEX_SUFFIX = "_INDEX"
 enum class TestSQLDBType(
     val connectionConfig: ConnectionConfig,
     val dbaConnectionConfig: ConnectionConfig? = connectionConfig,
-    val createDatabase : (dbaConnection: AS400) -> Unit = {},
-    val destroyDatabase: (dbaConnection: AS400) -> Unit = {}) {
-    DB2_400(ConnectionConfig(
-            fileName= "*",
+    val createDatabase: (dbaConnection: AS400) -> Unit = {},
+    val destroyDatabase: (dbaConnection: AS400) -> Unit = {},
+) {
+    DB2_400(
+        ConnectionConfig(
+            fileName = "*",
             driver = "com.ibm.as400.access.AS400JDBCDriver",
             url = "jdbc:as400://$DB2_400_HOST/$DB2_400_LIBRARY_NAME;",
             user = "USER",
-            password = "*********"),
+            password = "*********",
+        ),
         //force no create connection for dba operations
-        dbaConnectionConfig = null
-    )
-
+        dbaConnectionConfig = null,
+        ),
 }
 
 fun dbManagerForTest() = dbManagerForTest(defaultDbType)
 
-fun dbManagerForTest(testSQLDBType: TestSQLDBType) : JT400DBMManager {
+fun dbManagerForTest(testSQLDBType: TestSQLDBType): JT400DBMManager {
     testLog("Creating SQLDBManager with db type = $testSQLDBType")
 
     val dbManager = JT400DBMManager(testSQLDBType.connectionConfig)
@@ -89,23 +92,22 @@ fun destroyDatabase(testSQLDBType: TestSQLDBType) {
 
 fun createAndPopulateMunicipalityTable(dbManager: JT400DBMManager?) {
     val fields = listOf(
-        "NAZ"   fieldByType CharacterType(2),
-        "REG"   fieldByType CharacterType(3),
-        "PROV"  fieldByType CharacterType(2),
+        "NAZ" fieldByType CharacterType(2),
+        "REG" fieldByType CharacterType(3),
+        "PROV" fieldByType CharacterType(2),
         "CITTA" fieldByType VarcharType(35),
-        "CAP"   fieldByType CharacterType(5),
-        "PREF"  fieldByType CharacterType(4),
+        "CAP" fieldByType CharacterType(5),
+        "PREF" fieldByType CharacterType(4),
         "COMUNE" fieldByType CharacterType(4),
-        "ISTAT" fieldByType CharacterType(6)
+        "ISTAT" fieldByType CharacterType(6),
     )
 
     val keys = listOf(
         "NAZ",
         "REG",
         "PROV",
-        "CITTA"
+        "CITTA",
     )
-
 
     //createAndPopulateTable( /* ci mette tantissimo >20min, la teniamo fissa già creata */
     registerTable(
@@ -114,22 +116,21 @@ fun createAndPopulateMunicipalityTable(dbManager: JT400DBMManager?) {
         "TSTREC",
         fields,
         keys,
-        "src/test/resources/csv/Municipality.csv"
+        "src/test/resources/csv/Municipality.csv",
     )
-     /**/
+    /**/
 }
 
 fun createAndPopulateTestTable(dbManager: JT400DBMManager?) {
     val fields = listOf(
-        "TSTFLDCHR"   fieldByType CharacterType(3),
-        "TSTFLDNBR"   fieldByType DecimalType(5, 2)
+        "TSTFLDCHR" fieldByType CharacterType(3),
+        "TSTFLDNBR" fieldByType DecimalType(5, 2),
     )
 
     val keys = listOf(
         "TSTFLDCHR",
-        "TSTFLDNBR"
+        "TSTFLDNBR",
     )
-
 
     //createAndPopulateTable( /* ci mette tantissimo >20min, la teniamo fissa già creata */
     registerTable(
@@ -138,23 +139,22 @@ fun createAndPopulateTestTable(dbManager: JT400DBMManager?) {
         "TSTREC",
         fields,
         keys,
-        "src/test/resources/csv/TstTab.csv"
+        "src/test/resources/csv/TstTab.csv",
     )
     /**/
 }
 
 fun createAndPopulateTest2Table(dbManager: JT400DBMManager?) {
     val fields = listOf(
-        "TSTFLDCHR"   fieldByType CharacterType(3),
-        "TSTFLDNBR"   fieldByType DecimalType(5, 2),
-        "DESTST"   fieldByType CharacterType(10),
+        "TSTFLDCHR" fieldByType CharacterType(3),
+        "TSTFLDNBR" fieldByType DecimalType(5, 2),
+        "DESTST" fieldByType CharacterType(10),
     )
 
     val keys = listOf(
         "TSTFLDCHR",
-        "TSTFLDNBR"
+        "TSTFLDNBR",
     )
-
 
     //createAndPopulateTable( /* ci mette tantissimo >20min, la teniamo fissa già creata */
     registerTable(
@@ -163,24 +163,23 @@ fun createAndPopulateTest2Table(dbManager: JT400DBMManager?) {
         "TSTREC",
         fields,
         keys,
-        "src/test/resources/csv/TstTab.csv"
+        "src/test/resources/csv/TstTab.csv",
     )
     /**/
 }
 
 fun createAndPopulateEmployeeTable(dbManager: JT400DBMManager?) {
     val fields = listOf(
-        "EMPNO"   fieldByType CharacterType(6),
-        "FIRSTNME"   fieldByType CharacterType(20),
-        "MIDINIT"   fieldByType CharacterType(1),
-        "LASTNAME"   fieldByType CharacterType(20),
-        "WORKDEPT"   fieldByType CharacterType(3),
+        "EMPNO" fieldByType CharacterType(6),
+        "FIRSTNME" fieldByType CharacterType(20),
+        "MIDINIT" fieldByType CharacterType(1),
+        "LASTNAME" fieldByType CharacterType(20),
+        "WORKDEPT" fieldByType CharacterType(3),
     )
 
     val keys = listOf(
-        "EMPNO"
+        "EMPNO",
     )
-
 
     //createAndPopulateTable( /* ci mette tantissimo >20min, la teniamo fissa già creata */
     registerTable(
@@ -189,7 +188,7 @@ fun createAndPopulateEmployeeTable(dbManager: JT400DBMManager?) {
         "TSTREC",
         fields,
         keys,
-        "src/test/resources/csv/Employee.csv"
+        "src/test/resources/csv/Employee.csv",
     )
     /**/
 }
@@ -214,7 +213,7 @@ private fun registerTable(
     formatName: String,
     fields: List<TypedField>,
     keys: List<String>,
-    dataFilePath: String
+    dataFilePath: String,
 ) {
     val metadata = TypedMetadata(tableName, formatName, fields, keys).fileMetadata()
     dbManager!!.registerMetadata(metadata, true)
@@ -261,7 +260,7 @@ fun buildMunicipalityKey(vararg values: String): List<String> {
     val recordFields = mutableListOf<String>()
     val keys = arrayOf("NAZ", "REG", "PROV", "CITTA")
     for ((index, value) in values.withIndex()) {
-        if (keys.size> index) {
+        if (keys.size > index) {
             recordFields.add(value)
         }
     }
@@ -290,5 +289,3 @@ fun connectJDBC() : Connection {
     return DriverManager.getConnection(connectionConfig.url, connectionConfig.user, connectionConfig.password)
 }
  */
-
-

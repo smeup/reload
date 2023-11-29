@@ -231,7 +231,7 @@ class DB2400OperationsOnFile {
     // Ignore, fields in metadata non necessary
     @Ignore
     @Test
-    fun multipleUpdateOnReadE(){
+    fun multipleUpdateOnReadE() {
         // TEST FLOW
         // Step1: write 100 records with "currentTimeMillis" as unique key
         // Step2: read above written records and update A§DEA2 field
@@ -246,7 +246,7 @@ class DB2400OperationsOnFile {
 
         // Create list of items to write into A§ARTI field
         val items = mutableListOf<String>()
-        repeat(numberOfRecordsToHandle){
+        repeat(numberOfRecordsToHandle) {
             items.add(System.currentTimeMillis().toString() + "  ")
             Thread.sleep(5)
         }
@@ -257,15 +257,15 @@ class DB2400OperationsOnFile {
         val dea2Key = "Kotlin DBNativeAccess TEST-UPDATED "
 
         // WRITE
-        repeat(numberOfRecordsToHandle){
+        repeat(numberOfRecordsToHandle) {
             var record = Record()
-            repeat(fieldsNumber){ index ->
+            repeat(fieldsNumber) { index ->
                 var name: String = dbFile.fileMetadata.fields[index].name
                 print(tMetadata.getField(name)?.type)
-                var value = when(name){
+                var value = when (name) {
                     "A§ARTI" -> items[it]
                     "A§DEAR" -> dearKey
-                    else -> when(tMetadata.getField(name)?.type){
+                    else -> when (tMetadata.getField(name)?.type) {
                         is DecimalType -> "0"
                         else -> ""
                     }
@@ -306,7 +306,6 @@ class DB2400OperationsOnFile {
             //Delete record
             dbFile.delete(readEResult.record)
         }
-
     }
 
     @Test
@@ -378,7 +377,7 @@ class DB2400OperationsOnFile {
     }
 
     @Test
-    fun resultSetCursorMovements(){
+    fun resultSetCursorMovements() {
         val fileMetadata = PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", "BRARTI0L")
         dbManager!!.registerMetadata(fileMetadata, false)
         var dbFile = dbManager!!.openFile("BRARTI0L")
@@ -402,7 +401,7 @@ class DB2400OperationsOnFile {
     }
 
     @Test
-    fun resultSetCursorUpdate(){
+    fun resultSetCursorUpdate() {
         val fileMetadata = PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", "BRARTI0L")
         dbManager!!.registerMetadata(fileMetadata, false)
         var dbFile = dbManager!!.openFile("BRARTI0L")
@@ -439,6 +438,4 @@ class DB2400OperationsOnFile {
 
         dbManager!!.closeFile("BRARTI0L")
     }
-
 }
-

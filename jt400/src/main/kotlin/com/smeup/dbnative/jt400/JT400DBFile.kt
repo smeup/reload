@@ -32,10 +32,12 @@ private enum class CursorAction {
     NONE, SETLL, SETGT
 }
 
-class JT400DBFile(override var name: String,
-                  override var fileMetadata: FileMetadata,
-                  var file: KeyedFile,
-                  override var logger: Logger? = null) : DBFile {
+class JT400DBFile(
+    override var name: String,
+    override var fileMetadata: FileMetadata,
+    var file: KeyedFile,
+    override var logger: Logger? = null,
+) : DBFile {
 
     private var equalFlag: Boolean = false
     private var eofReached: Boolean = false
@@ -162,12 +164,12 @@ class JT400DBFile(override var name: String,
      */
     override fun read(): Result {
         //https://www.ibm.com/support/knowledgecenter/ssw_ibm_i_74/rzasd/zzread.htm
-        var r : Result
+        var r: Result
         try {
-            if (this.previousAction==CursorAction.SETLL) {
+            if (this.previousAction == CursorAction.SETLL) {
                 file.positionCursorToNext()
             }
-            r =  Result(as400RecordToSmeUPRecord(file.read()))
+            r = Result(as400RecordToSmeUPRecord(file.read()))
         } catch (e: AS400Exception) {
             handleAS400Error(e)
             r = Result(Record())
@@ -186,12 +188,12 @@ class JT400DBFile(override var name: String,
      */
     override fun readPrevious(): Result {
         resetStatus()
-        var r : Result
+        var r: Result
         try {
-            if (this.previousAction!=CursorAction.SETLL) {
+            if (this.previousAction != CursorAction.SETLL) {
                 file.positionCursorToPrevious()
             }
-            r =  Result(as400RecordToSmeUPRecord(file.read()))
+            r = Result(as400RecordToSmeUPRecord(file.read()))
         } catch (e: AS400Exception) {
             handleAS400Error(e)
             r = Result(Record())
@@ -226,7 +228,7 @@ class JT400DBFile(override var name: String,
         //https://code400.com/forum/forum/iseries-programming-languages/java/8386-noobie-question
         return try {
             //val r = if (this.previousAction==CursorAction.SETGT)  file.read(keys2Array(keys)) else file.readNextEqual(keys2Array(keys))
-            if (this.previousAction==CursorAction.SETGT) {
+            if (this.previousAction == CursorAction.SETGT) {
                 file.positionCursorToPrevious()
             }
             val r = file.readNextEqual(keys2Array(keys))
@@ -274,7 +276,7 @@ class JT400DBFile(override var name: String,
     override fun readPreviousEqual(keys: List<String>): Result {
         resetStatus()
         return try {
-            if (this.previousAction==CursorAction.SETLL) {
+            if (this.previousAction == CursorAction.SETLL) {
                 file.positionCursorToNext()
             }
             val r = file.readPreviousEqual(keys2Array(keys))
@@ -335,11 +337,12 @@ class JT400DBFile(override var name: String,
         }
         throw RuntimeException()
     }
-    private fun as400ErrorID(e: AS400Exception) : String {
+    private fun as400ErrorID(e: AS400Exception): String {
         //CPF5001 	End of file reached
         //CPF5006 	Record not found
-        if (e.aS400Message != null
-            && e.aS400Message.id != null) {
+        if (e.aS400Message != null &&
+            e.aS400Message.id != null
+        ) {
             return e.aS400Message.id
         }
         return ""
@@ -397,7 +400,7 @@ class JT400DBFile(override var name: String,
                 result.setField(name, BigDecimal(value))
             } else {
                 //try {
-                    result.setField(name, value.trimEnd())
+                result.setField(name, value.trimEnd())
                 //} catch (ex : Exception) {
                 //    println(ex.message)
                 //}
@@ -406,7 +409,7 @@ class JT400DBFile(override var name: String,
         return result
     }
 
-    private fun numericField(name : String) : Boolean {
+    private fun numericField(name: String): Boolean {
         val dataType = file.recordFormat.getFieldDescription(name).dataType.instanceType
         //val field : Field? = this.fileMetadata.getField(name)
         //val type : FieldType? =  field?.type
@@ -423,11 +426,11 @@ class JT400DBFile(override var name: String,
             AS400DataType.TYPE_UBIN4,
             AS400DataType.TYPE_UBIN8,
             AS400DataType.TYPE_FLOAT4,
-            AS400DataType.TYPE_FLOAT8 ->
+            AS400DataType.TYPE_FLOAT8,
+            ->
                 true
             else ->
                 false
         }
     }
-
 }
