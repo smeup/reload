@@ -34,7 +34,6 @@ import org.junit.Assert
 import java.io.File
 import java.sql.Connection
 import java.sql.ResultSet
-import java.util.concurrent.atomic.AtomicInteger
 
 const val EMPLOYEE_TABLE_NAME = "EMPLOYEE"
 const val EMPLOYEE_VIEW_NAME = "EMPLOYEE_VIEW"
@@ -99,10 +98,6 @@ enum class TestSQLDBType(
 
 }
 
-object DatabaseNameFactory {
-    var COUNTER = AtomicInteger()
-}
-
 fun dbManagerDB2400ForTest(host: String, library:String): SQLDBMManager{
     val dbManager = SQLDBMManager(ConnectionConfig(
         fileName= "*",
@@ -161,10 +156,10 @@ fun createAndPopulateEmployeeTable(dbManager: SQLDBMManager?) {
 
 fun createAndPopulateEmployeeView(dbManager: SQLDBMManager?) {
     // create view executing sql -> TODO: insert a createView method in DBMManager and use it
-    fun createXEMP2() = "CREATE VIEW $EMPLOYEE_VIEW_NAME AS SELECT * FROM ${EMPLOYEE_TABLE_NAME} ORDER BY WORKDEPT, EMPNO"
+    fun createXEMP2() = "CREATE VIEW $EMPLOYEE_VIEW_NAME AS SELECT * FROM $EMPLOYEE_TABLE_NAME ORDER BY WORKDEPT, EMPNO"
 
     fun createEmployeeIndex() =
-        "CREATE INDEX $EMPLOYEE_VIEW_NAME$CONVENTIONAL_INDEX_SUFFIX ON ${EMPLOYEE_TABLE_NAME} (WORKDEPT ASC, EMPNO ASC)"
+        "CREATE INDEX $EMPLOYEE_VIEW_NAME$CONVENTIONAL_INDEX_SUFFIX ON $EMPLOYEE_TABLE_NAME (WORKDEPT ASC, EMPNO ASC)"
 
     val fields = listOf(
         "EMPNO"     fieldByType CharacterType(6),
@@ -218,11 +213,11 @@ fun getEmployeeName(record: Record): String {
 }
 
 fun getMunicipalityName(record: Record): String {
-    return (record["CITTA"]?.toString()?.trim() ?: "")
+    return (record["CITTA"]?.trim() ?: "")
 }
 
 fun getMunicipalityProv(record: Record): String {
-    return (record["PROV"]?.toString()?.trim() ?: "")
+    return (record["PROV"]?.trim() ?: "")
 }
 
 fun testLog(message: String) {
@@ -304,7 +299,7 @@ fun buildNationKey(vararg values: String): List<String> {
 }
 
 fun createFile(tMetadata: TypedMetadata, dbManager: SQLDBMManager) {
-    val metadata: FileMetadata = tMetadata.fileMetadata();
+    val metadata: FileMetadata = tMetadata.fileMetadata()
     dbManager.connection.createStatement().use {
         it.execute(tMetadata.toSQL())
     }
@@ -338,6 +333,7 @@ fun TypedField.type2sql(): String =
         Type.VARBINARY -> "VARBINARY(${this.type.size})"
         else -> TODO("Conversion to SQL Type not yet implemented: ${this.type}")
     }
+
 
 fun sql2Type(metadataResultSet: ResultSet): FieldType {
     val sqlType = metadataResultSet.getString("TYPE_NAME")

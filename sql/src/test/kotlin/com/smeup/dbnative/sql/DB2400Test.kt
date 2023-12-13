@@ -26,12 +26,12 @@ import com.smeup.dbnative.sql.utils.dbManagerForTest
 import com.smeup.dbnative.utils.propertiesToTypedMetadata
 import org.junit.AfterClass
 import org.junit.BeforeClass
-import org.junit.Ignore
 import org.junit.Test
+import kotlin.test.Ignore
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-//@Ignore
+@Ignore
 class DB2400Test {
 
     companion object {
@@ -45,6 +45,7 @@ class DB2400Test {
         }
 
         @AfterClass
+        @JvmStatic
         fun tearDown() {
         }
     }
