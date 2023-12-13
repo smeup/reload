@@ -74,13 +74,13 @@ class SQLUtilsTest {
             RecordField("TSTFLDCHR", "XXX"),
             RecordField("TSTFLDNBR", "123.45")
         )
-        assertEquals("INSERT INTO TSTTAB (TSTFLDCHR, TSTFLDNBR) VALUES(?, ?)", "TSTTAB".insertSQL(record))
+        assertEquals("INSERT INTO TSTTAB (\"TSTFLDCHR\", \"TSTFLDNBR\") VALUES(?, ?)", "TSTTAB".insertSQL(record))
     }
 
     @Test
     fun sqlForOrderBy() {
         val fields = listOf("Field1", "Field2", "Field3")
-        assertEquals("ORDER BY Field1, Field2, Field3", orderBySQL(fields))
-        assertEquals("ORDER BY Field1 DESC, Field2 DESC, Field3 DESC", orderBySQL(fields, true))
+        assertEquals("ORDER BY \"Field1\", \"Field2\", \"Field3\"", orderBySQL(fields))
+        assertEquals("ORDER BY \"Field1\" DESC, \"Field2\" DESC, \"Field3\" DESC", orderBySQL(fields, true))
     }
 }

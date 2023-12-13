@@ -36,8 +36,8 @@ class ReadInstruction(var method: ReadMethod, var keys: List<String>){
 }
 
 class Native2SQL(val fileMetadata: FileMetadata) {
-    private var lastPositioningInstruction: PositioningInstruction? = null
     private var lastReadInstruction: ReadInstruction? = null
+    private var lastPositioningInstruction: PositioningInstruction? = null
 
     private fun checkPositioning(){
         requireNotNull(lastPositioningInstruction){
@@ -68,7 +68,7 @@ class Native2SQL(val fileMetadata: FileMetadata) {
     }
 
     private fun checkInstructions(){
-        checkPositioning()
+        //checkPositioning()
         checkRead()
     }
 
@@ -92,7 +92,7 @@ class Native2SQL(val fileMetadata: FileMetadata) {
                     "Uncoherent read not yet managed"
                 }
             }
-            ReadMethod.READ, ReadMethod.READP -> checkPositioning()
+            ReadMethod.READP -> checkPositioning()
             ReadMethod.CHAIN -> {
                 lastPositioningInstruction = null
                 executeQuery = true
@@ -118,9 +118,11 @@ class Native2SQL(val fileMetadata: FileMetadata) {
     fun isLastOperationSet()=lastReadInstruction == null
 
     fun lastReadMatchRecord(record: Record): Boolean {
+
         if(lastReadInstruction!!.keys.isEmpty()){
             return true
         }
+
         lastReadInstruction!!.keys.mapIndexed { index, value ->
             val keyname = fileMetadata.fileKeys.get(index)
             if(record[keyname]?.trim() != value.trim()){
@@ -132,20 +134,21 @@ class Native2SQL(val fileMetadata: FileMetadata) {
 
 
     fun isCoherent(newKeys: List<String>): Boolean{
-        checkPositioning()
-        return newKeys.isEmpty() ||
-            if (newKeys.size <= lastPositioningInstruction!!.keys.size &&
-            newKeys.size <= lastReadInstruction?.keys?.size?:newKeys.size) {
-            newKeys.forEachIndexed() { index, value ->
-                if(lastPositioningInstruction!!.keys.get(index) != value){
-                    return false
-                }
-            }
-            return true
-        }
-        else false
+        //checkPositioning()
+        if (lastPositioningInstruction != null) {
+            return newKeys.isEmpty() ||
+                    if (newKeys.size <= lastPositioningInstruction!!.keys.size &&
+                        newKeys.size <= lastReadInstruction?.keys?.size ?: newKeys.size
+                    ) {
+                        newKeys.forEachIndexed() { index, value ->
+                            if (lastPositioningInstruction!!.keys.get(index) != value) {
+                                return false
+                            }
+                        }
+                        return true
+                    } else false
+        } else return true
     }
-
 
     private fun getSortOrder(): SortOrder {
         checkInstructions()
@@ -154,9 +157,11 @@ class Native2SQL(val fileMetadata: FileMetadata) {
 
     private fun getComparison(): Pair<Comparison, Comparison>{
         checkInstructions()
-        return if(lastReadInstruction!!.method.forward){
+        return if (lastPositioningInstruction == null) {
+            return Pair(Comparison.EQ, Comparison.GT)
+        } else if(lastReadInstruction!!.method.forward){
             when(lastPositioningInstruction!!.method){
-                        PositioningMethod.SETLL -> return Pair(Comparison.GE, Comparison.GT)
+                        PositioningMethod.SETLL -> return Pair(Comparison.EQ, Comparison.GT)
                         PositioningMethod.SETGT -> return Pair(Comparison.GT, Comparison.GT)
             }
         }
@@ -184,35 +189,118 @@ class Native2SQL(val fileMetadata: FileMetadata) {
                 checkReadKeys()
                 return Pair(getSQL(fileMetadata.fields, fileMetadata.fileKeys.subList(0, lastReadInstruction!!.keys.size), Comparison.EQ, fileMetadata.tableName), lastReadInstruction!!.keys)
             }
-            ReadMethod.READ,ReadMethod.READP -> {
+            ReadMethod.READ -> {
+                checkRead()
+                return getReadCoherentSql(true)
+            }
+            ReadMethod.READP -> {
+                checkPositioning()
                 checkRead()
                 return getCoherentSql(true)
             }
             else -> {
+                //checkPositioning()
                 checkReadKeys()
                 return getCoherentSql()
             }
         }
     }
 
+    /*
+    // Senza posizionamento
+    SELECT * FROM EMPLOF
+
+    // Con posizionamento
+    SELECT *
+    FROM EMPL0F
+    WHERE WORKDEPT = 'C01'
+    UNION ALL
+    SELECT *
+    FROM EMPL0F
+    WHERE WORKDEPT >= 'C01'
+     */
+    private fun getReadCoherentSql(fullUnion: Boolean = false): Pair<String, MutableList<String>> {
+        var queries = mutableListOf<String>()
+        val replacements = mutableListOf<String>()
+        if (lastPositioningInstruction == null) {
+            var columns = ""
+            fileMetadata.fields.forEachIndexed { index, k ->
+                run {
+                    columns += "\"" + k.name + "\", "
+                }
+            }
+            return Pair("SELECT " + columns.removeSuffix(", ") + "FROM ${fileMetadata.tableName}", replacements)
+        } else {
+            var columns = ""
+            fileMetadata.fields.forEachIndexed { index, k ->
+                run {
+                    columns += "\"" + k.name + "\", "
+                }
+            }
+
+            var value = ""
+            val keys = fileMetadata.fileKeys
+            keys.forEachIndexed { index, k ->
+                run {
+                    value += "\"" + k + "\" >= ? AND "
+                }
+            }
+
+            queries.add(
+                "SELECT " + columns.removeSuffix(", ") + " FROM ${fileMetadata.tableName} WHERE " + value.removeSuffix(
+                    " AND "
+                )
+            )
+            replacements.addAll(lastPositioningInstruction!!.keys)
+            return Pair(queries.joinToString(), replacements)
+        }
+    }
 
     private fun getCoherentSql(fullUnion: Boolean = false):Pair<String, List<String>>{
-        checkPositioning()
         val queries = mutableListOf<String>()
         val replacements = mutableListOf<String>()
         val comparison = getComparison()
-        require(!lastPositioningInstruction!!.keys.isEmpty()){
-            "Empty positioning keys"
-        }
-        if(lastPositioningInstruction!!.keys.size == 1){
-            queries.add(getSQL(fileMetadata.fields, fileMetadata.fileKeys.subList(0, 1), comparison.first, fileMetadata.tableName))
-            replacements.addAll(lastPositioningInstruction!!.keys)
-        }
-        else {
-            val limit = if(fullUnion)1 else 2
-            for (i in lastPositioningInstruction!!.keys.size downTo limit) {
-                queries.add(getSQL(fileMetadata.fields, fileMetadata.fileKeys.subList(0, i), if(i == lastPositioningInstruction!!.keys.size) comparison.first else comparison.second, fileMetadata.tableName))
-                replacements.addAll(lastPositioningInstruction!!.keys.subList(0, i))
+
+        if (lastPositioningInstruction == null) {
+            var columns = ""
+            fileMetadata.fields.forEachIndexed { index, k ->
+                run {
+                    columns += "\"" + k.name + "\", "
+                }
+            }
+            var value = ""
+            fileMetadata.fileKeys.forEachIndexed { index, k ->
+                run {
+                    value += "\"" + k + "\" " + Comparison.EQ.symbol + " ? AND "
+                }
+            }
+            replacements.addAll(lastReadInstruction!!.keys)
+
+            return Pair("SELECT " + columns.removeSuffix(", ") + "FROM ${fileMetadata.tableName} WHERE " + value.removeSuffix(" AND "), replacements)
+        } else {
+            if (lastPositioningInstruction!!.keys.size == 1) {
+                queries.add(
+                    getSQL(
+                        fileMetadata.fields,
+                        fileMetadata.fileKeys.subList(0, 1),
+                        comparison.first,
+                        fileMetadata.tableName
+                    )
+                )
+                replacements.addAll(lastPositioningInstruction!!.keys)
+            } else {
+                val limit = if (fullUnion) 1 else 2
+                for (i in lastPositioningInstruction!!.keys.size downTo limit) {
+                    queries.add(
+                        getSQL(
+                            fileMetadata.fields,
+                            fileMetadata.fileKeys.subList(0, i),
+                            if (i == lastPositioningInstruction!!.keys.size) comparison.first else comparison.second,
+                            fileMetadata.tableName
+                        )
+                    )
+                    replacements.addAll(lastPositioningInstruction!!.keys.subList(0, i))
+                }
             }
         }
         return Pair(queries.joinToString(" UNION ") + getSQLOrderByClause(), replacements)

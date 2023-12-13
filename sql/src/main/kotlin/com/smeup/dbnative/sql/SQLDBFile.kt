@@ -45,6 +45,8 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
 
     private var lastNativeMethod: NativeMethod? = null
 
+    private var nextResult: Result? = null
+
     //Search from: metadata, primary key, unique index, view ordering fields
     //private val thisFileKeys: List<String> by lazy {
     //    // TODO: think about a right way (local file maybe?) to retrieve keylist
@@ -93,6 +95,7 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
     }
 
     override fun chain(keys: List<String>): Result {
+        nextResult = null
         lastNativeMethod = NativeMethod.chain
         logEvent(LoggingKey.native_access_method, "Executing chain on keys $keys")
         adapter.setRead(ReadMethod.CHAIN, keys)
@@ -100,7 +103,7 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
         measureTimeMillis {
 
             executeQuery(adapter.getSQLSatement())
-            read = readNextFromResultSet()
+            read = readNextFromResultSet(false)
         }.apply {
             logEvent(LoggingKey.native_access_method, "chain executed", this)
         }
@@ -116,7 +119,7 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
             if (adapter.setRead(ReadMethod.READ) ) {
                 executeQuery(adapter.getSQLSatement())
             }
-            read = readNextFromResultSet()
+            read = readNextFromResultSet(true)
         }.apply {
             logEvent(LoggingKey.native_access_method, "read executed", this)
         }
@@ -132,7 +135,7 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
             if (adapter.setRead(ReadMethod.READP)) {
                 executeQuery(adapter.getSQLSatement())
             }
-            read = readNextFromResultSet()
+            read = readNextFromResultSet(true)
         }.apply {
             logEvent(LoggingKey.native_access_method, "readPrevious executed", this)
         }
@@ -157,7 +160,7 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
             if (adapter.setRead(ReadMethod.READE, keys)) {
                 executeQuery(adapter.getSQLSatement())
             }
-            read = readNextFromResultSet()
+            read = readNextFromResultSet(true)
         }.apply {
             logEvent(LoggingKey.native_access_method, "readEqual executed", this)
         }
@@ -183,7 +186,7 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
             if (adapter.setRead(ReadMethod.READPE, keys)) {
                 executeQuery(adapter.getSQLSatement())
             }
-            read = readNextFromResultSet()
+            read = readNextFromResultSet(true)
         }.apply {
             logEvent(LoggingKey.native_access_method, "readPreviousEqual executed", this)
         }
@@ -208,7 +211,29 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
         return Result(record)
     }
 
+    /*
     override fun update(record: Record): Result {
+        lastNativeMethod = NativeMethod.update
+        logEvent(LoggingKey.native_access_method, "Executing write for record $record: with autocommit=${connection.autoCommit}")
+        measureTimeMillis {
+            // TODO: manage errors
+            val sql = fileMetadata.tableName.updateSQL(record)
+            connection.prepareStatement(sql).use { it ->
+                it.bind(record.values.map { it })
+                it.execute()
+            }
+        }.apply {
+            logEvent(LoggingKey.native_access_method, "update executed", this)
+        }
+        lastNativeMethod = null
+        return Result(record)
+    }
+    */
+
+    override fun update(record: Record): Result {
+        require(getResultSet() != null){
+            "Positioning required before update "
+        }
         lastNativeMethod = NativeMethod.update
         logEvent(LoggingKey.native_access_method, "Executing update record $actualRecord to $record with autocommit=${connection.autoCommit}")
         measureTimeMillis {
@@ -231,6 +256,7 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
         lastNativeMethod = null
         return Result(record)
     }
+
 
     override fun delete(record: Record): Result {
         lastNativeMethod = NativeMethod.delete
@@ -273,19 +299,32 @@ class SQLDBFile(override var name: String, override var fileMetadata: FileMetada
     }
 
 
-    private fun readNextFromResultSet(): Result {
-        val result = Result(resultSet.toValues())
-        if (!eof() && adapter.lastReadMatchRecord(result.record)) {
-            logEvent(LoggingKey.read_data, "Record read: ${result.record}")
-            actualRecord = result.record.duplicate()
-            eof = false
-            return result
-        } else {
-            eof = true
-            closeResultSet()
-            logEvent(LoggingKey.read_data, "No more record to read")
-            return Result()
+    private fun readNextFromResultSet(loadNext: Boolean): Result {
+        if (nextResult == null) nextResult = Result(resultSet.toValues())
+        val result = nextResult
+
+        var found:Boolean = false
+        while( !found && !eof) {
+            if (adapter.lastReadMatchRecord(result!!.record)) {
+                logEvent(LoggingKey.read_data, "Record read: ${result.record}")
+                actualRecord = result.record.duplicate()
+                eof = false
+                found = true
+            }
+
+            if (loadNext) {
+                nextResult = Result(resultSet.toValues());
+
+                if (nextResult!!.record.isEmpty()) {
+                    eof = true;
+                    closeResultSet()
+                    logEvent(LoggingKey.read_data, "No more record to read")
+                }
+            } else {
+                eof = true;
+            }
         }
+        return result!!
     }
 
     private fun closeResultSet(){

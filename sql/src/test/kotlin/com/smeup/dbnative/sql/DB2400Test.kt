@@ -32,7 +32,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 //@Ignore
-class DB2400OperationsOnFile {
+class DB2400Test {
 
     companion object {
 
@@ -439,6 +439,5 @@ class DB2400OperationsOnFile {
 
         dbManager!!.closeFile("BRARTI0L")
     }
-
 }
 

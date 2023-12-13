@@ -22,16 +22,13 @@ import com.smeup.dbnative.file.Record
 import com.smeup.dbnative.file.RecordField
 import com.smeup.dbnative.metadata.file.PropertiesSerializer
 import com.smeup.dbnative.sql.utils.*
-import org.junit.AfterClass
-import org.junit.BeforeClass
 import org.junit.Ignore
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlin.test.assertTrue
 
 
-class DB2400OperationsOnFilePerfTest {
+class DB2400PerfTest {
 
 
     private var dbManager: SQLDBMManager? = null
@@ -42,7 +39,7 @@ class DB2400OperationsOnFilePerfTest {
 
     @Test
     fun insert() {
-        initDbManager(library = "UP_PRR")
+        initDbManager(library = DB2_400_LIBRARY_NAME)
         dbManager.use {
             val fileMetadata =
                 PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", "VERAPG0L")
@@ -66,7 +63,7 @@ class DB2400OperationsOnFilePerfTest {
 
     @Test
     fun delete() {
-        initDbManager(library = "UP_PRR")
+        initDbManager(library = DB2_400_LIBRARY_NAME)
         dbManager.use {
             val fileMetadata =
                 PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", "VERAPG0L")
@@ -84,7 +81,7 @@ class DB2400OperationsOnFilePerfTest {
     @Ignore
     @Test
     fun updateMethods() {
-        initDbManager(library = "UP_PRR")
+        initDbManager(library = DB2_400_LIBRARY_NAME)
         dbManager.use {
             val fileMetadata =
                 PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", "VERAPG0L")
@@ -116,7 +113,7 @@ class DB2400OperationsOnFilePerfTest {
 
     @Test
     fun setllReadeNoMatch() {
-        initDbManager(library = "XSMEDATGRU")
+        initDbManager(library = DB2_400_LIBRARY_NAME)
         dbManager.use {
             val fileMetadata =
                 PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", "VERAPG9L")
@@ -130,7 +127,7 @@ class DB2400OperationsOnFilePerfTest {
 
     @Test
     fun chain() {
-        initDbManager(library = "UP_PRR")
+        initDbManager(library = DB2_400_LIBRARY_NAME)
         dbManager.use {
             val fileMetadata =
                 PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", "BRARTI0L")

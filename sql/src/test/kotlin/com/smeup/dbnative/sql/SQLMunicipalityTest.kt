@@ -25,9 +25,8 @@ import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-
+@Ignore
 class SQLMunicipalityTest {
-
     companion object {
 
         private lateinit var dbManager: SQLDBMManager

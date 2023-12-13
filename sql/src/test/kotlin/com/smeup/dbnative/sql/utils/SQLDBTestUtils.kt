@@ -37,9 +37,7 @@ import java.sql.ResultSet
 import java.util.concurrent.atomic.AtomicInteger
 
 const val EMPLOYEE_TABLE_NAME = "EMPLOYEE"
-const val XEMP2_VIEW_NAME = "XEMP2"
-const val TSTTAB_TABLE_NAME = "TSTTAB"
-const val TST2TAB_TABLE_NAME = "TSTTAB"
+const val EMPLOYEE_VIEW_NAME = "EMPLOYEE_VIEW"
 const val MUNICIPALITY_TABLE_NAME = "MUNICIPALITY"
 const val TEST_LOG = false
 private val LOGGING_LEVEL = LoggingLevel.ALL
@@ -50,7 +48,7 @@ private var defaultDbType = TestSQLDBType.HSQLDB
 //private var defaultDbType = TestSQLDBType.DB2_400
 const val DATABASE_NAME = "TEST"
 const val DB2_400_HOST = "SRVLAB01.SMEUP.COM"
-const val DB2_400_LIBRARY_NAME = "W_PARFRA"
+const val DB2_400_LIBRARY_NAME = "UP_PRR"
 
 enum class TestSQLDBType(
     val connectionConfig: ConnectionConfig,
@@ -82,8 +80,8 @@ enum class TestSQLDBType(
             fileName= "*",
             driver = "com.ibm.as400.access.AS400JDBCDriver",
             url = "jdbc:as400://$DB2_400_HOST/$DB2_400_LIBRARY_NAME;",
-            user = "USER",
-            password = "**********"),
+            user = System.getenv("AS400_USR")?:"USER",
+            password = System.getenv("AS400_PWD")?:"PASSWORD"),
 
         //force no create connection for dba operations
         dbaConnectionConfig = null
@@ -110,8 +108,8 @@ fun dbManagerDB2400ForTest(host: String, library:String): SQLDBMManager{
         fileName= "*",
         driver = "com.ibm.as400.access.AS400JDBCDriver",
         url = "jdbc:as400://$host/$library;",
-        user = "USER",
-        password = "**********"),
+        user = System.getenv("AS400_USR")?:"USER",
+        password = System.getenv("AS400_PWD")?:"PASSWORD"),
     )
     dbManager.logger = Logger.getSimpleInstance(LOGGING_LEVEL)
     return dbManager
@@ -145,35 +143,6 @@ fun destroyDatabase(testSQLDBType: TestSQLDBType) {
     }
 }
 
-fun createAndPopulateTstTable(dbManager: SQLDBMManager?) {
-    val fields = listOf(
-        "TSTFLDCHR" fieldByType CharacterType(3),
-        "TSTFLDNBR" fieldByType DecimalType(5, 2)
-    )
-
-    val keys = listOf(
-        "TSTFLDCHR"
-    )
-
-
-    createAndPopulateTable(dbManager, TSTTAB_TABLE_NAME, TSTTAB_TABLE_NAME, fields, keys, "src/test/resources/csv/TstTab.csv")
-}
-
-fun createAndPopulateTst2Table(dbManager: SQLDBMManager?) {
-    val fields = listOf(
-        "TSTFLDCHR" fieldByType VarcharType(3),
-        "TSTFLDNBR" fieldByType DecimalType(5, 2),
-        "DESTST" fieldByType VarcharType(40)
-    )
-
-    val keys = listOf(
-        "TSTFLDCHR",
-        "TSTFLDNBR"
-    )
-
-    createAndPopulateTable(dbManager, TST2TAB_TABLE_NAME, TST2TAB_TABLE_NAME, fields, keys,"src/test/resources/csv/Tst2Tab.csv")
-}
-
 fun createAndPopulateEmployeeTable(dbManager: SQLDBMManager?) {
     val fields = listOf(
         "EMPNO"     fieldByType CharacterType(6),
@@ -190,12 +159,12 @@ fun createAndPopulateEmployeeTable(dbManager: SQLDBMManager?) {
     createAndPopulateTable(dbManager, EMPLOYEE_TABLE_NAME, EMPLOYEE_TABLE_NAME, fields, keys,"src/test/resources/csv/Employee.csv")
 }
 
-fun createAndPopulateXemp2View(dbManager: SQLDBMManager?) {
+fun createAndPopulateEmployeeView(dbManager: SQLDBMManager?) {
     // create view executing sql -> TODO: insert a createView method in DBMManager and use it
-    fun createXEMP2() = "CREATE VIEW $XEMP2_VIEW_NAME AS SELECT * FROM EMPLOYEE ORDER BY WORKDEPT, EMPNO"
+    fun createXEMP2() = "CREATE VIEW $EMPLOYEE_VIEW_NAME AS SELECT * FROM ${EMPLOYEE_TABLE_NAME} ORDER BY WORKDEPT, EMPNO"
 
-    fun createXEMP2Index() =
-        "CREATE INDEX $XEMP2_VIEW_NAME$CONVENTIONAL_INDEX_SUFFIX ON EMPLOYEE (WORKDEPT ASC, EMPNO ASC)"
+    fun createEmployeeIndex() =
+        "CREATE INDEX $EMPLOYEE_VIEW_NAME$CONVENTIONAL_INDEX_SUFFIX ON ${EMPLOYEE_TABLE_NAME} (WORKDEPT ASC, EMPNO ASC)"
 
     val fields = listOf(
         "EMPNO"     fieldByType CharacterType(6),
@@ -209,9 +178,9 @@ fun createAndPopulateXemp2View(dbManager: SQLDBMManager?) {
         "WORKDEPT"
     )
 
-    val metadata = FileMetadata("$XEMP2_VIEW_NAME", "EMPLOYEE", fields.fieldList(), keys)
+    val metadata = FileMetadata(EMPLOYEE_VIEW_NAME, EMPLOYEE_TABLE_NAME, fields.fieldList(), keys)
     dbManager!!.registerMetadata(metadata, true)
-    dbManager.execute(listOf(createXEMP2(), createXEMP2Index()))
+    dbManager.execute(listOf(createXEMP2(), createEmployeeIndex()))
 }
 
 fun createAndPopulateMunicipalityTable(dbManager: SQLDBMManager?) {
@@ -293,6 +262,39 @@ private fun createAndPopulateTable(
 fun buildMunicipalityKey(vararg values: String): List<String> {
     val keyValues = mutableListOf<String>()
     val keys = arrayOf("NAZ", "REG", "PROV", "CITTA")
+    for ((index, value) in values.withIndex()) {
+        if (keys.size> index) {
+            keyValues.add(value)
+        }
+    }
+    return keyValues
+}
+
+fun buildCountryKey(vararg values: String): List<String> {
+    val keyValues = mutableListOf<String>()
+    val keys = arrayOf("NAZ", "REG", "PROV")
+    for ((index, value) in values.withIndex()) {
+        if (keys.size> index) {
+            keyValues.add(value)
+        }
+    }
+    return keyValues
+}
+
+fun buildRegionKey(vararg values: String): List<String> {
+    val keyValues = mutableListOf<String>()
+    val keys = arrayOf("NAZ", "REG")
+    for ((index, value) in values.withIndex()) {
+        if (keys.size> index) {
+            keyValues.add(value)
+        }
+    }
+    return keyValues
+}
+
+fun buildNationKey(vararg values: String): List<String> {
+    val keyValues = mutableListOf<String>()
+    val keys = arrayOf("NAZ")
     for ((index, value) in values.withIndex()) {
         if (keys.size> index) {
             keyValues.add(value)
