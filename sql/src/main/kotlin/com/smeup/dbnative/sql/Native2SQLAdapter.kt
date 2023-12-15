@@ -251,7 +251,12 @@ class Native2SQL(val fileMetadata: FileMetadata) {
                     " AND "
                 )
             )
+
             replacements.addAll(lastPositioningInstruction!!.keys)
+            val lostKeys = fileMetadata.fileKeys.size - lastPositioningInstruction!!.keys.size
+            repeat(lostKeys) {
+                replacements.add("");
+            }
             return Pair(queries.joinToString(), replacements)
         }
     }
