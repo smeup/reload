@@ -22,6 +22,7 @@ import com.smeup.dbnative.log.Logger
 import com.smeup.dbnative.metadata.MetadataRegister
 import com.smeup.dbnative.metadata.file.FSMetadataRegisterImpl
 import com.smeup.dbnative.model.FileMetadata
+import java.util.*
 
 abstract class DBManagerBaseImpl : DBMManager {
     var logger: Logger? = null
@@ -54,7 +55,7 @@ abstract class DBManagerBaseImpl : DBMManager {
     }
 
     override fun existFile(name: String): Boolean {
-        return getMetadataRegister().contains(name.toUpperCase())
+        return getMetadataRegister().contains(name.uppercase(Locale.getDefault()))
     }
 
     companion object {

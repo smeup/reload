@@ -17,28 +17,25 @@
 
 package com.smeup.dbnative.sql
 
-import com.smeup.dbnative.sql.utils.TSTTAB_TABLE_NAME
-import com.smeup.dbnative.sql.utils.createAndPopulateTstTable
-import com.smeup.dbnative.sql.utils.dbManagerForTest
-import com.smeup.dbnative.sql.utils.destroyDatabase
+import com.smeup.dbnative.sql.utils.*
 import org.junit.AfterClass
 import org.junit.BeforeClass
 import org.junit.Test
-import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class SQLChain1KeyTest {
+class SQLEqualsTest {
 
     companion object {
 
-        private var dbManager: SQLDBMManager? = null
-        private var libName: String? = null
-
+        private lateinit var dbManager: SQLDBMManager
+        
         @BeforeClass
         @JvmStatic
         fun setUp() {
             dbManager = dbManagerForTest()
-            createAndPopulateTstTable(dbManager)
+            createAndPopulateMunicipalityTable(dbManager)
+            createAndPopulateEmployeeTable(dbManager)
+            createAndPopulateEmployeeView(dbManager)
         }
 
         @AfterClass
@@ -49,20 +46,19 @@ class SQLChain1KeyTest {
     }
 
     @Test
-    fun findRecordsIfChainWithExistingKey() {
-        val dbFile = dbManager!!.openFile(TSTTAB_TABLE_NAME)
-        val chainResult = dbFile.chain("XXX")
-        assertEquals("XXX", chainResult.record["TSTFLDCHR"])
-        assertEquals("123.45", chainResult.record["TSTFLDNBR"])
-        dbManager!!.closeFile(TSTTAB_TABLE_NAME)
+    fun equal() {
+        val dbFile = SQLEqualsTest.dbManager.openFile(MUNICIPALITY_TABLE_NAME)
+        dbFile.setll(buildMunicipalityKey("IT", "LOM", "BS", "ERBUSCO"))
+        assertTrue(dbFile.equal())
+        SQLEqualsTest.dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
 
     @Test
-    fun doesNotFindRecordsIfChainWithNotExistingKey() {
-        val dbFile = dbManager!!.openFile(TSTTAB_TABLE_NAME)
-        assertTrue(dbFile.chain("XYZ").record.isEmpty())
-        dbManager!!.closeFile(TSTTAB_TABLE_NAME)
+    fun notEqual() {
+        val dbFile = SQLEqualsTest.dbManager.openFile(MUNICIPALITY_TABLE_NAME)
+        dbFile.setll(buildMunicipalityKey("IT", "LOM", "BS", "ERBASCO"))
+        assertTrue(!dbFile.equal())
+        SQLEqualsTest.dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
-
 }
 

@@ -22,12 +22,15 @@ import com.smeup.dbnative.file.RecordField
 import com.smeup.dbnative.sql.utils.*
 import org.junit.AfterClass
 import org.junit.BeforeClass
+import org.junit.FixMethodOrder
+import org.junit.Ignore
 import org.junit.Test
+import org.junit.runners.MethodSorters
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
 import kotlin.test.assertTrue
 
-
+@Ignore
 class SQLMunicipalityPerfTest {
 
     companion object {

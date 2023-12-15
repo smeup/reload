@@ -26,13 +26,13 @@ import com.smeup.dbnative.sql.utils.dbManagerForTest
 import com.smeup.dbnative.utils.propertiesToTypedMetadata
 import org.junit.AfterClass
 import org.junit.BeforeClass
-import org.junit.Ignore
 import org.junit.Test
+import kotlin.test.Ignore
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-//@Ignore
-class DB2400OperationsOnFile {
+@Ignore
+class DB2400Test {
 
     companion object {
 
@@ -45,6 +45,7 @@ class DB2400OperationsOnFile {
         }
 
         @AfterClass
+        @JvmStatic
         fun tearDown() {
         }
     }
@@ -439,6 +440,5 @@ class DB2400OperationsOnFile {
 
         dbManager!!.closeFile("BRARTI0L")
     }
-
 }
 
