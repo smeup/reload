@@ -100,5 +100,19 @@ class SQLReadTest {
         }
         SQLReadTest.dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
+
+    @Test
+    fun positioningWithLessKeysAndReadUntilEof() {
+        val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
+        var readed = 0;
+        val setllResult = dbFile.setll( buildCountryKey("IT", "LOM", "BS"))
+        while (dbFile.eof() == false) {
+            var readResult = dbFile.read()
+            readed++
+            System.out.println("Lettura $readed: " + getMunicipalityName(readResult.record))
+        }
+        assertEquals(1001, readed)
+        dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
+    }
 }
 
