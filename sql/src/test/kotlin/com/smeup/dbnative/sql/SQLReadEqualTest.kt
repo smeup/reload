@@ -23,7 +23,6 @@ import org.junit.AfterClass
 import org.junit.BeforeClass
 import org.junit.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class SQLReadEqualTest {
@@ -31,7 +30,7 @@ class SQLReadEqualTest {
     companion object {
 
         private lateinit var dbManager: SQLDBMManager
-        
+
         @BeforeClass
         @JvmStatic
         fun setUp() {
@@ -67,7 +66,7 @@ class SQLReadEqualTest {
     @Test
     fun findRecordsIfChainAndReadEExistingKey() {
         val dbFile = dbManager.openFile(EMPLOYEE_VIEW_NAME)
-        val setllResult = dbFile.setll( "C01")
+        val setllResult = dbFile.setll("C01")
         assertEquals("SALLY KWAN", getEmployeeName(dbFile.readEqual("C01").record))
         assertEquals("DELORES QUINTANA", getEmployeeName(dbFile.readEqual("C01").record))
         assertEquals("HEATHER NICHOLLS", getEmployeeName(dbFile.readEqual("C01").record))
@@ -79,7 +78,7 @@ class SQLReadEqualTest {
     @Test
     fun readUntilEof() {
         val dbFile = dbManager.openFile(EMPLOYEE_VIEW_NAME)
-        val setllResult = dbFile.setll( "C01")
+        val setllResult = dbFile.setll("C01")
         var readed = 0;
         var readResult = Result()
         while (dbFile.eof() == false) {
@@ -87,15 +86,15 @@ class SQLReadEqualTest {
             readed++
         }
         assertEquals(4, readed)
-        assertTrue (readResult.indicatorEQ)
+        assertTrue(readResult.indicatorEQ)
         dbManager.closeFile(EMPLOYEE_VIEW_NAME)
     }
 
     @Test
     fun equals() {
         val dbFile = dbManager.openFile(EMPLOYEE_VIEW_NAME)
-        val chainResult = dbFile.setll( "C01")
-        assertTrue (dbFile.equal())
+        val chainResult = dbFile.setll("C01")
+        assertTrue(dbFile.equal())
         dbManager.closeFile(EMPLOYEE_VIEW_NAME)
     }
 
@@ -110,6 +109,20 @@ class SQLReadEqualTest {
         assertEquals("GREG ORLANDO", getEmployeeName(dbFile.readEqual("A00").record))
         assertEquals(0, dbFile.readEqual().record.size)
         dbManager.closeFile(EMPLOYEE_VIEW_NAME)
+    }
+
+    @Test
+    fun setllReadsetllReade() {
+        val dbFile = SQLReadEqualTest.dbManager.openFile(MUNICIPALITY_TABLE_NAME)
+        assertTrue(dbFile.setll(buildMunicipalityKey("IT", "LOM", "BS")))
+        while (!dbFile.eof()) {
+            dbFile.read()
+        }
+        assertTrue(dbFile.setll(buildMunicipalityKey("IT", "LOM", "BS")))
+        val result = dbFile.readEqual(buildMunicipalityKey("IT", "LOM", "BS"))
+        assertEquals("ACQUAFREDDA", getMunicipalityName(result.record))
+
+        SQLReadEqualTest.dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
 
     @Test
@@ -130,6 +143,7 @@ class SQLReadEqualTest {
         assertEquals(0, dbFile.readEqual("C01").record.size)
         dbManager.closeFile(EMPLOYEE_VIEW_NAME)
     }
+
     @Test
     fun setgtReade() {
         val dbFile = SQLReadEqualTest.dbManager.openFile(MUNICIPALITY_TABLE_NAME)
@@ -146,6 +160,7 @@ class SQLReadEqualTest {
         assertEquals("ZONE", getMunicipalityName(dbFile.readEqual(buildMunicipalityKey("IT", "LOM", "BS")).record))
         var r = dbFile.readEqual(buildMunicipalityKey("IT", "LOM", "BS"))
         assertTrue(dbFile.eof())
+        assertTrue(r.indicatorEQ)
         r = dbFile.readEqual(buildMunicipalityKey("IT", "LOM", "BS"))
         assertTrue(dbFile.eof())
         SQLReadEqualTest.dbManager.closeFile(MUNICIPALITY_TABLE_NAME)

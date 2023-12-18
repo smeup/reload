@@ -346,7 +346,7 @@ class SQLDBFile(
 
 
     private fun readNextFromResultSet(loadNext: Boolean): Result {
-        if (nextResult == null) nextResult = Result(resultSet.toValues())
+        if (nextResult == null || nextResult!!.record.isEmpty()) nextResult = Result(resultSet.toValues())
         val result = nextResult
 
         var found: Boolean = false
