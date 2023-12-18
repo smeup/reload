@@ -160,7 +160,13 @@ class SQLDBFile(
     }
 
     override fun readEqual(): Result {
-        return readEqual(adapter.getLastKeys())
+        var result = Result()
+        try {
+            result = readEqual(adapter.getLastKeys())
+        } catch (exc: Exception) {
+            result.indicatorLO = true
+        }
+        return result
     }
 
     override fun readEqual(key: String): Result {
