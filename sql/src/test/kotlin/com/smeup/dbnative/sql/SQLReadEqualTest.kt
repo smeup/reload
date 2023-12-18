@@ -22,6 +22,7 @@ import com.smeup.dbnative.sql.utils.*
 import org.junit.AfterClass
 import org.junit.BeforeClass
 import org.junit.Test
+import kotlin.test.Ignore
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -98,7 +99,6 @@ class SQLReadEqualTest {
         dbManager.closeFile(EMPLOYEE_VIEW_NAME)
     }
 
-
     @Test
     fun findRecordsIfReadEWithKeyExistingKey() {
         val dbFile = dbManager.openFile(EMPLOYEE_VIEW_NAME)
@@ -171,6 +171,20 @@ class SQLReadEqualTest {
         val dbFile = SQLReadEqualTest.dbManager.openFile(MUNICIPALITY_TABLE_NAME)
         assertTrue(dbFile.setll(buildMunicipalityKey("IT", "LOM", "BS", "ERBASCO")))
         dbFile.readEqual(buildMunicipalityKey("IT", "LOM", "BS", "ERBASCO"))
+        SQLReadEqualTest.dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
+    }
+
+    @Test
+    fun setGtReadsetGtReade() {
+        val dbFile = SQLReadEqualTest.dbManager.openFile(MUNICIPALITY_TABLE_NAME)
+        assertTrue(dbFile.setll(buildMunicipalityKey("IT", "LOM", "BS")))
+        while(!dbFile.eof()) {
+            dbFile.read()
+        }
+        assertTrue(dbFile.setll(buildMunicipalityKey("IT", "LOM", "BS")))
+        val result = dbFile.readEqual(buildMunicipalityKey("IT", "LOM", "BS"))
+        assertEquals("ACQUAFREDDA", getMunicipalityName(result.record))
+
         SQLReadEqualTest.dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
 }
