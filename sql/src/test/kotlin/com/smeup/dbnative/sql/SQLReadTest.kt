@@ -17,6 +17,7 @@
 
 package com.smeup.dbnative.sql
 
+import com.smeup.dbnative.file.Result
 import com.smeup.dbnative.sql.utils.*
 import org.junit.AfterClass
 import org.junit.BeforeClass
@@ -29,7 +30,7 @@ class SQLReadTest {
     companion object {
 
         private lateinit var dbManager: SQLDBMManager
-        
+
         @BeforeClass
         @JvmStatic
         fun setUp() {
@@ -50,12 +51,14 @@ class SQLReadTest {
     fun readUntilEof() {
         val dbFile = dbManager.openFile(EMPLOYEE_VIEW_NAME)
         var readed = 0;
+        var readResult = Result()
         while (dbFile.eof() == false) {
-            var readResult = dbFile.read()
+            readResult = dbFile.read()
             readed++
-            System.out.println("Lettura $readed: " + getEmployeeName(readResult.record))
+            println("Lettura $readed: " + getEmployeeName(readResult.record))
         }
         assertEquals(42, readed)
+        assertTrue(readResult.indicatorEQ)
         dbManager.closeFile(EMPLOYEE_VIEW_NAME)
     }
 
@@ -63,13 +66,15 @@ class SQLReadTest {
     fun positioningAndReadUntilEof() {
         val dbFile = dbManager.openFile(EMPLOYEE_VIEW_NAME)
         var readed = 0;
-        val setllResult = dbFile.setll( "C01")
+        dbFile.setll("C01")
+        var readResult = Result()
         while (dbFile.eof() == false) {
-            var readResult = dbFile.read()
+            readResult = dbFile.read()
             readed++
-            System.out.println("Lettura $readed: " + getEmployeeName(readResult.record))
+            println("Lettura $readed: " + getEmployeeName(readResult.record))
         }
         assertEquals(36, readed)
+        assertTrue(readResult.indicatorEQ)
         dbManager.closeFile(EMPLOYEE_VIEW_NAME)
     }
 
@@ -77,11 +82,11 @@ class SQLReadTest {
     fun positioningBlankAndReadUntilEof() {
         val dbFile = dbManager.openFile(EMPLOYEE_VIEW_NAME)
         var readed = 0;
-        val setllResult = dbFile.setll( "")
+        dbFile.setll("")
         while (dbFile.eof() == false) {
             var readResult = dbFile.read()
             readed++
-            System.out.println("Lettura $readed: " + getEmployeeName(readResult.record))
+            println("Lettura $readed: " + getEmployeeName(readResult.record))
         }
         assertEquals(42, readed)
         dbManager.closeFile(EMPLOYEE_VIEW_NAME)
@@ -91,11 +96,11 @@ class SQLReadTest {
     fun multipleRead() {
         val dbFile = SQLReadTest.dbManager.openFile(MUNICIPALITY_TABLE_NAME)
         assertTrue(dbFile.setll(buildMunicipalityKey("IT", "LOM", "BS", "ERBUSCO")))
-        for(index in 0..138){
+        for (index in 0..138) {
             var result = dbFile.read();
-            assertTrue{!dbFile.eof()}
-            if(index == 138) {
-                assertEquals("CO" , getMunicipalityProv(result.record))
+            assertTrue { !dbFile.eof() }
+            if (index == 138) {
+                assertEquals("CO", getMunicipalityProv(result.record))
             }
         }
         SQLReadTest.dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
@@ -105,11 +110,11 @@ class SQLReadTest {
     fun positioningWithLessKeysAndReadUntilEof() {
         val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
         var readed = 0;
-        val setllResult = dbFile.setll( buildCountryKey("IT", "LOM", "BS"))
+        dbFile.setll(buildCountryKey("IT", "LOM", "BS"))
         while (dbFile.eof() == false) {
             var readResult = dbFile.read()
             readed++
-            System.out.println("Lettura $readed: " + getMunicipalityName(readResult.record))
+            println("Lettura $readed: " + getMunicipalityName(readResult.record))
         }
         assertEquals(1001, readed)
         dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
