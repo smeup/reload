@@ -19,7 +19,6 @@ package com.smeup.dbnative.sql
 
 import com.smeup.dbnative.ConnectionConfig
 import com.smeup.dbnative.DBManagerBaseImpl
-import com.smeup.dbnative.file.DBFile
 import com.smeup.dbnative.log.LoggingKey
 import java.sql.Connection
 import java.sql.DriverManager
@@ -40,13 +39,13 @@ open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBMa
                 Class.forName(connectionConfig.driver)
             }
 
-            val connectionProps = Properties();
-            connectionProps.put("user", connectionConfig.user);
-            connectionProps.put("password", connectionConfig.password);
+            val connectionProps = Properties()
+            connectionProps["user"] = connectionConfig.user
+            connectionProps["password"] = connectionConfig.password
 
-            connectionConfig.properties.forEach() {
-                if (!it.key.equals("user") && !it.key.equals("password")) {
-                    connectionProps.put(it.key, it.value);
+            connectionConfig.properties.forEach {
+                if (it.key != "user" && it.key != "password") {
+                    connectionProps[it.key] = it.value
                 }
             }
             conn = DriverManager.getConnection(connectionConfig.url, connectionProps)
