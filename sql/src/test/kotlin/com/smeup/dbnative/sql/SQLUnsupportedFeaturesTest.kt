@@ -66,7 +66,8 @@ class SQLUnsupportedFeaturesTest {
     @Test
     fun usupportedUnpositioning() {
         val dbFile = SQLUnsupportedFeaturesTest.dbManager.openFile(MUNICIPALITY_TABLE_NAME)
-        assertFails {dbFile.readEqual(buildMunicipalityKey("IT", "LOM", "BS"))}
+        val result = dbFile.readEqual(buildMunicipalityKey("IT", "LOM", "BS"))
+        assertTrue { result.indicatorLO }
         SQLUnsupportedFeaturesTest.dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
 

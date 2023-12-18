@@ -17,6 +17,7 @@
 
 package com.smeup.dbnative.sql
 
+import com.smeup.dbnative.file.Result
 import com.smeup.dbnative.sql.utils.*
 import org.junit.AfterClass
 import org.junit.BeforeClass
@@ -48,11 +49,10 @@ class SQLReadEqualTest {
     }
 
     @Test
-    fun throwsExceptionIfImmediatelyReadE() {
+    fun errorIfImmediatelyReadE() {
         val dbFile = dbManager.openFile(EMPLOYEE_VIEW_NAME)
-        assertFailsWith(Exception::class) {
-            dbFile.readEqual()
-        }
+        var result = dbFile.readEqual()
+        assertTrue(result.indicatorLO)
         dbManager.closeFile(EMPLOYEE_VIEW_NAME)
     }
 
@@ -81,11 +81,13 @@ class SQLReadEqualTest {
         val dbFile = dbManager.openFile(EMPLOYEE_VIEW_NAME)
         val setllResult = dbFile.setll( "C01")
         var readed = 0;
+        var readResult = Result()
         while (dbFile.eof() == false) {
-            var readResult = dbFile.readEqual("C01")
+            readResult = dbFile.readEqual("C01")
             readed++
         }
         assertEquals(4, readed)
+        assertTrue (readResult.indicatorEQ)
         dbManager.closeFile(EMPLOYEE_VIEW_NAME)
     }
 
@@ -132,7 +134,8 @@ class SQLReadEqualTest {
     fun setgtReade() {
         val dbFile = SQLReadEqualTest.dbManager.openFile(MUNICIPALITY_TABLE_NAME)
         assertTrue(dbFile.setgt(buildMunicipalityKey("IT", "LOM", "BS")))
-        assertEquals("ALBAVILLA", getMunicipalityName(dbFile.readEqual(buildMunicipalityKey("IT", "LOM")).record))
+        val result = dbFile.readEqual(buildMunicipalityKey("IT", "LOM"))
+        assertEquals("ALBAVILLA", getMunicipalityName(result.record))
         SQLReadEqualTest.dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
 
