@@ -114,5 +114,19 @@ class SQLReadTest {
         assertEquals(1001, readed)
         dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
+
+    @Test
+    fun positioningWithHalfKeysAndReadUntilEof() {
+        val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
+        var readed = 0;
+        val setllResult = dbFile.setll( buildRegionKey("IT", "LOM"))
+        while (dbFile.eof() == false) {
+            var readResult = dbFile.read()
+            readed++
+            System.out.println("Lettura $readed: " + getMunicipalityName(readResult.record))
+        }
+        assertEquals(1244, readed)
+        dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
+    }
 }
 
