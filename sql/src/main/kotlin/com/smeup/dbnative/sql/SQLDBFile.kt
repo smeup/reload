@@ -20,19 +20,23 @@ package com.smeup.dbnative.sql
 
 import com.smeup.dbnative.file.DBFile
 import com.smeup.dbnative.file.Record
+import com.smeup.dbnative.file.RecordField
 import com.smeup.dbnative.file.Result
 import com.smeup.dbnative.log.Logger
 import com.smeup.dbnative.log.LoggingKey
 import com.smeup.dbnative.log.NativeMethod
 import com.smeup.dbnative.model.FileMetadata
+import redis.clients.jedis.Jedis
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.ResultSet
+import java.sql.ResultSetMetaData
 import kotlin.system.measureTimeMillis
 
 class SQLDBFile(
     override var name: String, override var fileMetadata: FileMetadata,
     var connection: Connection,
+    var jedis: Jedis,
     override var logger: Logger? = null
 ) : DBFile {
 
@@ -40,7 +44,14 @@ class SQLDBFile(
         name: String,
         fileMetadata: FileMetadata,
         connection: Connection
-    ) : this(name, fileMetadata, connection, null)
+    ) : this(name, fileMetadata, connection, Jedis("172.16.2.160", 6379), null)
+
+    constructor(
+        name: String,
+        fileMetadata: FileMetadata,
+        connection: Connection,
+        logger: Logger?
+    ) : this(name, fileMetadata, connection, Jedis("172.16.2.160", 6379), logger)
 
     private var preparedStatements: MutableMap<String, PreparedStatement> = mutableMapOf()
     private var resultSet: ResultSet? = null
@@ -49,6 +60,9 @@ class SQLDBFile(
     private var lastNativeMethod: NativeMethod? = null
 
     private var nextResult: Result? = null
+
+    private var redisLoaded = false
+    private var redisKeys: MutableList<String> = mutableListOf()
 
     //Search from: metadata, primary key, unique index, view ordering fields
     //private val thisFileKeys: List<String> by lazy {
@@ -80,6 +94,52 @@ class SQLDBFile(
         return true
     }
 
+    fun loadInRedis() {
+        executeQuery(adapter.getGenericSQL(), mutableListOf())
+        var cont = 0.0
+        while (resultSet!!.next()) {
+            val metaData: ResultSetMetaData = resultSet!!.metaData
+            val columnCount: Int = metaData.columnCount
+
+            val recordMap = mutableMapOf<String, Any>()
+            var redisKey = ""
+            for (i in 1..columnCount) {
+                val columnName: String = metaData.getColumnName(i)
+                val columnValue: Any = resultSet!!.getObject(i)
+
+                if (columnName in fileMetadata.fileKeys) {
+                    redisKey += columnValue.toString() + "_"
+                }
+                recordMap[columnName] = columnValue
+            }
+            val jsonRecord = recordMap.toString()
+            jedis.setnx(redisKey.removeSuffix("_"), jsonRecord)
+            jedis.zadd(fileMetadata.tableName, cont, redisKey.removeSuffix("_"))
+
+            cont++
+        }
+        redisLoaded = true
+    }
+
+    fun retrieveFromRedis(keys: List<String>): Record {
+        if (redisKeys.isEmpty())
+            redisKeys = jedis.zrange(fileMetadata.tableName, 0, -1)
+        val record = Record()
+        for (key in redisKeys) {
+            if (key.contains(keys.joinToString("_"))) {
+                val value = jedis.get(key)
+                val regex = Regex("""(\w+)=(.*?)(?:,|\})""")
+                val matchResults = regex.findAll(value)
+                for (matchResult in matchResults) {
+                    val (key, value) = matchResult.destructured
+                    record.add(RecordField(key, value))
+                }
+                return record
+            }
+        }
+        return record
+    }
+
     override fun setgt(key: String): Boolean {
         return setgt(mutableListOf(key))
     }
@@ -104,8 +164,17 @@ class SQLDBFile(
         adapter.setRead(ReadMethod.CHAIN, keys)
         val read: Result
         measureTimeMillis {
-            executeQuery(adapter.getSQLSatement())
-            read = readNextFromResultSet(false)
+            //executeQuery(adapter.getSQLSatement())
+            if (!redisLoaded) {
+                measureTimeMillis {
+                    loadInRedis()
+                }.apply {
+                    logEvent(LoggingKey.native_access_method, "Writing record to Redis", this)
+                }
+
+            }
+
+            read = Result(retrieveFromRedis(keys)) //readNextFromResultSet(false)
         }.apply {
             logEvent(LoggingKey.native_access_method, "chain executed", this)
         }
@@ -248,25 +317,6 @@ class SQLDBFile(
         return Result(record)
     }
 
-    /*
-    override fun update(record: Record): Result {
-        lastNativeMethod = NativeMethod.update
-        logEvent(LoggingKey.native_access_method, "Executing write for record $record: with autocommit=${connection.autoCommit}")
-        measureTimeMillis {
-            // TODO: manage errors
-            val sql = fileMetadata.tableName.updateSQL(record)
-            connection.prepareStatement(sql).use { it ->
-                it.bind(record.values.map { it })
-                it.execute()
-            }
-        }.apply {
-            logEvent(LoggingKey.native_access_method, "update executed", this)
-        }
-        lastNativeMethod = null
-        return Result(record)
-    }
-    */
-
     override fun update(record: Record): Result {
         require(getResultSet() != null) {
             "Positioning required before update "
@@ -408,5 +458,11 @@ class SQLDBFile(
     override fun close() {
         resultSet.closeIfOpen()
         preparedStatements.values.forEach { it.close() }
+
+        for (key in redisKeys) {
+            jedis.del(key)
+        }
+        jedis.del(fileMetadata.tableName)
+        jedis.close()
     }
 }

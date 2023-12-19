@@ -17,10 +17,12 @@
  */
 package com.smeup.dbnative.sql
 
+import com.smeup.dbnative.log.LoggingKey
 import com.smeup.dbnative.sql.utils.*
 import org.junit.AfterClass
 import org.junit.BeforeClass
 import org.junit.Test
+import kotlin.system.measureTimeMillis
 import kotlin.test.assertEquals
 
 class SQLChainTest {
@@ -101,6 +103,20 @@ class SQLChainTest {
         // Chain to another record
         var chainResult = dbFile.chain(buildMunicipalityKey("IT", "LOM", "BS", "ADRO"))
         assertEquals("ADRO", getMunicipalityName(chainResult.record))
+        SQLChainTest.dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
+    }
+
+    @Test
+    fun chainLoop(){
+        val dbFile = SQLChainTest.dbManager.openFile(MUNICIPALITY_TABLE_NAME)
+        val n = 100000
+        measureTimeMillis {
+            for (i in 0..n) {
+                dbFile.chain(buildMunicipalityKey("IT", "LOM", "BS", "ERBUSCO"))
+            }
+        }.apply {
+            println("Time doing $n chain: $this")
+        }
         SQLChainTest.dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
 }
