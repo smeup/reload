@@ -27,6 +27,8 @@ import com.smeup.dbnative.log.LoggingKey
 import com.smeup.dbnative.log.NativeMethod
 import com.smeup.dbnative.model.FileMetadata
 import redis.clients.jedis.Jedis
+import redis.clients.jedis.params.ScanParams
+import redis.clients.jedis.resps.ScanResult
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.ResultSet
@@ -44,14 +46,14 @@ class SQLDBFile(
         name: String,
         fileMetadata: FileMetadata,
         connection: Connection
-    ) : this(name, fileMetadata, connection, Jedis("172.16.2.160", 6379), null)
+    ) : this(name, fileMetadata, connection, Jedis(System.getenv("REDIS_HOST"), Integer.parseInt(System.getenv("REDIS_PORT"))), null)
 
     constructor(
         name: String,
         fileMetadata: FileMetadata,
         connection: Connection,
         logger: Logger?
-    ) : this(name, fileMetadata, connection, Jedis("172.16.2.160", 6379), logger)
+    ) : this(name, fileMetadata, connection, Jedis(System.getenv("REDIS_HOST"), Integer.parseInt(System.getenv("REDIS_PORT"))), logger)
 
     private var preparedStatements: MutableMap<String, PreparedStatement> = mutableMapOf()
     private var resultSet: ResultSet? = null
@@ -94,7 +96,7 @@ class SQLDBFile(
         return true
     }
 
-    fun loadInRedis() {
+    private fun loadInRedis() {
         executeQuery(adapter.getGenericSQL(), mutableListOf())
         var cont = 0.0
         while (resultSet!!.next()) {
@@ -121,7 +123,38 @@ class SQLDBFile(
         redisLoaded = true
     }
 
-    fun retrieveFromRedis(keys: List<String>): Record {
+    private fun loadInRediswithKeys(keys: List<String>) {
+        executeQuery(adapter.getGenericSQL(), mutableListOf())
+        val fileKeys = fileMetadata.fileKeys.take(keys.size)
+        //var cont = 0.0
+        while (resultSet!!.next()) {
+            val metaData: ResultSetMetaData = resultSet!!.metaData
+            val columnCount: Int = metaData.columnCount
+
+            val recordMap = mutableMapOf<String, Any>()
+            var redisKey = "${fileMetadata.tableName}_"
+            for (i in 1..columnCount) {
+                val columnName: String = metaData.getColumnName(i)
+                val columnValue: Any = resultSet!!.getObject(i)
+
+                if (columnName in fileKeys) {
+                    redisKey += columnValue.toString() + "_"
+                }
+                recordMap[columnName] = columnValue
+            }
+            //if(redisKey.removeSuffix("_").equals(fileKeys.joinToString("_"))){
+                val jsonRecord = recordMap.toString()
+                jedis.setnx(redisKey.removeSuffix("_"), jsonRecord)
+            //}
+
+            //jedis.zadd(fileMetadata.tableName, cont, redisKey.removeSuffix("_"))
+
+            //cont++
+        }
+        redisLoaded = true
+    }
+
+    private fun retrieveFromRedis(keys: List<String>): Record {
         if (redisKeys.isEmpty())
             redisKeys = jedis.zrange(fileMetadata.tableName, 0, -1)
         val record = Record()
@@ -135,6 +168,20 @@ class SQLDBFile(
                     record.add(RecordField(key, value))
                 }
                 return record
+            }
+        }
+        return record
+    }
+
+    private fun retrieveFromRedis2(keys: List<String>): Record {
+        val record = Record()
+        val value = jedis.get(fileMetadata.tableName + "_" + keys.joinToString("_"))
+        val regex = Regex("""(\w+)=(.*?)(?:,|\})""")
+        if(value != null){
+            val matchResults = regex.findAll(value)
+            for (matchResult in matchResults) {
+                val (key, value) = matchResult.destructured
+                record.add(RecordField(key, value))
             }
         }
         return record
@@ -167,14 +214,16 @@ class SQLDBFile(
             //executeQuery(adapter.getSQLSatement())
             if (!redisLoaded) {
                 measureTimeMillis {
-                    loadInRedis()
+                    //loadInRedis()
+                    loadInRediswithKeys(keys)
                 }.apply {
                     logEvent(LoggingKey.native_access_method, "Writing record to Redis", this)
                 }
 
             }
 
-            read = Result(retrieveFromRedis(keys)) //readNextFromResultSet(false)
+            //read = Result(retrieveFromRedis(keys)) //readNextFromResultSet(false)
+            read = Result(retrieveFromRedis2(keys))
         }.apply {
             logEvent(LoggingKey.native_access_method, "chain executed", this)
         }
@@ -459,10 +508,21 @@ class SQLDBFile(
         resultSet.closeIfOpen()
         preparedStatements.values.forEach { it.close() }
 
-        for (key in redisKeys) {
-            jedis.del(key)
-        }
-        jedis.del(fileMetadata.tableName)
+        val prefix = fileMetadata.tableName
+        val scanParams = ScanParams().match("$prefix*")
+        var cursor = "0"
+
+        do {
+            val scanResult: ScanResult<String> = jedis.scan(cursor, scanParams)
+            val keys = scanResult.result
+
+            // Delete each key
+            keys.forEach { key -> jedis.del(key) }
+
+            // Update the cursor for the next iteration
+            cursor = scanResult.cursor
+        } while (cursor != "0")
+
         jedis.close()
     }
 }

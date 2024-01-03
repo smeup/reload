@@ -31,7 +31,7 @@
     <parent>
         <groupId>io.github.smeup.reload</groupId>
         <artifactId>reload</artifactId>
-        <version>develop-SNAPSHOT</version>
+        <version>poc-redis-SNAPSHOT</version>
     </parent>
 
     <artifactId>jt400</artifactId>

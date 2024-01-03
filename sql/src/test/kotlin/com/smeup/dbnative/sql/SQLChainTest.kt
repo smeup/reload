@@ -109,14 +109,16 @@ class SQLChainTest {
     @Test
     fun chainLoop(){
         val dbFile = SQLChainTest.dbManager.openFile(MUNICIPALITY_TABLE_NAME)
-        val n = 100000
+        val n = 5
         measureTimeMillis {
             for (i in 0..n) {
-                dbFile.chain(buildMunicipalityKey("IT", "LOM", "BS", "ERBUSCO"))
+                dbFile.chain(buildRegionKey("IT", "LOM"))
+                dbFile.chain(buildRegionKey("IT", "LAZ"))
             }
         }.apply {
             println("Time doing $n chain: $this")
         }
+        dbFile.close()
         SQLChainTest.dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
 }
