@@ -107,9 +107,9 @@ class SQLChainTest {
     }
 
     @Test
-    fun chainLoop(){
+    fun chainLoop() {
         val dbFile = SQLChainTest.dbManager.openFile(MUNICIPALITY_TABLE_NAME)
-        val n = 5
+        val n = 50
         measureTimeMillis {
             for (i in 0..n) {
                 dbFile.chain(buildRegionKey("IT", "LOM"))
@@ -118,8 +118,24 @@ class SQLChainTest {
         }.apply {
             println("Time doing $n chain: $this")
         }
-        dbFile.close()
-        SQLChainTest.dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
+        /*dbFile.close()
+        SQLChainTest.dbManager.closeFile(MUNICIPALITY_TABLE_NAME)*/
+    }
+
+    @Test
+    fun chainRedisTest() {
+        val dbFile = SQLChainTest.dbManager.openFile("BRCOMM0L")
+        val keys = mutableListOf<String>()
+        for (i in 0..50) {
+            keys.add("IOT.001   ")
+            dbFile.chain(keys)
+            keys.remove("IOT.001   ")
+            keys.add("R2-20-0281")
+            dbFile.chain(keys)
+            keys.remove("R2-20-0281")
+        }
+
+
     }
 }
 

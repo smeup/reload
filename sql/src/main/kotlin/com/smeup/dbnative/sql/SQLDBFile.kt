@@ -46,14 +46,26 @@ class SQLDBFile(
         name: String,
         fileMetadata: FileMetadata,
         connection: Connection
-    ) : this(name, fileMetadata, connection, Jedis(System.getenv("REDIS_HOST"), Integer.parseInt(System.getenv("REDIS_PORT"))), null)
+    ) : this(
+        name,
+        fileMetadata,
+        connection,
+        Jedis(System.getenv("REDIS_HOST"), Integer.parseInt(System.getenv("REDIS_PORT"))),
+        null
+    )
 
     constructor(
         name: String,
         fileMetadata: FileMetadata,
         connection: Connection,
         logger: Logger?
-    ) : this(name, fileMetadata, connection, Jedis(System.getenv("REDIS_HOST"), Integer.parseInt(System.getenv("REDIS_PORT"))), logger)
+    ) : this(
+        name,
+        fileMetadata,
+        connection,
+        Jedis(System.getenv("REDIS_HOST"), Integer.parseInt(System.getenv("REDIS_PORT"))),
+        logger
+    )
 
     private var preparedStatements: MutableMap<String, PreparedStatement> = mutableMapOf()
     private var resultSet: ResultSet? = null
@@ -143,8 +155,8 @@ class SQLDBFile(
                 recordMap[columnName] = columnValue
             }
             //if(redisKey.removeSuffix("_").equals(fileKeys.joinToString("_"))){
-                val jsonRecord = recordMap.toString()
-                jedis.setnx(redisKey.removeSuffix("_"), jsonRecord)
+            val jsonRecord = recordMap.toString()
+            jedis.setnx(redisKey.removeSuffix("_"), jsonRecord)
             //}
 
             //jedis.zadd(fileMetadata.tableName, cont, redisKey.removeSuffix("_"))
@@ -175,13 +187,22 @@ class SQLDBFile(
 
     private fun retrieveFromRedis2(keys: List<String>): Record {
         val record = Record()
-        val value = jedis.get(fileMetadata.tableName + "_" + keys.joinToString("_"))
-        val regex = Regex("""(\w+)=(.*?)(?:,|\})""")
+        var value = jedis.get(fileMetadata.tableName + "_" + keys.joinToString("_"))
+
         if(value != null){
-            val matchResults = regex.findAll(value)
-            for (matchResult in matchResults) {
-                val (key, value) = matchResult.destructured
-                record.add(RecordField(key, value))
+            value = value.substring(1, value.length - 1)
+            val keyValuePairs = value.split(',')
+                .map { it }
+                .mapNotNull {
+                    if(!it.contains('=')) {
+                        null
+                    }else {
+                        val (key, value) = it.split('=')
+                        Pair(key.trim(), value)
+                    }
+                }
+            for(pair in keyValuePairs){
+                record.add(RecordField(pair.first, pair.second))
             }
         }
         return record
@@ -213,13 +234,15 @@ class SQLDBFile(
         measureTimeMillis {
             //executeQuery(adapter.getSQLSatement())
             if (!redisLoaded) {
-                measureTimeMillis {
-                    //loadInRedis()
-                    loadInRediswithKeys(keys)
-                }.apply {
-                    logEvent(LoggingKey.native_access_method, "Writing record to Redis", this)
-                }
+                if (!isRedisLoaded(fileMetadata.tableName)) {
+                    measureTimeMillis {
+                        //loadInRedis()
+                        loadInRediswithKeys(keys)
+                    }.apply {
+                        logEvent(LoggingKey.native_access_method, "Writing record to Redis", this)
+                    }
 
+                }
             }
 
             //read = Result(retrieveFromRedis(keys)) //readNextFromResultSet(false)
@@ -505,6 +528,7 @@ class SQLDBFile(
     }
 
     override fun close() {
+        jedis.close()
         resultSet.closeIfOpen()
         preparedStatements.values.forEach { it.close() }
 
@@ -524,5 +548,16 @@ class SQLDBFile(
         } while (cursor != "0")
 
         jedis.close()
+    }
+
+    private fun isRedisLoaded(tableName: String): Boolean {
+        if (jedis.keys("$tableName*").isNotEmpty()) {
+            redisLoaded = true
+            jedis.close()
+            return true
+        } else {
+            jedis.close()
+            return false
+        }
     }
 }
