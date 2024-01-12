@@ -108,33 +108,6 @@ class SQLDBFile(
         return true
     }
 
-    private fun loadInRedis() {
-        executeQuery(adapter.getGenericSQL(), mutableListOf())
-        var cont = 0.0
-        while (resultSet!!.next()) {
-            val metaData: ResultSetMetaData = resultSet!!.metaData
-            val columnCount: Int = metaData.columnCount
-
-            val recordMap = mutableMapOf<String, Any>()
-            var redisKey = ""
-            for (i in 1..columnCount) {
-                val columnName: String = metaData.getColumnName(i)
-                val columnValue: Any = resultSet!!.getObject(i)
-
-                if (columnName in fileMetadata.fileKeys) {
-                    redisKey += columnValue.toString() + "_"
-                }
-                recordMap[columnName] = columnValue
-            }
-            val jsonRecord = recordMap.toString()
-            jedis.setnx(redisKey.removeSuffix("_"), jsonRecord)
-            jedis.zadd(fileMetadata.tableName, cont, redisKey.removeSuffix("_"))
-
-            cont++
-        }
-        redisLoaded = true
-    }
-
     private fun loadInRediswithKeys(keys: List<String>) {
         executeQuery(adapter.getGenericSQL(), mutableListOf())
         val fileKeys = fileMetadata.fileKeys.take(keys.size)
@@ -167,25 +140,6 @@ class SQLDBFile(
     }
 
     private fun retrieveFromRedis(keys: List<String>): Record {
-        if (redisKeys.isEmpty())
-            redisKeys = jedis.zrange(fileMetadata.tableName, 0, -1)
-        val record = Record()
-        for (key in redisKeys) {
-            if (key.contains(keys.joinToString("_"))) {
-                val value = jedis.get(key)
-                val regex = Regex("""(\w+)=(.*?)(?:,|\})""")
-                val matchResults = regex.findAll(value)
-                for (matchResult in matchResults) {
-                    val (key, value) = matchResult.destructured
-                    record.add(RecordField(key, value))
-                }
-                return record
-            }
-        }
-        return record
-    }
-
-    private fun retrieveFromRedis2(keys: List<String>): Record {
         val record = Record()
         var value = jedis.get(fileMetadata.tableName + "_" + keys.joinToString("_"))
 
@@ -246,7 +200,7 @@ class SQLDBFile(
             }
 
             //read = Result(retrieveFromRedis(keys)) //readNextFromResultSet(false)
-            read = Result(retrieveFromRedis2(keys))
+            read = Result(retrieveFromRedis(keys))
         }.apply {
             logEvent(LoggingKey.native_access_method, "chain executed", this)
         }
@@ -274,6 +228,7 @@ class SQLDBFile(
             logEvent(LoggingKey.native_access_method, "read executed", this)
         }
         lastNativeMethod = null
+
         return read
     }
 
@@ -444,17 +399,22 @@ class SQLDBFile(
     }
 
     private fun executeQuery(sql: String, values: List<String>) {
+        var actualSql = sql
         eof = false
         resultSet.closeIfOpen()
-        logEvent(LoggingKey.execute_inquiry, "Preparing statement for query: $sql with bingings: $values")
+        logEvent(LoggingKey.execute_inquiry, "Preparing statement for query: $actualSql with bingings: $values")
         val stm: PreparedStatement
+        /*if(connection.metaData.driverName.contains("PostgreSQL", true)){
+            actualSql = actualSql.replace("\"", "")
+        }*/
+
         measureTimeMillis {
-            stm = preparedStatements.get(sql) ?: connection.prepareStatement(
-                sql,
+            stm = preparedStatements.get(actualSql) ?: connection.prepareStatement(
+                actualSql,
                 ResultSet.TYPE_FORWARD_ONLY,
                 ResultSet.CONCUR_UPDATABLE
             )
-            preparedStatements.putIfAbsent(sql, stm);
+            preparedStatements.putIfAbsent(actualSql, stm);
             stm.bind(values)
         }.apply {
             logEvent(LoggingKey.execute_inquiry, "Statement prepared, executing query for statement", this)

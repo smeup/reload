@@ -133,5 +133,23 @@ class SQLReadTest {
         assertEquals(1244, readed)
         dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
+
+    @Test
+    fun setllReadPostgresql(){
+        var readed = 0;
+        val testSQLDBType = TestSQLDBType.POSGRESQL
+        val dbManager = SQLDBMManager(testSQLDBType.connectionConfig)
+        val dbFile = dbManager.openFile("MU24020L")
+        dbFile.setll("20231002")
+        while (dbFile.eof() == false) {
+            var readResult = dbFile.read()
+            if(readResult.record["M240DATA"]!! > "20231002"){
+                break;
+            }
+            readed++
+            System.out.println("Lettura $readed: " + readResult.record)
+        }
+        dbManager.closeFile("MU24020L")
+    }
 }
 

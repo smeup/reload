@@ -176,9 +176,9 @@ class Native2SQL(val fileMetadata: FileMetadata) {
 
     private fun getSQLOrderByClause(): String {
         val sortOrder = getSortOrder()
-        return " ORDER BY " + fileMetadata.fileKeys.joinToString(
-            separator = " " + sortOrder.symbol + ", ",
-            postfix = " " + sortOrder.symbol
+        return " ORDER BY \"" + fileMetadata.fileKeys.joinToString(
+            separator = "\" " + sortOrder.symbol + ", \"",
+            postfix = "\" " + sortOrder.symbol
         )
     }
 
@@ -278,7 +278,7 @@ class Native2SQL(val fileMetadata: FileMetadata) {
             repeat(lostKeys) {
                 replacements.add("");
             }
-            return Pair(queries.joinToString(), replacements)
+            return Pair(queries.joinToString() + getSQLOrderByClause(), replacements)
         }
     }
 

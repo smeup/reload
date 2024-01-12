@@ -94,7 +94,18 @@ enum class TestSQLDBType(
 
         //force no create connection for dba operations
         dbaConnectionConfig = null
+    ),
+    POSGRESQL(ConnectionConfig(
+        fileName= "*",
+        driver = "org.postgresql.Driver",
+        url = "jdbc:postgresql://172.16.2.160:5432/postgres?currentSchema=\"P_005247\"",
+        user = "postgres",
+        password = "***"),
+
+        //force no create connection for dba operations
+        dbaConnectionConfig = null
     )
+
 
 }
 
