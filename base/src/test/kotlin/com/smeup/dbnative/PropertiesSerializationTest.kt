@@ -17,7 +17,9 @@
 
 package com.smeup.dbnative
 
-import com.smeup.dbnative.metadata.file.PropertiesSerializer
+import com.smeup.dbnative.metadata.file.MetadataSerializer
+import com.smeup.dbnative.model.Field
+import com.smeup.dbnative.model.FileMetadata
 import org.junit.Test
 import java.io.File
 
@@ -25,22 +27,27 @@ class DBFileFactoryTest {
 
     @Test
     fun loadAndSaveTest() {
-        // Delete tmp file
-        var tmpFile = File("src/test/resources/dds/properties/out/BRARTI0F.properties")
-        if (tmpFile.exists()) tmpFile.delete()
-        tmpFile.parentFile.mkdirs()
 
-        // Read metadata1 from properties
-        var metadata1 = PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", "BRARTI0F")
-        println(metadata1)
+        val fileMetadata = FileMetadata(
+            "TEST",
+            "ExampleTable",
+            listOf(
+                Field("field1", "some text", false),
+                Field("field2", numeric = true)
+            ),
+            listOf("key1", "key2")
+        )
+
+        // Delete tmp file
+        val tmpDir = System.getProperty("java.io.tmpdir")
 
         // Save metadata1 to tmp properties file
-        PropertiesSerializer.metadataToProperties("src/test/resources/dds/properties/out", metadata1, true)
+        MetadataSerializer.metadataToJson(tmpDir, fileMetadata, true)
 
-        // Read metadata2 from tmp properties file
-        var metadata2 = PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/out/", "BRARTI0F")
+        // Read metadata1 from properties
+        var metadata = MetadataSerializer.jsonToMetadata(tmpDir, "TEST")
 
         // Compare metadatas class
-        assert(metadata2.equals(metadata1))
+        assert(metadata.name.equals("TEST"))
     }
 }

@@ -37,19 +37,19 @@ object FSMetadataRegisterImpl: MetadataRegister{
     }
 
     override fun registerMetadata(metadata: FileMetadata, overwrite: Boolean) {
-        PropertiesSerializer.metadataToProperties(propertiesDirPath, metadata, true)
+        MetadataSerializer.metadataToJson(propertiesDirPath, metadata, true)
     }
 
     override fun getMetadata(filename: String): FileMetadata {
-        return PropertiesSerializer.propertiesToMetadata(propertiesDirPath, filename)
+        return MetadataSerializer.jsonToMetadata(propertiesDirPath, filename)
     }
 
     override fun contains(fileName: String): Boolean {
-        return File("${propertiesDirPath}${File.separatorChar}${fileName}.properties").exists()
+        return File("${propertiesDirPath}${File.separatorChar}${fileName}.json").exists()
     }
 
     override fun remove(fileName: String) {
-        var propertiesFile = File("${propertiesDirPath}${File.separatorChar}${fileName}.properties")
+        var propertiesFile = File("${propertiesDirPath}${File.separatorChar}${fileName}.json")
         if (propertiesFile.exists()) propertiesFile.delete()
     }
 }

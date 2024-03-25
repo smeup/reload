@@ -59,6 +59,11 @@
 			<version>8.0.18</version>
 			<scope>test</scope>
 		</dependency>
+		<dependency>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
+			<version>42.7.3</version>
+		</dependency>
 		<!-- https://mvnrepository.com/artifact/net.sf.jt400/jt400 -->
 		<dependency>
 			<groupId>net.sf.jt400</groupId>

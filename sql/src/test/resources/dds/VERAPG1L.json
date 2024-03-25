@@ -1,0 +1,12 @@
+{
+  "name": "VERAPG1L",
+  "tableName": "VERAPG0F",
+  "fields": [
+  ],
+  "fileKeys": [
+    "V£DATA",
+    "V£NOME",
+    "V£IDOJ"
+  ]
+}
+

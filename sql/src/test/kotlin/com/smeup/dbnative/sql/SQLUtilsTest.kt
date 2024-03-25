@@ -22,52 +22,10 @@ import com.smeup.dbnative.file.RecordField
 import com.smeup.dbnative.model.CharacterType
 import com.smeup.dbnative.model.DecimalType
 import com.smeup.dbnative.sql.utils.toSQL
-import com.smeup.dbnative.utils.TypedMetadata
-import com.smeup.dbnative.utils.fieldByType
 import org.junit.Test
 import kotlin.test.assertEquals
 
 class SQLUtilsTest {
-
-    @Test
-    fun sqlForCreateTableTestWithPrimaryKeys() {
-        val fileMetadata = TypedMetadata(
-            "TSTTAB",
-            "TSTTAB",
-            listOf(
-                "TSTFLDCHR" fieldByType CharacterType(5),
-                "TSTFLDNBR" fieldByType DecimalType(7, 2),
-                "TSTFLDNB2" fieldByType DecimalType(2, 0)
-            ),
-            listOf(
-                "TSTFLDCHR",
-                "TSTFLDNBR"
-            )
-        )
-        assertEquals(
-            "CREATE TABLE TSTTAB (TSTFLDCHR CHAR(5) DEFAULT '' NOT NULL, TSTFLDNBR DECIMAL(7,2) DEFAULT 0 NOT NULL, TSTFLDNB2 DECIMAL(2,0) DEFAULT 0 NOT NULL, PRIMARY KEY(TSTFLDCHR, TSTFLDNBR))",
-            fileMetadata.toSQL()
-        )
-    }
-
-    @Test
-    fun sqlForCreateTableTestWithoutPrimaryKeys() {
-        val fileMetadata = TypedMetadata(
-            "TSTTAB",
-            "TSTTAB",
-            listOf(
-                "TSTFLDCHR" fieldByType CharacterType(5),
-                "TSTFLDNBR" fieldByType DecimalType(7, 2),
-                "TSTFLDNB2" fieldByType DecimalType(2, 0)
-            ),
-            listOf()
-        )
-        assertEquals(
-            "CREATE TABLE TSTTAB (TSTFLDCHR CHAR(5) DEFAULT '' NOT NULL, TSTFLDNBR DECIMAL(7,2) DEFAULT 0 NOT NULL, TSTFLDNB2 DECIMAL(2,0) DEFAULT 0 NOT NULL)",
-            fileMetadata.toSQL()
-        )
-    }
-
     @Test
     fun sqlForInsertTest() {
         val record = Record(

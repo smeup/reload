@@ -36,12 +36,6 @@ class SQLDBFile(
     override var logger: Logger? = null
 ) : DBFile {
 
-    constructor(
-        name: String,
-        fileMetadata: FileMetadata,
-        connection: Connection
-    ) : this(name, fileMetadata, connection, null)
-
     private var preparedStatements: MutableMap<String, PreparedStatement> = mutableMapOf()
     private var resultSet: ResultSet? = null
     private var actualRecord: Record? = null

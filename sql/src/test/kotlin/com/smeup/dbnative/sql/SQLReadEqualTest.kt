@@ -187,5 +187,15 @@ class SQLReadEqualTest {
 
         SQLReadEqualTest.dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
+
+    @Test
+    fun setLlReadEWithMoreKeys() {
+        val dbFile = SQLReadEqualTest.dbManager.openFile(MUNICIPALITY_TABLE_NAME)
+        assertTrue(dbFile.setll(buildMunicipalityKey("IT", "LOM")))
+        val result = dbFile.readEqual(buildMunicipalityKey("IT", "LOM", "BS"))
+        assertEquals("ACQUAFREDDA", getMunicipalityName(result.record))
+
+        SQLReadEqualTest.dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
+    }
 }
 
