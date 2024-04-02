@@ -6,7 +6,7 @@ on:
 jobs:
   workflow-trigger:
     #needs: build
-    uses: smeup/devops/.github/workflows/workflow-trigger.yaml@refactor/working-directory
+    uses: smeup/devops/.github/workflows/workflow-trigger.yaml@main
     with:
       repo-name: kokos
       action-file-name: develop-release.yml
