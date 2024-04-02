@@ -5,7 +5,7 @@ on:
       - feat/add-reusable-workflow
 jobs:
   workflow-trigger:
-    #needs: build
+    #needs: build 
     uses: smeup/devops/.github/workflows/workflow-trigger.yaml@main
     with:
       repo-name: kokos
