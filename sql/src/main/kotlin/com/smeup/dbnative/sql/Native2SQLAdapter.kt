@@ -374,7 +374,7 @@ class Native2SQL(val fileMetadata: FileMetadata) {
                 }
             }
         }
-        return Pair(queries.joinToString(" UNION ") + getSQLOrderByClause(), replacements)
+        return Pair(queries.joinToString(" UNION ") + " " + getSQLOrderByClause(), replacements)
     }
 }
 
