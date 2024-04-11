@@ -24,20 +24,20 @@ import com.smeup.dbnative.file.RecordField
 fun String.insertSQL(record: Record): String {
     val names = record.keys.joinToString { "\"" + it + "\"" }
     val questionMarks = record.keys.joinToString { "?" }
-    return "INSERT INTO $this ($names) VALUES($questionMarks)"
+    return "INSERT INTO \"$this\" ($names) VALUES($questionMarks)"
 }
 
 fun String.updateSQL(record: Record): String {
     val namesAndQuestionMarks = record.keys.joinToString { "\"$it\" = ?" }
     val wheres = record.keys.toList()
     val comparations = List(record.size) { Comparison.EQ }
-    return "UPDATE $this SET $namesAndQuestionMarks ${whereSQL(wheres, comparations)}"
+    return "UPDATE \"$this\" SET $namesAndQuestionMarks ${whereSQL(wheres, comparations)}"
 }
 
 fun String.deleteSQL(record: Record): String {
     val wheres = record.keys.toList()
     val comparations = List(record.size) { Comparison.EQ }
-    return "DELETE FROM $this ${whereSQL(wheres, comparations)}"
+    return "DELETE FROM \"$this\" ${whereSQL(wheres, comparations)}"
 }
 
 fun orderBySQL(keysNames: List<String>, reverse: Boolean = false): String =
