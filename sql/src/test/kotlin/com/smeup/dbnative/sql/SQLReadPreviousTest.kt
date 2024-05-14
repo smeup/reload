@@ -34,6 +34,7 @@ class SQLReadPreviousTest {
         @JvmStatic
         fun setUp() {
             dbManager = dbManagerForTest()
+            createAndPopulateMunicipalityTable(dbManager)
             createAndPopulateEmployeeTable(dbManager)
         }
 
@@ -46,21 +47,29 @@ class SQLReadPreviousTest {
 
     @Test
     fun findRecordsIfSetllFromLastRecord() {
-        val dbFile = dbManager.openFile(EMPLOYEE_TABLE_NAME)
+        val dbFile = SQLReadPreviousTest.dbManager.openFile(EMPLOYEE_TABLE_NAME)
         assertTrue(dbFile.setll("200340"))
         assertEquals("HELENA WONG", getEmployeeName(dbFile.readPrevious().record))
         assertEquals("MICHELLE SPRINGER", getEmployeeName(dbFile.readPrevious().record))
-        dbManager.closeFile(EMPLOYEE_TABLE_NAME)
+        SQLReadPreviousTest.dbManager.closeFile(EMPLOYEE_TABLE_NAME)
     }
 
     @Test
     fun findRecordsIfSetGtFromLastRecord() {
-        val dbFile = dbManager.openFile(EMPLOYEE_TABLE_NAME)
+        val dbFile = SQLReadPreviousTest.dbManager.openFile(EMPLOYEE_TABLE_NAME)
         assertTrue(dbFile.setgt("200340"))
         assertEquals("ROY ALONZO", getEmployeeName(dbFile.readPrevious().record))
         assertEquals("HELENA WONG", getEmployeeName(dbFile.readPrevious().record))
         assertEquals("MICHELLE SPRINGER", getEmployeeName(dbFile.readPrevious().record))
-        dbManager.closeFile(EMPLOYEE_TABLE_NAME)
+        SQLReadPreviousTest.dbManager.closeFile(EMPLOYEE_TABLE_NAME)
+    }
+
+    @Test
+    fun setllReadpe() {
+        val dbFile = SQLReadPreviousTest.dbManager.openFile(MUNICIPALITY_TABLE_NAME)
+        assertTrue(dbFile.setll(buildMunicipalityKey("IT", "LOM", "BS", "ERBUSCO")))
+        assertEquals("EDOLO", getMunicipalityName(dbFile.readPreviousEqual(buildMunicipalityKey("IT", "LOM")).record))
+        SQLReadPreviousTest.dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
 
 }

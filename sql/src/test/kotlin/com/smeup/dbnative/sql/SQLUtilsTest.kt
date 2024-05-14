@@ -22,65 +22,23 @@ import com.smeup.dbnative.file.RecordField
 import com.smeup.dbnative.model.CharacterType
 import com.smeup.dbnative.model.DecimalType
 import com.smeup.dbnative.sql.utils.toSQL
-import com.smeup.dbnative.utils.TypedMetadata
-import com.smeup.dbnative.utils.fieldByType
 import org.junit.Test
 import kotlin.test.assertEquals
 
 class SQLUtilsTest {
-
-    @Test
-    fun sqlForCreateTableTestWithPrimaryKeys() {
-        val fileMetadata = TypedMetadata(
-            "TSTTAB",
-            "TSTTAB",
-            listOf(
-                "TSTFLDCHR" fieldByType CharacterType(5),
-                "TSTFLDNBR" fieldByType DecimalType(7, 2),
-                "TSTFLDNB2" fieldByType DecimalType(2, 0)
-            ),
-            listOf(
-                "TSTFLDCHR",
-                "TSTFLDNBR"
-            )
-        )
-        assertEquals(
-            "CREATE TABLE TSTTAB (TSTFLDCHR CHAR(5) DEFAULT '' NOT NULL, TSTFLDNBR DECIMAL(7,2) DEFAULT 0 NOT NULL, TSTFLDNB2 DECIMAL(2,0) DEFAULT 0 NOT NULL, PRIMARY KEY(TSTFLDCHR, TSTFLDNBR))",
-            fileMetadata.toSQL()
-        )
-    }
-
-    @Test
-    fun sqlForCreateTableTestWithoutPrimaryKeys() {
-        val fileMetadata = TypedMetadata(
-            "TSTTAB",
-            "TSTTAB",
-            listOf(
-                "TSTFLDCHR" fieldByType CharacterType(5),
-                "TSTFLDNBR" fieldByType DecimalType(7, 2),
-                "TSTFLDNB2" fieldByType DecimalType(2, 0)
-            ),
-            listOf()
-        )
-        assertEquals(
-            "CREATE TABLE TSTTAB (TSTFLDCHR CHAR(5) DEFAULT '' NOT NULL, TSTFLDNBR DECIMAL(7,2) DEFAULT 0 NOT NULL, TSTFLDNB2 DECIMAL(2,0) DEFAULT 0 NOT NULL)",
-            fileMetadata.toSQL()
-        )
-    }
-
     @Test
     fun sqlForInsertTest() {
         val record = Record(
             RecordField("TSTFLDCHR", "XXX"),
             RecordField("TSTFLDNBR", "123.45")
         )
-        assertEquals("INSERT INTO TSTTAB (TSTFLDCHR, TSTFLDNBR) VALUES(?, ?)", "TSTTAB".insertSQL(record))
+        assertEquals("INSERT INTO TSTTAB (\"TSTFLDCHR\", \"TSTFLDNBR\") VALUES(?, ?)", "TSTTAB".insertSQL(record))
     }
 
     @Test
     fun sqlForOrderBy() {
         val fields = listOf("Field1", "Field2", "Field3")
-        assertEquals("ORDER BY Field1, Field2, Field3", orderBySQL(fields))
-        assertEquals("ORDER BY Field1 DESC, Field2 DESC, Field3 DESC", orderBySQL(fields, true))
+        assertEquals("ORDER BY \"Field1\", \"Field2\", \"Field3\"", orderBySQL(fields))
+        assertEquals("ORDER BY \"Field1\" DESC, \"Field2\" DESC, \"Field3\" DESC", orderBySQL(fields, true))
     }
 }

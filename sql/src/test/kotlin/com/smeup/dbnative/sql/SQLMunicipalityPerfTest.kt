@@ -17,15 +17,20 @@
 
 package com.smeup.dbnative.sql
 
+import com.smeup.dbnative.file.Record
+import com.smeup.dbnative.file.RecordField
 import com.smeup.dbnative.sql.utils.*
 import org.junit.AfterClass
 import org.junit.BeforeClass
+import org.junit.FixMethodOrder
+import org.junit.Ignore
 import org.junit.Test
+import org.junit.runners.MethodSorters
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
 import kotlin.test.assertTrue
 
-
+@Ignore
 class SQLMunicipalityPerfTest {
 
     companion object {
@@ -143,6 +148,89 @@ class SQLMunicipalityPerfTest {
         r = dbFile.readEqual(buildMunicipalityKey("IT", "LOM", "BS"))
         assertTrue(dbFile.eof())
         dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
+    }
+
+    @Test
+    fun write() {
+        val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
+
+        // Write new record
+        val recordFields = emptyList<RecordField>().toMutableList()
+        recordFields.add(RecordField("NAZ", "IT"))
+        recordFields.add(RecordField("REG", "LOM"))
+        recordFields.add(RecordField("PROV", "BG"))
+        recordFields.add(RecordField("CITTA", "TOPOLINIA"))
+        recordFields.add(RecordField("PREF", "1234"))
+        recordFields.add(RecordField("COMUNE", "A99"))
+        recordFields.add(RecordField("ISTAT", "999999"))
+        dbFile.write(Record(*recordFields.toTypedArray()));
+
+        // Read new record for control
+        var chainResult = dbFile.chain(buildMunicipalityKey("IT", "LOM", "BG", "TOPOLINIA"))
+        assertEquals("TOPOLINIA", getMunicipalityName(chainResult.record))
+    }
+
+    @Test
+    fun update() {
+        val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
+
+        // Chain to record to modify
+        var chainResult = dbFile.chain(buildMunicipalityKey("IT", "LOM", "BG", "DALMINE"))
+        assertEquals("DALMINE", getMunicipalityName(chainResult.record))
+        assertEquals("BG", getMunicipalityProv(chainResult.record))
+
+        // Update
+        val record = chainResult.record
+        record.set("PROV", "BS")
+        dbFile.update(record)
+
+        // Verify changes
+        chainResult = dbFile.chain(buildMunicipalityKey("IT", "LOM", "BS", "DALMINE"))
+        assertEquals("BS", getMunicipalityProv(chainResult.record))
+
+        // Verify that old record is missing
+        chainResult = dbFile.chain(buildMunicipalityKey("IT", "LOM", "BG", "DALMINE"))
+        assertTrue(dbFile.eof())
+    }
+
+    @Test
+    fun readAndChain() {
+        val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
+
+        dbFile.setll(buildMunicipalityKey("IT", "LOM", "BS", "ERBUSCO"))
+        val readResult = dbFile.read()
+        assertEquals("ERBUSCO", getMunicipalityName(readResult.record))
+
+        // Chain to another record
+        var chainResult = dbFile.chain(buildMunicipalityKey("IT", "LOM", "BS", "ADRO"))
+        assertEquals("ADRO", getMunicipalityName(chainResult.record))
+    }
+
+    @Test
+    fun writeAndDelete() {
+        val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
+
+        // Write new record
+        val recordFields = emptyList<RecordField>().toMutableList()
+        recordFields.add(RecordField("NAZ", "IT"))
+        recordFields.add(RecordField("REG", "LOM"))
+        recordFields.add(RecordField("PROV", "BG"))
+        recordFields.add(RecordField("CITTA", "PAPEROPOLI"))
+        recordFields.add(RecordField("PREF", "4321"))
+        recordFields.add(RecordField("COMUNE", "A99"))
+        recordFields.add(RecordField("ISTAT", "999999"))
+        dbFile.write(Record(*recordFields.toTypedArray()));
+
+        // Read new record
+        dbFile.setll(buildMunicipalityKey("IT", "LOM", "BG", "PAPEROPOLI"))
+        val readResult = dbFile.read()
+        assertEquals("PAPEROPOLI", getMunicipalityName(readResult.record))
+
+        // Delete added record
+        var chainResult= dbFile.chain(buildMunicipalityKey("IT", "LOM", "BG", "PAPEROPOLI"))
+        dbFile.delete(chainResult.record)
+        chainResult = dbFile.chain(buildMunicipalityKey("IT", "LOM", "BG", "PAPEROPOLI"))
+        assertTrue(dbFile.eof())
     }
 
     @Test

@@ -1,0 +1,20 @@
+{
+  "name": "example.txt",
+  "tableName": "ExampleTable",
+  "fields": [
+    {
+      "name": "field1",
+      "text": "some text",
+      "numeric": false
+    },
+    {
+      "name": "field2",
+      "text": "",
+      "numeric": true
+    }
+  ],
+  "fileKeys": [
+    "key1",
+    "key2"
+  ]
+}

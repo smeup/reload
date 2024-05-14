@@ -22,22 +22,33 @@ import com.smeup.dbnative.DBManagerBaseImpl
 import com.smeup.dbnative.log.LoggingKey
 import java.sql.Connection
 import java.sql.DriverManager
+import java.util.*
 import kotlin.system.measureTimeMillis
 
-open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBManagerBaseImpl()  {
+open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBManagerBaseImpl() {
 
     private var sqlLog: Boolean = false
 
-    private var openedFile = mutableMapOf<String, SQLDBFile>()
+    //private var openedFile = mutableMapOf<String, SQLDBFile>()
 
-    val connection : Connection by lazy {
+    val connection: Connection by lazy {
         logger?.logEvent(LoggingKey.connection, "Opening SQL connection on url ${connectionConfig.url}")
         val conn: Connection
         measureTimeMillis {
             connectionConfig.driver?.let {
                 Class.forName(connectionConfig.driver)
             }
-            conn = DriverManager.getConnection(connectionConfig.url, connectionConfig.user, connectionConfig.password)
+
+            val connectionProps = Properties()
+            connectionProps["user"] = connectionConfig.user
+            connectionProps["password"] = connectionConfig.password
+
+            connectionConfig.properties.forEach {
+                if (it.key != "user" && it.key != "password") {
+                    connectionProps[it.key] = it.value
+                }
+            }
+            conn = DriverManager.getConnection(connectionConfig.url, connectionProps)
         }.apply {
             logger?.logEvent(LoggingKey.connection, "SQL connection successfully opened", this)
         }
@@ -48,21 +59,18 @@ open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBMa
     }
 
     override fun close() {
-        openedFile.values.forEach { it.close()}
-        openedFile.clear()
+        //openedFile.values.forEach { it.close()}
+        //openedFile.clear()
         connection.close()
     }
 
-    override fun openFile(name: String) = openedFile.getOrPut(name) {
-        require(existFile(name)) {
-            "Cannot open a unregistered file $name"
-        }
-        SQLDBFile(name = name, fileMetadata = metadataOf(name), connection =  connection, logger)
+    override fun openFile(name: String): SQLDBFile {
+        require(this.existFile(name))
+        return SQLDBFile(name = name, fileMetadata = metadataOf(name), connection = connection, logger)
     }
 
-
     override fun closeFile(name: String) {
-        openedFile.remove(name)?.close()
+        //openedFile.remove(name)?.close()
     }
 
     fun execute(sqlStatements: List<String>) {

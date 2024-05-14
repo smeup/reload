@@ -17,4 +17,4 @@
 
 package com.smeup.dbnative.model
 
-data class Field(val name: String, val text:String = "")
+data class Field(val name: String, val text:String = "", val numeric:Boolean = false)

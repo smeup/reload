@@ -26,6 +26,70 @@ import java.sql.ResultSet
 
 const val CONVENTIONAL_INDEX_SUFFIX = "_INDEX"
 
+
+
+fun Connection.isNumericColumn(tableName: String, columnName: String): Boolean {
+    var isNumeric = false
+
+    createStatement().use { statement ->
+        statement.executeQuery("SELECT $columnName FROM $tableName LIMIT 0").use { resultSet ->
+            val metaData = resultSet.metaData
+            val columnType = metaData.getColumnType(1)
+
+            // Check if the column type is numeric
+            isNumeric = when (columnType) {
+                java.sql.Types.BIGINT, java.sql.Types.NUMERIC, java.sql.Types.INTEGER,
+                java.sql.Types.SMALLINT, java.sql.Types.TINYINT, java.sql.Types.FLOAT,
+                java.sql.Types.REAL, java.sql.Types.DOUBLE, java.sql.Types.DECIMAL -> true
+                else -> false
+            }
+        }
+    }
+    return isNumeric
+}
+
+fun Connection.getTableColumnTypes(tableName: String): Map<String, Int> {
+    val columnTypes = mutableMapOf<String, Int>()
+
+    createStatement().use { statement ->
+        val resultSet = statement.executeQuery("SELECT * FROM $tableName LIMIT 0")
+        val metaData = resultSet.metaData
+        val columnCount = metaData.columnCount
+
+        for (i in 1..columnCount) {
+            val columnName = metaData.getColumnName(i)
+            val columnType = metaData.getColumnType(i)
+            columnTypes[columnName] = columnType
+        }
+    }
+
+    return columnTypes
+}
+
+fun Connection.getNumeriColumns(tableName: String): List<String> {
+    val numericColumns = mutableListOf<String>()
+    var isNumeric = false
+
+    createStatement().use { statement ->
+        val resultSet = statement.executeQuery("SELECT * FROM $tableName LIMIT 0")
+        val metaData = resultSet.metaData
+        val columnCount = metaData.columnCount
+
+        for (i in 1..columnCount) {
+            val columnType = metaData.getColumnType(i)
+            isNumeric = when (columnType) {
+                java.sql.Types.BIGINT, java.sql.Types.NUMERIC, java.sql.Types.INTEGER,
+                java.sql.Types.SMALLINT, java.sql.Types.TINYINT, java.sql.Types.FLOAT,
+                java.sql.Types.REAL, java.sql.Types.DOUBLE, java.sql.Types.DECIMAL -> true
+                else -> false
+            }
+            if (isNumeric) numericColumns.add(metaData.getColumnName(i));
+        }
+    }
+    return numericColumns
+}
+
+
 fun ResultSet.joinToString(separator: String = " - "): String {
     val sb = StringBuilder()
     while (this.next()) {

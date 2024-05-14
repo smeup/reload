@@ -1,7 +1,10 @@
 package com.smeup.dbnative.sql
 
 import com.smeup.dbnative.file.Record
+import com.smeup.dbnative.model.FileMetadata
+import com.smeup.dbnative.model.Field
 import java.lang.Exception
+import java.sql.Connection
 
 enum class PositioningMethod {
     SETLL, SETGT;
@@ -33,9 +36,37 @@ class ReadInstruction(var method: ReadMethod, var keys: List<String>){
     fun admitEmptyKeys() = method == ReadMethod.READ || method == ReadMethod.READP
 }
 
-class Native2SQL(val fileKeys: List<String>, val tableName: String) {
-    private var lastPositioningInstruction: PositioningInstruction? = null
+class Native2SQL(val fileMetadata: FileMetadata) {
     private var lastReadInstruction: ReadInstruction? = null
+    private var lastPositioningInstruction: PositioningInstruction? = null
+
+    /**
+     * Build values replacements for store procedures settings empty numerics values as 0
+     */
+    private fun buildRepalcements(values: List<String>): MutableList<String> {
+        val result = mutableListOf<String>()
+        values.forEachIndexed { index, s ->
+            if (s.isNullOrEmpty()) {
+                if (isNumeric(fileMetadata.fileKeys[index])) {
+                    result.add("0")
+                } else {
+                    result.add("");
+                }
+            } else {
+                result.add(s)
+            }
+        }
+        return result
+    }
+
+    private fun isNumeric(fieldName: String ):Boolean {
+        val field = fileMetadata.fields.find { it.name == fieldName }
+        if (field != null) {
+            return field.numeric
+        } else {
+            return false
+        }
+    }
 
     private fun checkPositioning(){
         requireNotNull(lastPositioningInstruction){
@@ -44,11 +75,11 @@ class Native2SQL(val fileKeys: List<String>, val tableName: String) {
     }
 
     private fun checkKeys(keys: List<String>){
-        require(fileKeys.size > 0){
+        require(fileMetadata.fileKeys.size > 0){
             "No keys specified in metadata"
         }
-        require(keys.size <= fileKeys.size){
-            "Number of metadata keys $fileKeys less than number of positioning/read keys $keys"
+        require(keys.size <= fileMetadata.fileKeys.size){
+            "Number of metadata keys $fileMetadata.fileKeys less than number of positioning/read keys $keys"
         }
     }
 
@@ -66,7 +97,7 @@ class Native2SQL(val fileKeys: List<String>, val tableName: String) {
     }
 
     private fun checkInstructions(){
-        checkPositioning()
+        //checkPositioning()
         checkRead()
     }
 
@@ -74,6 +105,36 @@ class Native2SQL(val fileKeys: List<String>, val tableName: String) {
         checkKeys(keys)
         lastPositioningInstruction = PositioningInstruction(method, keys)
         lastReadInstruction = null
+    }
+
+    /**
+     * Check key list:
+     * - If passed key are less then file metadata keys fill missing var with empty values
+     * - If a key is numeric and is empty, set its value to 0
+     */
+    private fun checkEmptyKeys(keys: List<String>): List<String>  {
+        val result = mutableListOf<String>()
+
+        result.addAll(keys)
+        val lostKeys = fileMetadata.fileKeys.size - result.size
+        repeat(lostKeys) {
+            result.add("");
+        }
+
+        val checkedResult = mutableListOf<String>()
+        result.forEachIndexed { index, s ->
+            if (s.isNullOrEmpty() ) {
+                if (isNumeric(fileMetadata.fileKeys.get(index))) {
+                    checkedResult.add("0")
+                } else {
+                    checkedResult.add("")
+                }
+            } else {
+                checkedResult.add(s)
+            }
+        }
+
+        return checkedResult
     }
 
     /*
@@ -90,14 +151,14 @@ class Native2SQL(val fileKeys: List<String>, val tableName: String) {
                     "Uncoherent read not yet managed"
                 }
             }
-            ReadMethod.READ, ReadMethod.READP -> checkPositioning()
+            ReadMethod.READP -> checkPositioning()
             ReadMethod.CHAIN -> {
                 lastPositioningInstruction = null
                 executeQuery = true
             }
         }
-        require(lastReadInstruction == null || method == lastReadInstruction!!.method) {
-            "read operations are only allowed immediatly after positioning or after a same method read instruction"
+        require(lastReadInstruction == null || method == ReadMethod.CHAIN || method == lastReadInstruction!!.method) {
+            "read operation " + method + " is allowed immediatly after positioning or after a same method read instruction"
         }
         if(lastReadInstruction == null){
             executeQuery = true
@@ -116,11 +177,13 @@ class Native2SQL(val fileKeys: List<String>, val tableName: String) {
     fun isLastOperationSet()=lastReadInstruction == null
 
     fun lastReadMatchRecord(record: Record): Boolean {
+
         if(lastReadInstruction!!.keys.isEmpty()){
             return true
         }
+
         lastReadInstruction!!.keys.mapIndexed { index, value ->
-            val keyname = fileKeys.get(index)
+            val keyname = fileMetadata.fileKeys.get(index)
             if(record[keyname]?.trim() != value.trim()){
                 return false
             }
@@ -130,20 +193,21 @@ class Native2SQL(val fileKeys: List<String>, val tableName: String) {
 
 
     fun isCoherent(newKeys: List<String>): Boolean{
-        checkPositioning()
-        return newKeys.isEmpty() ||
-            if (newKeys.size <= lastPositioningInstruction!!.keys.size &&
-            newKeys.size <= lastReadInstruction?.keys?.size?:newKeys.size) {
-            newKeys.forEachIndexed() { index, value ->
-                if(lastPositioningInstruction!!.keys.get(index) != value){
-                    return false
-                }
-            }
-            return true
-        }
-        else false
+        //checkPositioning()
+        if (lastPositioningInstruction != null) {
+            return newKeys.isEmpty() ||
+                    if (newKeys.size <= lastPositioningInstruction!!.keys.size &&
+                        newKeys.size <= lastReadInstruction?.keys?.size ?: newKeys.size
+                    ) {
+                        newKeys.forEachIndexed() { index, value ->
+                            if (lastPositioningInstruction!!.keys.get(index) != value) {
+                                return false
+                            }
+                        }
+                        return true
+                    } else false
+        } else return true
     }
-
 
     private fun getSortOrder(): SortOrder {
         checkInstructions()
@@ -152,9 +216,11 @@ class Native2SQL(val fileKeys: List<String>, val tableName: String) {
 
     private fun getComparison(): Pair<Comparison, Comparison>{
         checkInstructions()
-        return if(lastReadInstruction!!.method.forward){
+        return if (lastPositioningInstruction == null) {
+            return Pair(Comparison.EQ, Comparison.GT)
+        } else if(lastReadInstruction!!.method.forward){
             when(lastPositioningInstruction!!.method){
-                        PositioningMethod.SETLL -> return Pair(Comparison.GE, Comparison.GT)
+                        PositioningMethod.SETLL -> return Pair(Comparison.EQ, Comparison.GT)
                         PositioningMethod.SETGT -> return Pair(Comparison.GT, Comparison.GT)
             }
         }
@@ -168,67 +234,174 @@ class Native2SQL(val fileKeys: List<String>, val tableName: String) {
 
     private fun getSQLOrderByClause(): String{
         val sortOrder = getSortOrder()
-        return " ORDER BY " + fileKeys.joinToString(separator = " " + sortOrder.symbol + ", ", postfix = " " + sortOrder.symbol )
+        var result = "ORDER BY"
+
+        fileMetadata.fileKeys.forEach() {
+            result += " \"" + it + "\" " + sortOrder.symbol +","
+        }
+        return result.removeSuffix(",")
     }
 
     fun getReadSqlStatement(): Pair<String, List<String>>{
         checkPositioning()
-        return Pair(getSQL(fileKeys.subList(0, lastPositioningInstruction!!.keys.size), Comparison.EQ, tableName), lastPositioningInstruction!!.keys)
+        return Pair(getSQL(fileMetadata.fields, fileMetadata.fileKeys.subList(0, lastPositioningInstruction!!.keys.size), Comparison.EQ, fileMetadata.tableName), lastPositioningInstruction!!.keys)
     }
 
     fun getSQLSatement(): Pair<String, List<String>>{
         when(lastReadInstruction!!.method){
             ReadMethod.CHAIN ->{
                 checkReadKeys()
-                return Pair(getSQL(fileKeys.subList(0, lastReadInstruction!!.keys.size), Comparison.EQ, tableName), lastReadInstruction!!.keys)
+                return Pair(getSQL(fileMetadata.fields, fileMetadata.fileKeys.subList(0, lastReadInstruction!!.keys.size), Comparison.EQ, fileMetadata.tableName), lastReadInstruction!!.keys)
             }
-            ReadMethod.READ,ReadMethod.READP -> {
+            ReadMethod.READ -> {
+                checkRead()
+                return getReadCoherentSql(true)
+            }
+            ReadMethod.READP -> {
+                checkPositioning()
                 checkRead()
                 return getCoherentSql(true)
             }
             else -> {
+                //checkPositioning()
                 checkReadKeys()
                 return getCoherentSql()
             }
         }
     }
 
+    /*
+    // Senza posizionamento
+    SELECT * FROM EMPLOF
+
+    // Con posizionamento
+    SELECT *
+    FROM EMPL0F
+    WHERE WORKDEPT = 'C01'
+    UNION ALL
+    SELECT *
+    FROM EMPL0F
+    WHERE WORKDEPT >= 'C01'
+     */
+    private fun getReadCoherentSql(fullUnion: Boolean = false): Pair<String, MutableList<String>> {
+        var queries = mutableListOf<String>()
+        var replacements = mutableListOf<String>()
+        if (lastPositioningInstruction == null) {
+            var columns = ""
+            fileMetadata.fields.forEachIndexed { index, k ->
+                run {
+                    columns += "\"" + k.name + "\", "
+                }
+            }
+            return Pair("SELECT " + columns.removeSuffix(", ") + "FROM \"${fileMetadata.tableName}\"", replacements)
+        } else {
+            var columns = ""
+            fileMetadata.fields.forEachIndexed { index, k ->
+                run {
+                    columns += "\"" + k.name + "\", "
+                }
+            }
+
+            var value = ""
+            val keys = lastPositioningInstruction?.keys
+            keys?.forEachIndexed { index, k ->
+                run {
+                    value += "\"" + fileMetadata.fileKeys[index] + "\" >= ? AND "
+                }
+            }
+
+            queries.add(
+                "SELECT " + columns.removeSuffix(", ") + " FROM \"${fileMetadata.tableName}\" WHERE " + value.removeSuffix(
+                    " AND "
+                )
+            )
+
+            replacements.addAll(buildRepalcements(lastPositioningInstruction!!.keys))
+            /*
+            val lostKeys = fileMetadata.fileKeys.size - lastPositioningInstruction!!.keys.size
+            repeat(lostKeys) {
+                replacements.add("");
+            }
+            */
+            return Pair(queries.joinToString() + " " + getSQLOrderByClause(), replacements)
+        }
+    }
 
     private fun getCoherentSql(fullUnion: Boolean = false):Pair<String, List<String>>{
-        checkPositioning()
         val queries = mutableListOf<String>()
-        val replacements = mutableListOf<String>()
+        var replacements = mutableListOf<String>()
         val comparison = getComparison()
-        require(!lastPositioningInstruction!!.keys.isEmpty()){
-            "Empty positioning keys"
-        }
-        if(lastPositioningInstruction!!.keys.size == 1){
-            queries.add(getSQL(fileKeys.subList(0, 1), comparison.first, tableName))
-            replacements.addAll(lastPositioningInstruction!!.keys)
-        }
-        else {
-            val limit = if(fullUnion)1 else 2
-            for (i in lastPositioningInstruction!!.keys.size downTo limit) {
-                queries.add(getSQL(fileKeys.subList(0, i), if(i == lastPositioningInstruction!!.keys.size) comparison.first else comparison.second, tableName))
-                replacements.addAll(lastPositioningInstruction!!.keys.subList(0, i))
+
+        if (lastPositioningInstruction == null) {
+            var columns = ""
+            fileMetadata.fields.forEachIndexed { index, k ->
+                run {
+                    columns += "\"" + k.name + "\", "
+                }
+            }
+            var value = ""
+            fileMetadata.fileKeys.forEachIndexed { index, k ->
+                run {
+                    value += "\"" + k + "\" " + Comparison.EQ.symbol + " ? AND "
+                }
+            }
+            replacements.addAll(buildRepalcements(lastReadInstruction!!.keys))
+
+            return Pair("SELECT " + columns.removeSuffix(", ") + "FROM \"${fileMetadata.tableName}\" WHERE " + value.removeSuffix(" AND "), replacements)
+        } else {
+            if (lastPositioningInstruction!!.keys.size == 1) {
+                queries.add(
+                    getSQL(
+                        fileMetadata.fields,
+                        fileMetadata.fileKeys.subList(0, 1),
+                        comparison.first,
+                        fileMetadata.tableName
+                    )
+                )
+                replacements.addAll(buildRepalcements(lastPositioningInstruction!!.keys))
+            } else {
+                val limit = if (fullUnion) 1 else 2
+                for (i in lastPositioningInstruction!!.keys.size downTo limit) {
+                    queries.add(
+                        getSQL(
+                            fileMetadata.fields,
+                            fileMetadata.fileKeys.subList(0, i),
+                            if (i == lastPositioningInstruction!!.keys.size) comparison.first else comparison.second,
+                            fileMetadata.tableName
+                        )
+                    )
+                    replacements.addAll(buildRepalcements(lastPositioningInstruction!!.keys.subList(0, i)))
+                }
             }
         }
-        return Pair(queries.joinToString(" UNION ") + getSQLOrderByClause(), replacements)
+        return Pair(queries.joinToString(" UNION ") + " " + getSQLOrderByClause(), replacements)
     }
 }
 
-private fun getSQL(keys: List<String>, comparison: Comparison, tableName: String): String{
+private fun getSQL(fields: List<Field>, keys: List<String>, comparison: Comparison, tableName: String): String{
+    var columns = ""
+    fields.forEachIndexed { index, k ->
+        run {
+            columns += "\"" + k.name + "\", "
+        }
+    }
+
     var value = ""
     keys.forEachIndexed { index, k ->
         run {
-            value += k + " " + (if (index < keys.size - 1) Comparison.EQ.symbol else  comparison.symbol) + " ? AND "
+            value += "\"" + k + "\" " + (if (index < keys.size - 1) Comparison.EQ.symbol else  comparison.symbol) + " ? AND "
         }
     }
-    return "(SELECT * FROM $tableName WHERE " + value.removeSuffix("AND ") + ")"
+    return "(SELECT " + columns.removeSuffix(", ")+ " FROM \"$tableName\" WHERE " + value.removeSuffix("AND ") + ")"
 }
 
+
+
 fun main(){
-    val adapter = Native2SQL(listOf("Regione", "Provincia", "Comune"), "rld_comuni").apply{
+    var fields = listOf(Field("Regione", ""), Field("Provincia", ""), Field("Comune", ""))
+    var fieldsKeys = listOf("Regione", "Provincia", "Comune")
+    var metadata = FileMetadata("test", "rld_comuni", fields, fieldsKeys)
+    val adapter = Native2SQL(metadata).apply{
         setPositioning(PositioningMethod.SETLL, listOf("Lombardia", "Brescia", "Erbusco"))
         println(isCoherent(listOf("Lombardia", "Brescia", "Erbusco")))
         setRead(ReadMethod.READE, listOf("Lombardia", "Brescia", "Erbusco"))

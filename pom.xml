@@ -5,7 +5,7 @@
 
 	<groupId>io.github.smeup.reload</groupId>
 	<artifactId>reload</artifactId>
-	<version>v1.3.2</version>
+	<version>1.4.0</version>
 	<packaging>pom</packaging>
 
 	<name>reload</name>
@@ -40,7 +40,7 @@
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<kotlin.version>1.4.10</kotlin.version>
+		<kotlin.version>1.8.20</kotlin.version>
 		<kotlin.code.style>official</kotlin.code.style>
 		<junit.version>[4.13.1,)</junit.version>
 		<serialization.version>1.0.0-RC</serialization.version>
@@ -110,6 +110,9 @@
 								<source>src/main/kotlin</source>
 								<source>src/main/resources</source>
 							</sourceDirs>
+							<jvmTarget>11</jvmTarget>
+							<languageVersion>1.6</languageVersion>
+							<apiVersion>1.6</apiVersion>
 						</configuration>
 					</execution>
 					<execution>
@@ -184,6 +187,16 @@
 	<profiles>
 		<profile>
 			<id>ci-cd</id>
+			<distributionManagement>
+				<snapshotRepository>
+					<id>ossrh</id>
+					<url>https://s01.oss.sonatype.org/content/repositories/snapshots</url>
+				</snapshotRepository>
+				<repository>
+					<id>ossrh</id>
+					<url>https://s01.oss.sonatype.org/service/local/staging/deploy/maven2</url>
+				</repository>
+			</distributionManagement>
 			<build>
 				<plugins>
 					<plugin>
@@ -222,14 +235,17 @@
 	</profiles>
 
 	<distributionManagement>
-		<snapshotRepository>
-			<id>ossrh</id>
-			<url>https://s01.oss.sonatype.org/content/repositories/snapshots</url>
-		</snapshotRepository>
 		<repository>
-			<id>ossrh</id>
-			<url>https://s01.oss.sonatype.org/service/local/staging/deploy/maven2</url>
+			<id>releases</id>
+			<name>Internal Releases</name>
+			<url>https://repo.smeup.cloud/nexus/content/repositories/releases</url>
 		</repository>
+
+		<snapshotRepository>
+			<id>snapshots</id>
+			<name>Internal Snapshots</name>
+			<url>https://repo.smeup.cloud/nexus/content/repositories/snapshots</url>
+		</snapshotRepository>
 	</distributionManagement>
 
 </project>

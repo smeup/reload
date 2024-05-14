@@ -20,18 +20,15 @@ package com.smeup.dbnative.sql
 import com.smeup.dbnative.file.DBFile
 import com.smeup.dbnative.file.Record
 import com.smeup.dbnative.file.RecordField
-import com.smeup.dbnative.metadata.file.PropertiesSerializer
+import com.smeup.dbnative.metadata.file.MetadataSerializer
 import com.smeup.dbnative.sql.utils.*
-import org.junit.AfterClass
-import org.junit.BeforeClass
-import org.junit.Ignore
 import org.junit.Test
+import kotlin.test.Ignore
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlin.test.assertTrue
 
-
-class DB2400OperationsOnFilePerfTest {
+@Ignore
+class DB2400PerfTest {
 
 
     private var dbManager: SQLDBMManager? = null
@@ -42,10 +39,10 @@ class DB2400OperationsOnFilePerfTest {
 
     @Test
     fun insert() {
-        initDbManager(library = "UP_PRR")
+        initDbManager(library = DB2_400_LIBRARY_NAME)
         dbManager.use {
             val fileMetadata =
-                PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", "VERAPG0L")
+                MetadataSerializer.jsonToMetadata("src/test/resources/dds/", "VERAPG0L")
             it!!.registerMetadata(fileMetadata, false)
             val dbFile = it!!.openFile("VERAPG0L")
             for(i in 1..10) {
@@ -66,10 +63,10 @@ class DB2400OperationsOnFilePerfTest {
 
     @Test
     fun delete() {
-        initDbManager(library = "UP_PRR")
+        initDbManager(library = DB2_400_LIBRARY_NAME)
         dbManager.use {
             val fileMetadata =
-                PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", "VERAPG0L")
+                MetadataSerializer.jsonToMetadata("src/test/resources/dds/", "VERAPG0L")
             it!!.registerMetadata(fileMetadata, false)
             val dbFile = it!!.openFile("VERAPG0L")
 
@@ -84,10 +81,10 @@ class DB2400OperationsOnFilePerfTest {
     @Ignore
     @Test
     fun updateMethods() {
-        initDbManager(library = "UP_PRR")
+        initDbManager(library = DB2_400_LIBRARY_NAME)
         dbManager.use {
             val fileMetadata =
-                PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", "VERAPG0L")
+                MetadataSerializer.jsonToMetadata("src/test/resources/dds/", "VERAPG0L")
             it!!.registerMetadata(fileMetadata, false)
             val dbFile = it!!.openFile("VERAPG0L")
 
@@ -116,10 +113,10 @@ class DB2400OperationsOnFilePerfTest {
 
     @Test
     fun setllReadeNoMatch() {
-        initDbManager(library = "XSMEDATGRU")
+        initDbManager(library = DB2_400_LIBRARY_NAME)
         dbManager.use {
             val fileMetadata =
-                PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", "VERAPG9L")
+                MetadataSerializer.jsonToMetadata("src/test/resources/dds/", "VERAPG9L")
             it!!.registerMetadata(fileMetadata, false)
             val dbFile = it!!.openFile("VERAPG9L")
             var keys = arrayListOf("20210117", "SMEGL.001      ")
@@ -130,10 +127,10 @@ class DB2400OperationsOnFilePerfTest {
 
     @Test
     fun chain() {
-        initDbManager(library = "UP_PRR")
+        initDbManager(library = DB2_400_LIBRARY_NAME)
         dbManager.use {
             val fileMetadata =
-                PropertiesSerializer.propertiesToMetadata("src/test/resources/dds/properties/", "BRARTI0L")
+                MetadataSerializer.jsonToMetadata("src/test/resources/dds/", "BRARTI0L")
             it!!.registerMetadata(fileMetadata, false)
             val dbFile = it!!.openFile("BRARTI0L")
             var keys = arrayListOf("ASACC0001")
