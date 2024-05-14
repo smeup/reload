@@ -76,6 +76,14 @@ enum class TestSQLDBType(
         password = "root"),
         destroyDatabase = { dbaConnection -> dbaConnection.prepareStatement("DROP SCHEMA PUBLIC CASCADE").use { it.execute() }  }
     ),
+    // Added H2 embedded DB with postgres compability (for tests)
+    H2SQLDB(ConnectionConfig(
+        fileName= "*",
+        url = "jdbc:h2:~/$DATABASE_NAME;MODE=PostgreSQL",
+        user = "sa",
+        password = ""),
+        destroyDatabase = { dbaConnection -> dbaConnection.prepareStatement("DROP SCHEMA PUBLIC CASCADE").use { it.execute() }  }
+    ),
     DB2_400(ConnectionConfig(
             fileName= "*",
             driver = "com.ibm.as400.access.AS400JDBCDriver",
