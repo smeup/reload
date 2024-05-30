@@ -17,14 +17,11 @@
 
 package com.smeup.dbnative.nosql
 
-import com.mongodb.BasicDBObject
 import com.mongodb.MongoClient
-import com.mongodb.client.MongoCollection
 import com.mongodb.client.MongoDatabase
 import com.smeup.dbnative.ConnectionConfig
 import com.smeup.dbnative.DBManagerBaseImpl
 import com.smeup.dbnative.file.DBFile
-import org.bson.Document
 
 /**
  *  Assign table:
@@ -36,19 +33,48 @@ import org.bson.Document
 
 class NoSQLDBMManager (override val connectionConfig: ConnectionConfig) : DBManagerBaseImpl() {
 
-    private val match = Regex("mongodb://((?:\\w|\\.)+):(\\d+)/(\\w+)").find(connectionConfig.url)
-    private val host : String by lazy {
-        match!!.destructured.component1()
-    }
-    private val port : Int by lazy {
-        match!!.destructured.component2().toInt()
-    }
-    private val dataBase : String by lazy {
-        match!!.destructured.component3()
+    // Best regex "mongodb://(?:([a-zA-Z0-9._%+-]+):([a-zA-Z0-9._%+-]+)@)?([a-zA-Z0-9.-]+):(\\d+)/([a-zA-Z0-9._-]+)$"
+
+    //private val match = Regex("mongodb://((?:\\w|\\.)+):(\\d+)/(\\w+)").find(connectionConfig.url)
+    private var host : String = ""
+    private var port : Int = 0
+    private var dataBase : String = ""
+    private var username : String? = ""
+    private var password : String? = ""
+
+    private val match = parseConnectionString(connectionConfig.url)
+
+    private fun parseConnectionString(connectionUrl: String): Boolean  {
+
+        // Define each part of the regex as separate variables
+        val schemePart = "^mongodb:\\/\\/"
+        val userInfoPart = "(?:([a-zA-Z0-9._%+-]+):([a-zA-Z0-9._%+-]+)@)?"
+        val hostPart = "([a-zA-Z0-9.-]+)"
+        val portPart = ":(\\d+)"
+        val databasePart = "\\/([a-zA-Z0-9._-]+)"
+
+        // Combine the elements to form the complete regex pattern
+        val fullRegexPattern = "$schemePart$userInfoPart$hostPart$portPart$databasePart$"
+
+        // Create a Regex object using the combined pattern
+        val tmpRegex = Regex(fullRegexPattern)
+
+        // Match the connection string against the regex
+        val matchResult = tmpRegex.matchEntire(connectionUrl)
+
+        // If there's a match, extract the values and return them as a data class
+        if (matchResult != null) {
+            username = matchResult.groups[1]?.value
+            password = matchResult.groups[2]?.value
+            host = matchResult.groups[3]?.value!!
+            port = matchResult.groups[4]?.value!!.toInt()
+            dataBase = matchResult.groups[5]?.value!!
+            return true
+        } else return false
     }
 
     private val mongoClient : MongoClient by lazy {
-        MongoClient(host, port)
+        MongoClient(connectionConfig.url)
     }
 
     val mongoDatabase : MongoDatabase by lazy {
@@ -58,8 +84,8 @@ class NoSQLDBMManager (override val connectionConfig: ConnectionConfig) : DBMana
     private var openedFile = mutableMapOf<String, NoSQLDBFile>()
 
     override fun validateConfig() {
-        require(match != null) {
-            "Url syntax is not valid, correct format is: mongodb://host:port/database"
+        if (!match) {
+            throw  RuntimeException("Url syntax is not valid, correct format is: mongodb:user:password@//host:port/database")
         }
     }
 
