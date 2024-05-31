@@ -17,7 +17,8 @@
 
 package com.smeup.dbnative.nosql
 
-import com.mongodb.MongoClient
+import com.mongodb.client.MongoClient
+import com.mongodb.client.MongoClients
 import com.mongodb.client.MongoDatabase
 import com.smeup.dbnative.ConnectionConfig
 import com.smeup.dbnative.DBManagerBaseImpl
@@ -74,7 +75,7 @@ class NoSQLDBMManager (override val connectionConfig: ConnectionConfig) : DBMana
     }
 
     private val mongoClient : MongoClient by lazy {
-        MongoClient(connectionConfig.url)
+        MongoClients.create(connectionConfig.url)
     }
 
     val mongoDatabase : MongoDatabase by lazy {

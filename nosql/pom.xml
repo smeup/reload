@@ -47,11 +47,17 @@
 			<type>test-jar</type>
 			<scope>test</scope>
 		</dependency>
-		<!-- https://mvnrepository.com/artifact/org.mongodb/mongo-java-driver -->
+		<!--
 		<dependency>
 			<groupId>org.mongodb</groupId>
 			<artifactId>mongo-java-driver</artifactId>
 			<version>3.12.1</version>
+		</dependency>
+		-->
+		<dependency>
+			<groupId>org.mongodb</groupId>
+			<artifactId>mongodb-driver-sync</artifactId>
+			<version>4.9.0</version> <!-- Adjust version as needed -->
 		</dependency>
 	</dependencies>
 
