@@ -53,9 +53,10 @@ class NoSQLDBMManager (override val connectionConfig: ConnectionConfig) : DBMana
         val hostPart = "([a-zA-Z0-9.-]+)"
         val portPart = ":(\\d+)"
         val databasePart = "\\/([a-zA-Z0-9._-]+)"
+        val optionsPart = "(\\?.*)?"
 
         // Combine the elements to form the complete regex pattern
-        val fullRegexPattern = "$schemePart$userInfoPart$hostPart$portPart$databasePart$"
+        val fullRegexPattern = "$schemePart$userInfoPart$hostPart$portPart$databasePart$optionsPart$"
 
         // Create a Regex object using the combined pattern
         val tmpRegex = Regex(fullRegexPattern)
