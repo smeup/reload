@@ -24,6 +24,7 @@ import com.smeup.dbnative.file.Result
 import com.smeup.dbnative.log.Logger
 import com.smeup.dbnative.log.LoggingKey
 import com.smeup.dbnative.log.NativeMethod
+import com.smeup.dbnative.log.TelemetrySpan
 import com.smeup.dbnative.model.FileMetadata
 import java.sql.Connection
 import java.sql.PreparedStatement
@@ -92,6 +93,7 @@ class SQLDBFile(
     }
 
     override fun chain(keys: List<String>): Result {
+        val telemetrySpan = TelemetrySpan("CHAIN Execution")
         nextResult = null
         lastNativeMethod = NativeMethod.chain
         logEvent(LoggingKey.native_access_method, "Executing chain on keys $keys")
@@ -104,10 +106,12 @@ class SQLDBFile(
             logEvent(LoggingKey.native_access_method, "chain executed", this)
         }
         lastNativeMethod = null
+        telemetrySpan.endSpan()
         return read
     }
 
     override fun read(): Result {
+        val telemetrySpan = TelemetrySpan("READ Execution")
         lastNativeMethod = NativeMethod.read
         logEvent(LoggingKey.native_access_method, "Executing read")
         val read: Result
@@ -127,10 +131,12 @@ class SQLDBFile(
             logEvent(LoggingKey.native_access_method, "read executed", this)
         }
         lastNativeMethod = null
+        telemetrySpan.endSpan()
         return read
     }
 
     override fun readPrevious(): Result {
+        val telemetrySpan = TelemetrySpan("READP Execution")
         lastNativeMethod = NativeMethod.readPrevious
         logEvent(LoggingKey.native_access_method, "Executing readPrevious")
         val read: Result
@@ -150,16 +156,19 @@ class SQLDBFile(
             logEvent(LoggingKey.native_access_method, "readPrevious executed", this)
         }
         lastNativeMethod = null
+        telemetrySpan.endSpan()
         return read
     }
 
     override fun readEqual(): Result {
+        val telemetrySpan = TelemetrySpan("READE Execution")
         var result = Result()
         try {
             result = readEqual(adapter.getLastKeys())
         } catch (exc: Exception) {
             result.indicatorLO = true
         }
+        telemetrySpan.endSpan()
         return result
     }
 
@@ -201,6 +210,7 @@ class SQLDBFile(
 
     override fun readPreviousEqual(keys: List<String>): Result {
         lastNativeMethod = NativeMethod.readPreviousEqual
+        val telemetrySpan = TelemetrySpan("READPE Execution")
         logEvent(LoggingKey.native_access_method, "Executing readPreviousEqual on keys $keys")
         val read: Result
         var queryError = false
@@ -219,11 +229,13 @@ class SQLDBFile(
             logEvent(LoggingKey.native_access_method, "readPreviousEqual executed", this)
         }
         lastNativeMethod = null
+        telemetrySpan.endSpan()
         return read
     }
 
     override fun write(record: Record): Result {
         lastNativeMethod = NativeMethod.write
+        val telemetrySpan = TelemetrySpan("WRITE Execution")
         logEvent(
             LoggingKey.native_access_method,
             "Executing write for record $record: with autocommit=${connection.autoCommit}"
@@ -239,6 +251,7 @@ class SQLDBFile(
             logEvent(LoggingKey.native_access_method, "write executed", this)
         }
         lastNativeMethod = null
+        telemetrySpan.endSpan()
         return Result(record)
     }
 
@@ -265,6 +278,7 @@ class SQLDBFile(
         require(getResultSet() != null) {
             "Positioning required before update "
         }
+        val telemetrySpan = TelemetrySpan("UPDATE Execution")
         lastNativeMethod = NativeMethod.update
         logEvent(
             LoggingKey.native_access_method,
@@ -288,12 +302,14 @@ class SQLDBFile(
             logEvent(LoggingKey.native_access_method, "update executed", this)
         }
         lastNativeMethod = null
+        telemetrySpan.endSpan()
         return Result(record)
     }
 
 
     override fun delete(record: Record): Result {
         lastNativeMethod = NativeMethod.delete
+        val telemetrySpan = TelemetrySpan("DELETE Execution")
         logEvent(
             LoggingKey.native_access_method,
             "Executing delete for current record $actualRecord with autocommit=${connection.autoCommit}"
@@ -308,6 +324,7 @@ class SQLDBFile(
             logEvent(LoggingKey.native_access_method, "delete executed", this)
         }
         lastNativeMethod = null
+        telemetrySpan.endSpan()
         return Result(record)
     }
 

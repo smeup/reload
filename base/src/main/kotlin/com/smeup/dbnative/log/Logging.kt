@@ -12,7 +12,8 @@ enum class LoggingKey(val level: LoggingLevel){
     read_data(LoggingLevel.TRACE),
     execute_inquiry(LoggingLevel.DEBUG),
     search_data(LoggingLevel.DEBUG),
-    connection(LoggingLevel.DEBUG)
+    connection(LoggingLevel.DEBUG),
+    performance_metric(LoggingLevel.DEBUG)
 }
 
 enum class NativeMethod(){
