@@ -68,14 +68,6 @@ open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBMa
         require(this.existFile(name))
         return SQLDBFile(name = name, fileMetadata = metadataOf(name), connection = connection, logger)
     }
-    fun openFileNoLog(name: String): SQLDBFileNoLog {
-        require(this.existFile(name))
-        return SQLDBFileNoLog(name = name, fileMetadata = metadataOf(name), connection = connection, null)
-    }
-    fun openFilePerf(name: String): SQLDBFilePerf {
-        require(this.existFile(name))
-        return SQLDBFilePerf(name = name, fileMetadata = metadataOf(name), connection = connection, null)
-    }
 
     override fun closeFile(name: String) {
         //openedFile.remove(name)?.close()
@@ -83,8 +75,7 @@ open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBMa
 
     fun execute(sqlStatements: List<String>) {
         connection.createStatement().use { statement ->
-            sqlStatements.forEach {
-                    sql ->
+            sqlStatements.forEach { sql ->
                 println(sql)
                 statement.addBatch(sql)
             }

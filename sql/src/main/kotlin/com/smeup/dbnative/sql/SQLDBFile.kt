@@ -98,7 +98,7 @@ class SQLDBFile(
         adapter.setRead(ReadMethod.CHAIN, keys)
         val read: Result
         measureTimeMillis {
-            executeQuery(adapter.getSQLSatement())
+            executeQuery(adapter.getSQLStatement())
             read = readNextFromResultSet(false)
         }.apply {
             logEvent(LoggingKey.native_access_method, "chain executed", this)
@@ -115,7 +115,7 @@ class SQLDBFile(
         measureTimeMillis {
             if (adapter.setRead(ReadMethod.READ)) {
                 try {
-                    executeQuery(adapter.getSQLSatement())
+                    executeQuery(adapter.getSQLStatement())
                 } catch (e: Exception) {
                     queryError = true
                     logEvent(LoggingKey.native_access_method, "Query execution failed: " + e.message)
@@ -138,7 +138,7 @@ class SQLDBFile(
         measureTimeMillis {
             if (adapter.setRead(ReadMethod.READP)) {
                 try {
-                    executeQuery(adapter.getSQLSatement())
+                    executeQuery(adapter.getSQLStatement())
                 } catch (e: Exception) {
                     queryError = true
                     logEvent(LoggingKey.native_access_method, "Query execution failed: " + e.message)
@@ -175,7 +175,7 @@ class SQLDBFile(
         measureTimeMillis {
             if (adapter.setRead(ReadMethod.READE, keys)) {
                 try {
-                    executeQuery(adapter.getSQLSatement())
+                    executeQuery(adapter.getSQLStatement())
                 } catch (e: Exception) {
                     queryError = true
                     logEvent(LoggingKey.native_access_method, "Query execution failed: " + e.message)
@@ -207,7 +207,7 @@ class SQLDBFile(
         measureTimeMillis {
             if (adapter.setRead(ReadMethod.READPE, keys)) {
                 try {
-                    executeQuery(adapter.getSQLSatement())
+                    executeQuery(adapter.getSQLStatement())
                 } catch (e: Exception) {
                     queryError = true
                     logEvent(LoggingKey.native_access_method, "Query execution failed: " + e.message)
@@ -321,12 +321,13 @@ class SQLDBFile(
         logEvent(LoggingKey.execute_inquiry, "Preparing statement for query: $sql with bingings: $values")
         val stm: PreparedStatement
         measureTimeMillis {
-            stm = preparedStatements.get(sql) ?: connection.prepareStatement(
-                sql,
-                ResultSet.TYPE_FORWARD_ONLY,
-                ResultSet.CONCUR_UPDATABLE
-            )
-            preparedStatements.putIfAbsent(sql, stm);
+            stm = preparedStatements.getOrPut(sql) {
+                connection.prepareStatement(
+                    sql,
+                    ResultSet.TYPE_FORWARD_ONLY,
+                    ResultSet.CONCUR_UPDATABLE
+                )
+            }
             stm.bind(values)
         }.apply {
             logEvent(LoggingKey.execute_inquiry, "Statement prepared, executing query for statement", this)
@@ -340,10 +341,12 @@ class SQLDBFile(
 
 
     private fun readNextFromResultSet(loadNext: Boolean): Result {
-        if (nextResult == null || nextResult!!.record.isEmpty()) nextResult = Result(resultSet.toValues())
-        val result = nextResult
+        if (nextResult?.record.isNullOrEmpty()) {
+            nextResult = Result(resultSet.toValues())
+        }
 
-        var found: Boolean = false
+        val result = nextResult
+        var found = false
         while (!found && !eof) {
             if (adapter.lastReadMatchRecord(result!!.record)) {
                 logEvent(LoggingKey.read_data, "Record read: ${result.record}")
@@ -353,7 +356,7 @@ class SQLDBFile(
             }
 
             if (loadNext) {
-                nextResult = Result(resultSet.toValues());
+                nextResult = Result(resultSet.toValues())
 
                 if (nextResult!!.record.isEmpty()) {
                     eof = true
@@ -362,7 +365,7 @@ class SQLDBFile(
                     logEvent(LoggingKey.read_data, "No more record to read")
                 }
             } else {
-                eof = true;
+                eof = true
             }
         }
         return result!!
@@ -380,22 +383,21 @@ class SQLDBFile(
         logEvent(LoggingKey.read_data, "Read current record for equal")
         lastNativeMethod = NativeMethod.equal
         val result: Boolean
-        if (!adapter.isLastOperationSet()) {
-            result = false
-        } else {
-
+        if (adapter.isLastOperationSet()) {
             measureTimeMillis {
                 executeQuery(adapter.getReadSqlStatement())
                 result = resultSet?.next() ?: false
             }.apply {
                 logEvent(LoggingKey.read_data, "Record for equal read", this)
             }
+        } else {
+            result = false
         }
         lastNativeMethod = null
         return result
     }
 
-    fun getResultSet(): ResultSet? {
+    private fun getResultSet(): ResultSet? {
         return this.resultSet
     }
 
