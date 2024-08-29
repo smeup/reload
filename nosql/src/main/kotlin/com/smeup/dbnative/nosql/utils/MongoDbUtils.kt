@@ -23,7 +23,6 @@ import com.smeup.dbnative.model.FileMetadata
 
 fun FileMetadata.buildInsertCommand(filename: String, record: Record): String {
     //TODO: insert controls beetwen metadata and record format
-    println("Build insert command from ${filename} metadata")
 
     val documents = StringBuilder()
 
@@ -37,8 +36,6 @@ fun FileMetadata.buildInsertCommand(filename: String, record: Record): String {
         documents: [ $documents ]
     }
     """
-
-    println(result)
 
     return result
 
@@ -95,9 +92,72 @@ fun FileMetadata.buildIndexCommand(): String{
         writeConcern: { w: "majority" }
     }
     """
-    println(result)
 
     return result
 
+}
+
+fun FileMetadata.buildCriteria(record: Record): Map<String, String> {
+    val criteria = mutableMapOf<String, String>()
+
+    this.fileKeys.forEach { key ->
+        val value = record[key] ?: error("Record does not contain value for key: $key")
+        criteria[key] = value
+    }
+
+    return criteria
+}
+
+fun FileMetadata.buildUpdateCommand(filename: String, record: Record, upsert:Boolean = true): String {
+    val updateCriteria = this.buildCriteria(record)
+
+    val filter = StringBuilder()
+    updateCriteria.entries.joinTo(filter, separator = ",", prefix = "{", postfix = "}") {
+        "\"${it.key}\": \"${it.value}\""
+    }
+
+    val updateFields = StringBuilder()
+    record.toList().joinTo(updateFields, separator = ",", prefix = "{", postfix = "}") {
+        "\"${it.first}\": \"${it.second}\""
+    }
+
+    val result = """
+    {
+        update: "${filename.toUpperCase()}",
+        updates: [
+            {
+                q: $filter,
+                u: $updateFields,
+                multi: false,
+                upsert: $upsert
+            }
+        ]
+    }
+    """
+
+    return result
+}
+
+fun FileMetadata.buildDeleteCommand(filename: String, record: Record): String {
+    val deleteCriteria = this.buildCriteria(record)
+
+    val filter = StringBuilder()
+    deleteCriteria.entries.joinTo(filter, separator = ",", prefix = "{", postfix = "}") {
+        "\"${it.key}\": \"${it.value}\""
+    }
+
+    val result = """
+    {
+        delete: "${filename.toUpperCase()}",
+        deletes: [
+            {
+                q: $filter,
+                limit: 1
+            }
+        ]
+    }
+    """
+
+    return result
 }
 

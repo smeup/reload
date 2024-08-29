@@ -38,7 +38,7 @@ import java.io.File
 const val TSTAB_TABLE_NAME = "TSTAB01"
 const val MUNICIPALITY_TABLE_NAME = "MUNICIPALITY"
 const val TEST_LOG = false
-private val LOGGING_LEVEL = LoggingLevel.OFF
+private val LOGGING_LEVEL = LoggingLevel.TRACE
 
 fun dbManagerForTest(): NoSQLDBMManager {
     testLog("Creating NOSQLDBManager with db type MONGO")
@@ -101,6 +101,10 @@ fun createAndPopulateMunicipalityTable(dbManager: NoSQLDBMManager) {
 fun getMunicipalityName(record: Record): String {
     val name = record["CITTA"] as String
     return name.trim()
+}
+
+fun getMunicipalityProv(record: Record): String {
+    return (record["PROV"]?.trim() ?: "")
 }
 
 fun testLog(message: String) {
