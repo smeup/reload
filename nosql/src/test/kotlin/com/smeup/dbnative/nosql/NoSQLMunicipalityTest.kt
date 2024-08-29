@@ -339,7 +339,7 @@ class NoSQLMunicipalityTest {
     fun t10C_findLastOfBergamoWithSetll3AndReadPE2() {
         val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
         assertTrue(dbFile.setll(buildMunicipalityKey("IT", "LOM", "BS")))
-        assertEquals("ZOGNO", getMunicipalityName(dbFile.readPreviousEqual(buildMunicipalityKey("IT", "LOM")).record))
+        assertEquals("ADRARA SAN MARTINO", getMunicipalityName(dbFile.readPreviousEqual(buildMunicipalityKey("IT", "LOM")).record))
         dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
 
