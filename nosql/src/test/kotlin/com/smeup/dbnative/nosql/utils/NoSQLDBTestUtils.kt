@@ -45,6 +45,11 @@ fun dbManagerForTest(): NoSQLDBMManager {
     return NoSQLDBMManager(ConnectionConfig("*", "mongodb://localhost:27017/W_TEST", "", "")).apply { logger = Logger.getSimpleInstance(LOGGING_LEVEL) }
 }
 
+fun deleteMunicipalityTable(dbManager: NoSQLDBMManager) {
+    dbManager.mongoDatabase.getCollection(MUNICIPALITY_TABLE_NAME).drop()
+}
+
+
 fun createAndPopulateTestTable(dbManager: NoSQLDBMManager) {
     // Create file
     val fields = listOf(
@@ -68,7 +73,7 @@ fun createAndPopulateTestTable(dbManager: NoSQLDBMManager) {
 
 fun createAndPopulateMunicipalityTable(dbManager: NoSQLDBMManager) {
 
-    if (!dbManager.existFile(MUNICIPALITY_TABLE_NAME)) {
+    if (dbManager.existFile(MUNICIPALITY_TABLE_NAME)) {
 
         val fields = listOf(
             "£NAZ" fieldByType  CharacterType(2),
@@ -118,7 +123,7 @@ private fun createAndPopulateTable(dbManager: NoSQLDBMManager, tableName: String
     val tMetadata = TypedMetadata(tableName, tableName, fields, keys)
 
     //if not exist file on mongodb create and populate with data
-    if (dbManager.existFile(tableName) == false) {
+    if (dbManager.existFile(tableName)) {
 
         createFile(tMetadata, dbManager)
         Assert.assertTrue(dbManager.existFile(tableName))

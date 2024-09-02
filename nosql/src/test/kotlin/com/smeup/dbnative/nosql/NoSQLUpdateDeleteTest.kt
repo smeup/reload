@@ -3,9 +3,7 @@ package com.smeup.dbnative.nosql
 import com.smeup.dbnative.file.Record
 import com.smeup.dbnative.file.RecordField
 import com.smeup.dbnative.nosql.utils.*
-import org.junit.After
-import org.junit.Before
-import org.junit.Test
+import org.junit.*
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -14,16 +12,27 @@ class NoSQLUpdateDeleteTest {
 
     private lateinit var dbManager: NoSQLDBMManager
 
+    companion object {
+
+        private val dbManager = dbManagerForTest()
+        @JvmStatic
+        @BeforeClass
+        fun initEnv() {
+            createAndPopulateMunicipalityTable(dbManager)
+        }
+
+        @JvmStatic
+        @AfterClass
+        fun destroyEnv() {
+            deleteMunicipalityTable(dbManager)
+        }
+    }
+
     @Before
-    fun initEnv() {
+    fun initManager() {
         dbManager = dbManagerForTest()
-        createAndPopulateMunicipalityTable(dbManager)
     }
 
-    @After
-    fun destroyEnv() {
-
-    }
 
     private fun buildMunicipalityKey(vararg values: String): List<String> {
         val keyValues = mutableListOf<String>()
@@ -117,7 +126,8 @@ class NoSQLUpdateDeleteTest {
         if(chainResult2.record.isNotEmpty()){
             assertEquals("CREDARO", getMunicipalityName(chainResult2.record))
             dbFile.delete(chainResult2.record)
-            dbFile.chain(buildMunicipalityKey("IT", "LOM", "BG", "CREDARO"))
+            val chainResult = dbFile.chain(buildMunicipalityKey("IT", "LOM", "BG", "CREDARO"))
+            assertTrue(chainResult.record.isEmpty())
         }
         this.dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
@@ -129,8 +139,8 @@ class NoSQLUpdateDeleteTest {
         val record = dbFile.read().record
         dbFile.delete(record)
         assertTrue(dbFile.setll(buildMunicipalityKey("IT", "LOM", "BG", "COVO")))
-        dbFile.readEqual(buildMunicipalityKey("IT", "LOM", "BG", "COVO"))
-        assertTrue(dbFile.eof())
+        val chainResult = dbFile.readEqual(buildMunicipalityKey("IT", "LOM", "BG", "COVO"))
+        assertTrue(chainResult.record.isEmpty())
         this.dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
 

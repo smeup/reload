@@ -17,13 +17,8 @@
 
 package com.smeup.dbnative.nosql
 
-import com.smeup.dbnative.nosql.utils.MUNICIPALITY_TABLE_NAME
-import com.smeup.dbnative.nosql.utils.createAndPopulateMunicipalityTable
-import com.smeup.dbnative.nosql.utils.dbManagerForTest
-import com.smeup.dbnative.nosql.utils.getMunicipalityName
-import org.junit.After
-import org.junit.Before
-import org.junit.Test
+import com.smeup.dbnative.nosql.utils.*
+import org.junit.*
 import kotlin.test.Ignore
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -32,10 +27,25 @@ class NoSQLMunicipalityTest {
 
     private lateinit var dbManager: NoSQLDBMManager
 
+    companion object {
+
+        private val dbManager = dbManagerForTest()
+        @JvmStatic
+        @BeforeClass
+        fun initEnv() {
+            createAndPopulateMunicipalityTable(dbManager)
+        }
+
+        @JvmStatic
+        @AfterClass
+        fun destroyEnv() {
+            deleteMunicipalityTable(dbManager)
+        }
+    }
+
     @Before
-    fun initEnv() {
+    fun initManager() {
         dbManager = dbManagerForTest()
-        createAndPopulateMunicipalityTable(dbManager)
     }
 
     @Test
@@ -398,11 +408,6 @@ class NoSQLMunicipalityTest {
         }
         assertEquals(32, count)
         dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
-    }
-
-    @After
-    fun destroyEnv() {
-
     }
 
 
