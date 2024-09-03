@@ -29,7 +29,9 @@ import com.smeup.dbnative.log.LoggingKey
 import com.smeup.dbnative.log.NativeMethod
 import com.smeup.dbnative.model.Field
 import com.smeup.dbnative.model.FileMetadata
+import com.smeup.dbnative.nosql.utils.buildDeleteCommand
 import com.smeup.dbnative.nosql.utils.buildInsertCommand
+import com.smeup.dbnative.nosql.utils.buildUpdateCommand
 import com.smeup.dbnative.utils.getField
 import com.smeup.dbnative.utils.matchFileKeys
 import org.bson.Document
@@ -56,14 +58,10 @@ class NoSQLDBFile(override var name: String,
     }
 
     override fun equal(): Boolean {
-        if (lastSetOperation == false || globalCursor == null) {
+        if (!lastSetOperation || globalCursor == null) {
             return false
         } else {
-            if (matchKeys(globalCursor!!.next(), last_set_keys)) {
-                return true
-            } else {
-                return false
-            }
+            return matchKeys(globalCursor!!.next(), last_set_keys)
         }
     }
 
@@ -82,7 +80,7 @@ class NoSQLDBFile(override var name: String,
         measureTimeMillis {
             eof = false
 
-            var keyAsRecordField = keys.mapIndexed { index, value ->
+            val keyAsRecordField = keys.mapIndexed { index, value ->
                 val keyname = fileMetadata.fileKeys.get(index)
                 RecordField(keyname, value)
             }
@@ -90,7 +88,7 @@ class NoSQLDBFile(override var name: String,
             /*
             Passed keys are not primary key for DBFile
              */
-            if (fileMetadata.matchFileKeys(keyAsRecordField) == false) {
+            if (!fileMetadata.matchFileKeys(keyAsRecordField)) {
                 return false
             }
 
@@ -185,7 +183,7 @@ class NoSQLDBFile(override var name: String,
         measureTimeMillis {
             eof = false
 
-            var keyAsRecordField = keys.mapIndexed { index, value ->
+            val keyAsRecordField = keys.mapIndexed { index, value ->
                 val keyname = fileMetadata.fileKeys.get(index)
                 RecordField(keyname, value)
             }
@@ -291,7 +289,7 @@ class NoSQLDBFile(override var name: String,
         measureTimeMillis {
             eof = false
 
-            var keyAsRecordField = keys.mapIndexed { index, value ->
+            val keyAsRecordField = keys.mapIndexed { index, value ->
                 val keyname = fileMetadata.fileKeys.get(index)
                 RecordField(keyname, value)
             }
@@ -299,7 +297,7 @@ class NoSQLDBFile(override var name: String,
             /*
             Passed keys are not primary key for DBFile
              */
-            if (fileMetadata.matchFileKeys(keyAsRecordField) == false) {
+            if (!fileMetadata.matchFileKeys(keyAsRecordField)) {
                 result =  Result(record = Record(), indicatorLO = true)
             }
             else {
@@ -337,9 +335,10 @@ class NoSQLDBFile(override var name: String,
     override fun read(): Result {
         lastNativeMethod = NativeMethod.read
         logEvent(LoggingKey.native_access_method, "Executing read")
+        var result: Result
         measureTimeMillis {
             if (globalCursor == null) {
-                return Result(
+                result = Result(
                     indicatorLO = true,
                     errorMsg = "Cursor not defined. Call SETLL or SETGT before invoke READ command"
                 )
@@ -361,21 +360,22 @@ class NoSQLDBFile(override var name: String,
                     val record = documentToRecord(globalCursor!!.next())
                     if (globalCursor!!.hasNext()) {
                         updateLastKeys(record)
-                        return Result(record = record)
+                        result = Result(record = record)
                     } else {
                         eof = true
-                        return Result(record = record, indicatorEQ = true)
+                        result = Result(record = record, indicatorEQ = true)
                     }
                 } else {
-                    return Result(indicatorLO = true, errorMsg = "READ called on EOF cursor")
+                    result = Result(indicatorLO = true, errorMsg = "READ called on EOF cursor")
                 }
             } else {
-                return Result(indicatorLO = true, errorMsg = "Cursor not defined. Call SETLL or SETGT before invoke READ command")
+                result = Result(indicatorLO = true, errorMsg = "Cursor not defined. Call SETLL or SETGT before invoke READ command")
             }
         }.apply {
             logEvent(LoggingKey.native_access_method, "read executed", this)
         }
         lastNativeMethod = null
+        return result
     }
 
     /*
@@ -398,7 +398,7 @@ class NoSQLDBFile(override var name: String,
         lastNativeMethod = NativeMethod.readEqual
         logEvent(LoggingKey.native_access_method, "Executing readEqual on keys $keys")
         measureTimeMillis {
-            var keyAsRecordField = keys.mapIndexed { index, value ->
+            val keyAsRecordField = keys.mapIndexed { index, value ->
                 val keyname = fileMetadata.fileKeys.get(index)
                 RecordField(keyname, value)
             }
@@ -506,7 +506,7 @@ class NoSQLDBFile(override var name: String,
         lastNativeMethod = NativeMethod.readPreviousEqual
         logEvent(LoggingKey.native_access_method, "Executing readPreviousEqual on keys $keys")
         measureTimeMillis {
-            var keyAsRecordField = keys.mapIndexed { index, value ->
+            val keyAsRecordField = keys.mapIndexed { index, value ->
                 val keyname = fileMetadata.fileKeys.get(index)
                 RecordField(keyname, value)
             }
@@ -567,24 +567,53 @@ class NoSQLDBFile(override var name: String,
     override fun write(record: Record): Result {
         lastNativeMethod = NativeMethod.write
         logEvent(LoggingKey.native_access_method, "Executing write for record $record")
+        val result: Result
         measureTimeMillis {
             val insertCommand = fileMetadata.buildInsertCommand(fileMetadata.tableName, record)
             logEvent(LoggingKey.execute_inquiry, "Executing insert command $insertCommand")
             executeCommand(insertCommand)
-            return Result(record = record)
+            result = Result(record = record)
         }.apply {
             logEvent(LoggingKey.native_access_method, "write executed", this)
         }
         lastNativeMethod = null
+        return result
     }
 
     override fun update(record: Record): Result {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        lastNativeMethod = NativeMethod.update
+        logEvent(LoggingKey.native_access_method, "Executing update for record $record")
+
+        val result: Result
+        measureTimeMillis {
+            val updateCommand = fileMetadata.buildUpdateCommand(fileMetadata.tableName, record)
+            logEvent(LoggingKey.execute_inquiry, "Executing update command $updateCommand")
+            executeCommand(updateCommand)
+            result = Result(record = record)
+        }.apply {
+            logEvent(LoggingKey.native_access_method, "update executed", this)
+        }
+        lastNativeMethod = null
+        return result
     }
 
+
     override fun delete(record: Record): Result {
-        TODO("Not yet implemented")
+        lastNativeMethod = NativeMethod.delete
+        logEvent(LoggingKey.native_access_method, "Executing delete for record $record")
+        val result: Result
+        measureTimeMillis {
+            val deleteCommand = fileMetadata.buildDeleteCommand(fileMetadata.tableName, record)
+            logEvent(LoggingKey.execute_inquiry, "Executing delete command $deleteCommand")
+            executeCommand(deleteCommand)
+            result = Result(record = record)
+        }.apply {
+            logEvent(LoggingKey.native_access_method, "delete executed", this)
+        }
+        lastNativeMethod = null
+        return result
     }
+
 
     private fun executeCommand(command: String) = database.runCommand(Document.parse(command))
 
@@ -595,11 +624,11 @@ class NoSQLDBFile(override var name: String,
 
         var match = true
 
-        keys.forEach({
-            if (it.value == document.getString(it.name) == false) {
+        keys.forEach {
+            if (!(it.value == document.getString(it.name))) {
                 match = false
             }
-        })
+        }
 
         return match
 
@@ -610,9 +639,9 @@ class NoSQLDBFile(override var name: String,
         val result = Record()
 
         if (document != null) {
-            fileMetadata.fields.forEach({
+            fileMetadata.fields.forEach {
                 result.add(RecordField(it.name, document.getValue(it.name).toString()))
-            })
+            }
         }
         return result
     }
