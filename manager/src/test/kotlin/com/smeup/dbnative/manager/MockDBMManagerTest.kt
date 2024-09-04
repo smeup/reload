@@ -28,7 +28,6 @@ private val MOCK_METADATA = FileMetadata(
 class MockDBManager(override val connectionConfig: ConnectionConfig) : DBManagerBaseImpl() {
 
     override fun validateConfig() {
-        connectionConfig.url.startsWith("test:")
     }
 
     override fun close() {
