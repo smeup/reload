@@ -17,6 +17,12 @@
 
 package com.smeup.dbnative.nosql
 
+import com.amazonaws.auth.AWSStaticCredentialsProvider
+import com.amazonaws.auth.BasicAWSCredentials
+import com.amazonaws.client.builder.AwsClientBuilder
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBAsync
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBAsyncClientBuilder
+import com.amazonaws.services.dynamodbv2.document.DynamoDB
 import com.mongodb.client.MongoClient
 import com.mongodb.client.MongoClients
 import com.mongodb.client.MongoDatabase
@@ -34,20 +40,54 @@ import com.smeup.dbnative.file.DBFile
 
 class NoSQLDBMManager (override val connectionConfig: ConnectionConfig) : DBManagerBaseImpl() {
 
-    // Best regex "mongodb://(?:([a-zA-Z0-9._%+-]+):([a-zA-Z0-9._%+-]+)@)?([a-zA-Z0-9.-]+):(\\d+)/([a-zA-Z0-9._-]+)$"
+    private enum class DatabaseType {
+        MONGO, DYNAMO
+    }
 
-    //private val match = Regex("mongodb://((?:\\w|\\.)+):(\\d+)/(\\w+)").find(connectionConfig.url)
-    private var host : String = ""
-    private var port : Int = 0
-    private var dataBase : String = ""
-    private var username : String? = ""
-    private var password : String? = ""
+    private val databaseType: DatabaseType = determineDatabaseType()
 
-    private val match = parseConnectionString(connectionConfig.url)
+    // MongoDB-related fields
+    private var host: String = ""
+    private var port: Int = 0
+    private var dataBase: String = ""
+    private var username: String? = ""
+    private var password: String? = ""
+    private lateinit var mongoClient: MongoClient
+    lateinit var mongoDatabase: MongoDatabase
 
-    private fun parseConnectionString(connectionUrl: String): Boolean  {
+    // DynamoDB-related fields
+    lateinit var dynamoDBAsyncClient: AmazonDynamoDBAsync
+    lateinit var dynamoDB: DynamoDB
 
-        // Define each part of the regex as separate variables
+    private val openedFiles = mutableMapOf<String, DBFile>()
+
+    init {
+        validateConfig()
+        when (databaseType) {
+            DatabaseType.MONGO -> setupMongoClient()
+            DatabaseType.DYNAMO -> setupDynamoDBClient()
+        }
+    }
+
+    private fun determineDatabaseType(): DatabaseType {
+        return if (connectionConfig.url.startsWith("mongodb", ignoreCase = true)) {
+            DatabaseType.MONGO
+        } else {
+            DatabaseType.DYNAMO
+        }
+    }
+
+    private fun setupMongoClient() {
+        val match = parseMongoConnectionString(connectionConfig.url)
+        if (!match) {
+            throw RuntimeException("Invalid MongoDB URL format")
+        }
+
+        mongoClient = MongoClients.create(connectionConfig.url)
+        mongoDatabase = mongoClient.getDatabase(dataBase)
+    }
+
+    private fun parseMongoConnectionString(connectionUrl: String): Boolean {
         val schemePart = "^mongodb:\\/\\/"
         val userInfoPart = "(?:([a-zA-Z0-9._%+-]+):([a-zA-Z0-9._%+-]+)@)?"
         val hostPart = "([a-zA-Z0-9.-]+)"
@@ -55,70 +95,92 @@ class NoSQLDBMManager (override val connectionConfig: ConnectionConfig) : DBMana
         val databasePart = "\\/([a-zA-Z0-9._-]+)"
         val optionsPart = "(\\?.*)?"
 
-        // Combine the elements to form the complete regex pattern
         val fullRegexPattern = "$schemePart$userInfoPart$hostPart$portPart$databasePart$optionsPart$"
-
-        // Create a Regex object using the combined pattern
         val tmpRegex = Regex(fullRegexPattern)
 
-        // Match the connection string against the regex
         val matchResult = tmpRegex.matchEntire(connectionUrl)
-
-        // If there's a match, extract the values and return them as a data class
-        if (matchResult != null) {
-            username = matchResult.groups[1]?.value
-            password = matchResult.groups[2]?.value
-            host = matchResult.groups[3]?.value!!
-            port = matchResult.groups[4]?.value!!.toInt()
-            dataBase = matchResult.groups[5]?.value!!
-            return true
-        } else return false
+        return matchResult?.let {
+            username = it.groups[1]?.value
+            password = it.groups[2]?.value
+            host = it.groups[3]?.value!!
+            port = it.groups[4]?.value!!.toInt()
+            dataBase = it.groups[5]?.value!!
+            true
+        } ?: false
     }
 
-    private val mongoClient : MongoClient by lazy {
-        MongoClients.create(connectionConfig.url)
+    private fun setupDynamoDBClient() {
+        val region = connectionConfig.properties["REGION"] ?: throw RuntimeException("REGION is required")
+        val endpoint = connectionConfig.url
+
+        val clientBuilder = AmazonDynamoDBAsyncClientBuilder.standard()
+            .withEndpointConfiguration(AwsClientBuilder.EndpointConfiguration(endpoint, region))
+
+
+        val awsAccessKeyId = connectionConfig.properties["AWS_ACCESS_KEY_ID"]
+            ?: throw RuntimeException("AWS_ACCESS_KEY_ID is required")
+        val awsSecretAccessKey = connectionConfig.properties["AWS_SECRET_ACCESS_KEY"]
+            ?: throw RuntimeException("AWS_SECRET_ACCESS_KEY is required")
+
+        val credentials = BasicAWSCredentials(awsAccessKeyId, awsSecretAccessKey)
+        clientBuilder.withCredentials(AWSStaticCredentialsProvider(credentials))
+
+
+        dynamoDBAsyncClient = clientBuilder.build()
+        dynamoDB = DynamoDB(dynamoDBAsyncClient)
     }
 
-    val mongoDatabase : MongoDatabase by lazy {
-        mongoClient.getDatabase(dataBase)
-    }
-
-    private var openedFile = mutableMapOf<String, NoSQLDBFile>()
 
     override fun validateConfig() {
-        if (!match) {
-            throw  RuntimeException("Url syntax is not valid, correct format is: mongodb:user:password@//host:port/database")
+        if (connectionConfig.url.isBlank()) {
+            throw RuntimeException("Database endpoint URL is required")
+        }
+        when (databaseType) {
+            DatabaseType.MONGO -> {
+                if (!parseMongoConnectionString(connectionConfig.url)) {
+                    throw RuntimeException("Invalid MongoDB URL format")
+                }
+            }
+
+            DatabaseType.DYNAMO -> {
+                if (connectionConfig.properties["AWS_ACCESS_KEY_ID"].isNullOrBlank()) {
+                    throw RuntimeException("AWS_ACCESS_KEY_ID is required")
+                }
+                if (connectionConfig.properties["AWS_SECRET_ACCESS_KEY"].isNullOrBlank()) {
+                    throw RuntimeException("AWS_SECRET_ACCESS_KEY is required")
+                }
+
+                if (connectionConfig.properties["REGION"].isNullOrBlank()) {
+                    throw RuntimeException("REGION is required")
+                }
+            }
         }
     }
 
     override fun close() {
-        openedFile.values.forEach { it.close()}
-        openedFile.clear()
-        mongoClient.close()
+        openedFiles.values.forEach { it.close() }
+        openedFiles.clear()
+
+        when (databaseType) {
+            DatabaseType.MONGO -> mongoClient.close()
+            DatabaseType.DYNAMO -> dynamoDBAsyncClient.shutdown()
+        }
     }
 
     override fun openFile(name: String): DBFile {
-
         require(existFile(name)) {
             "Cannot open unregistered file $name"
         }
 
-        val sqldbFile: NoSQLDBFile
-        val key = name
-
-        if (openedFile.containsKey(key)) {
-            sqldbFile = openedFile.getValue(key)
-        } else {
-            require(existFile(name)) {
-                "File $name do not exist"
+        return openedFiles.getOrPut(name) {
+            when (databaseType) {
+                DatabaseType.MONGO -> NoSQLDBFile(name, metadataOf(name), mongoDatabase, logger)
+                DatabaseType.DYNAMO -> DynamoDBFile(name, metadataOf(name), dynamoDBAsyncClient, logger)
             }
-            sqldbFile = NoSQLDBFile(name, metadataOf(name), mongoDatabase, logger)
-            openedFile.putIfAbsent(key, sqldbFile)
         }
-        return sqldbFile
     }
 
     override fun closeFile(name: String) {
-        openedFile.remove(name)!!.close()
+        openedFiles.remove(name)?.close()
     }
 }

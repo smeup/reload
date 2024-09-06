@@ -59,6 +59,21 @@
 			<artifactId>mongodb-driver-sync</artifactId>
 			<version>4.9.0</version> <!-- Adjust version as needed -->
 		</dependency>
+
+		<!-- AWS SDK for DynamoDB -->
+		<dependency>
+			<groupId>com.amazonaws</groupId>
+			<artifactId>aws-java-sdk-dynamodb</artifactId>
+			<version>1.12.538</version>
+		</dependency>
+
+		<!-- AWS SDK Core (needed for credentials, etc.) -->
+		<dependency>
+			<groupId>com.amazonaws</groupId>
+			<artifactId>aws-java-sdk-core</artifactId>
+			<version>1.12.538</version>
+		</dependency>
+
 	</dependencies>
 
 	<build>
