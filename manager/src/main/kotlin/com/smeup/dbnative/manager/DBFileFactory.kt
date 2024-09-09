@@ -125,7 +125,7 @@ private fun createDBManager(config: ConnectionConfig, logger: Logger? = null): D
 
 private fun getImplByUrl(config: ConnectionConfig) : String {
     return when {
-        config.impl != null && config.impl!!.trim().isEmpty() -> config.impl!!
+        config.impl != null && config.impl!!.trim().isNotEmpty() -> config.impl!!
         config.url.startsWith("jdbc:") -> "com.smeup.dbnative.sql.SQLDBMManager"
         config.url.startsWith("mongodb:") -> "com.smeup.dbnative.nosql.NoSQLDBMManager"
         config.url.startsWith("as400:") -> "com.smeup.dbnative.jt400.JT400DBMMAnager"
