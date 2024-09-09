@@ -1,6 +1,6 @@
 name: Execute tests on different DBs
 
-on: [push, pull_request]
+on: [push]
 
 jobs:
   test:
@@ -19,10 +19,10 @@ jobs:
         uses: adambirds/docker-compose-action@v1.3.0
         with:
           compose-file: |
-            docker/mongodb/docker-compose.yml
-            docker/dynamodb/docker-compose.yml
-            docker/mysql/docker-compose.yml
-            docker/postgresql/docker-compose.yml
+            ./docker/mongodb/docker-compose.yml
+            ./docker/dynamodb/docker-compose.yml
+            ./docker/mysql/docker-compose.yml
+            ./docker/postgresql/docker-compose.yml
           down-flags: "--volumes"
 
       - name: Run Maven tests
