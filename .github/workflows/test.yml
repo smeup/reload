@@ -38,6 +38,7 @@ jobs:
 
       - name: Run Maven tests
         run: |
+          mvn install -DskipTests
           mvn test -pl sql
           mvn test -pl nosql
           mvn test -pl manager
