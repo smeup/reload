@@ -48,9 +48,10 @@ class NoSQLConnectionTest {
             Assert.fail("Expected no exception, but got: ${exc.message}")
         }
 
-        noSQLDBMManager = NoSQLDBMManager(ConnectionConfig("*", testConnectionStrings[2], "", ""))
-        assertFailsWith<RuntimeException>("Expected exception, but none was thrown") {
-            noSQLDBMManager.validateConfig()
+        assertFailsWith<RuntimeException>("Expected exception") {
+            noSQLDBMManager = NoSQLDBMManager(ConnectionConfig("*", testConnectionStrings[2], "", ""))
         }
+
+
     }
 }

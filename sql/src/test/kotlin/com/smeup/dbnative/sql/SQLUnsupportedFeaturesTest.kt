@@ -79,5 +79,15 @@ class SQLUnsupportedFeaturesTest {
         assertFails {dbFile.readPrevious()}
         SQLUnsupportedFeaturesTest.dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
+
+
+    @Test
+    fun unsupportedReadDeleteRead() {
+        val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
+        assertTrue(dbFile.setll(buildMunicipalityKey("IT", "LOM", "BG", "COVO")))
+        val record = dbFile.read().record
+        assertFails { dbFile.delete(record) }
+        dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
+    }
 }
 

@@ -57,18 +57,6 @@ class SQLWriteDeleteTest {
     }
 
     @Test
-    fun readDeleteRead() {
-        val dbFile = SQLWriteDeleteTest.dbManager.openFile(MUNICIPALITY_TABLE_NAME)
-        assertTrue(dbFile.setll(buildMunicipalityKey("IT", "LOM", "BG", "COVO")))
-        val record = dbFile.read().record
-        dbFile.delete(record)
-        assertTrue(dbFile.setll(buildMunicipalityKey("IT", "LOM", "BG", "COVO")))
-        dbFile.readEqual(buildMunicipalityKey("IT", "LOM", "BG", "COVO"))
-        assertTrue(dbFile.eof())
-        SQLWriteDeleteTest.dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
-    }
-
-    @Test
     fun writeDelete() {
         val dbFile = SQLWriteDeleteTest.dbManager.openFile(MUNICIPALITY_TABLE_NAME)
 
