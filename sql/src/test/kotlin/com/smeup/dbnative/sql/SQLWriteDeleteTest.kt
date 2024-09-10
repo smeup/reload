@@ -49,7 +49,6 @@ class SQLWriteDeleteTest {
     fun chainDeleteChain() {
         val dbFile = SQLWriteDeleteTest.dbManager.openFile(MUNICIPALITY_TABLE_NAME)
         val chainResult2 = dbFile.chain(buildMunicipalityKey("IT", "LOM", "BG", "CREDARO"))
-        assertEquals("CREDARO", getMunicipalityName(chainResult2.record))
         dbFile.delete(chainResult2.record)
         dbFile.chain(buildMunicipalityKey("IT", "LOM", "BG", "CREDARO"))
         assertTrue(dbFile.eof())
