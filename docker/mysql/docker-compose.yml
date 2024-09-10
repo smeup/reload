@@ -10,6 +10,7 @@ services:
       MYSQL_DATABASE: default_schema
     ports:
       - "3306:3306"
+    command: --sql_mode='ANSI_QUOTES'
       
 #  phpmyadmin:
 #    image: phpmyadmin/phpmyadmin

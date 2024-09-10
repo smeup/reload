@@ -45,7 +45,15 @@ private val LOGGING_LEVEL = LoggingLevel.ALL
 
 //do not change defaultValue
 //if you want to create sqlconnection against another db use function: dbManagerForTest(testSQLDBType: TestSQLDBType)
-private var defaultDbType = if (System.getenv("CI").toBoolean()) TestSQLDBType.POSTGRES else TestSQLDBType.HSQLDB
+private var defaultDbType = if (System.getenv("CI").toBoolean()) {
+    when(System.getenv("SQL_DB_TYPE").toString()) {
+        "postgresql" -> TestSQLDBType.POSTGRES
+        "mysql" -> TestSQLDBType.MY_SQL
+        else -> TestSQLDBType.HSQLDB
+    }
+} else {
+    TestSQLDBType.HSQLDB
+}
 //private var defaultDbType = TestSQLDBType.POSTGRES
 //private var defaultDbType = TestSQLDBType.MY_SQL
 //private var defaultDbType = TestSQLDBType.DB2_400
@@ -73,10 +81,10 @@ enum class TestSQLDBType(
             password = "root"
         ),
         createDatabase = { dbaConnection ->
-            dbaConnection.prepareStatement("CREATE DATABASE $DATABASE_NAME").use { it.execute() }
+            dbaConnection.prepareStatement("CREATE DATABASE IF NOT EXISTS $DATABASE_NAME").use { it.execute() }
         },
         destroyDatabase = { dbaConnection ->
-            dbaConnection.prepareStatement("DROP DATABASE  $DATABASE_NAME").use { it.execute() }
+            dbaConnection.prepareStatement("DROP DATABASE IF EXISTS  $DATABASE_NAME").use { it.execute() }
         }
     ),
     HSQLDB(ConnectionConfig(

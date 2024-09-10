@@ -45,10 +45,20 @@ jobs:
           port: 8000
           cors: '*'
 
-      - name: Run Maven tests
+      - name: Set environment to Postgres
+        run: echo "SQL_DB_TYPE=postgresql" >> $GITHUB_ENV
+
+      - name: Run Maven tests with Postgres
         run: |
           mvn install -DskipTests
           mvn test -pl sql
           mvn test -pl nosql
           mvn test -pl manager
           mvn test -pl base
+
+      - name: Set environment to MySQL
+        run: echo "SQL_DB_TYPE=mysql" >> $GITHUB_ENV
+
+      - name: Run Maven tests with MySQL
+        run: |
+          mvn test -pl sql
