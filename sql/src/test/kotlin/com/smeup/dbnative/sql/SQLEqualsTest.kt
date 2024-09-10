@@ -42,6 +42,8 @@ class SQLEqualsTest {
         @JvmStatic
         fun tearDown() {
             destroyDatabase()
+            destroyView()
+            destroyIndex()
         }
     }
 

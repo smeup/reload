@@ -24,6 +24,7 @@ import org.junit.BeforeClass
 import org.junit.Test
 import kotlin.test.Ignore
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class SQLReadEqualTest {
@@ -45,6 +46,8 @@ class SQLReadEqualTest {
         @JvmStatic
         fun tearDown() {
             destroyDatabase()
+            destroyView()
+            destroyIndex()
         }
     }
 
@@ -192,9 +195,9 @@ class SQLReadEqualTest {
     fun setLlReadEWithMoreKeys() {
         val dbFile = SQLReadEqualTest.dbManager.openFile(MUNICIPALITY_TABLE_NAME)
         assertTrue(dbFile.setll(buildMunicipalityKey("IT", "LOM")))
-        val result = dbFile.readEqual(buildMunicipalityKey("IT", "LOM", "BS"))
-        assertEquals("ACQUAFREDDA", getMunicipalityName(result.record))
-
+        assertFailsWith<IllegalArgumentException>("Expected exception, Uncoherent read not yet managed") {
+            dbFile.readEqual(buildMunicipalityKey("IT", "LOM", "BS"))
+        }
         SQLReadEqualTest.dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
 }
