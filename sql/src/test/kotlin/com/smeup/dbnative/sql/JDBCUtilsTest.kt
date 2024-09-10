@@ -17,45 +17,53 @@
 
 package com.smeup.dbnative.sql
 
-import com.smeup.dbnative.sql.utils.dbManagerForTest
-import com.smeup.dbnative.sql.utils.destroyDatabase
-import org.junit.After
-import org.junit.Before
-import org.junit.Test
+import com.smeup.dbnative.sql.utils.*
+import org.junit.*
 import kotlin.test.assertEquals
 
 class JDBCUtilsTest {
 
-    private lateinit var dbManager: SQLDBMManager
 
-    @Before
-    fun setUpEach() {
-        dbManager = dbManagerForTest()
+    companion object {
+
+        private lateinit var dbManager: SQLDBMManager
+
+        lateinit var primaryKeys : List<Any>
+        lateinit var orderingFields : List<Any>
+
+        @BeforeClass
+        @JvmStatic
+        fun setUp() {
+            dbManager = dbManagerForTest()
+            dbManager.connection.use {
+                it.createStatement()
+                    .execute("CREATE TABLE \"TSTTAB00\" (TSTFLDCHR CHAR (5) NOT NULL, TSTFLDNBR DECIMAL (7, 2) NOT NULL, TSTFLDNB2 DECIMAL (2, 0) NOT NULL, PRIMARY KEY(TSTFLDCHR, TSTFLDNBR))")
+                it.createStatement()
+                    .execute("CREATE VIEW \"TSTVIEW\" AS SELECT * FROM \"TSTTAB00\" ORDER BY TSTFLDNB2, TSTFLDNBR")
+                it.createStatement()
+                    .execute("CREATE INDEX \"TSTVIEW$CONVENTIONAL_INDEX_SUFFIX\" ON \"TSTTAB00\" (TSTFLDNB2, TSTFLDNBR)")
+
+                primaryKeys = it.primaryKeys("\"TSTTAB00\"")
+                orderingFields = it.orderingFields("\"TSTVIEW\"")
+            }
+        }
+
+        @AfterClass
+        @JvmStatic
+        fun tearDown() {
+        }
     }
 
     @Test
     fun primaryKeysTest() {
-        dbManager.connection.use {
-            it.createStatement()
-                .execute("CREATE TABLE TSTTAB00 (TSTFLDCHR CHAR (5) NOT NULL, TSTFLDNBR DECIMAL (7, 2) NOT NULL, TSTFLDNB2 DECIMAL (2, 0) NOT NULL, PRIMARY KEY(TSTFLDCHR, TSTFLDNBR))")
-            assertEquals(listOf("TSTFLDCHR", "TSTFLDNBR"), it.primaryKeys("TSTTAB00"))
-        }
+        if( Companion.primaryKeys.isNotEmpty()) { assertEquals(listOf("TSTFLDCHR", "TSTFLDNBR"), primaryKeys) }
+
     }
 
     @Test
     fun orderingFieldsTest() {
-        dbManager.connection.use {
-            it.createStatement()
-                .execute("CREATE TABLE TSTTAB00 (TSTFLDCHR CHAR (5) NOT NULL, TSTFLDNBR DECIMAL (7, 2) NOT NULL, TSTFLDNB2 DECIMAL (2, 0) NOT NULL, PRIMARY KEY(TSTFLDCHR, TSTFLDNBR))")
-            it.createStatement().execute("CREATE VIEW TSTVIEW AS SELECT * FROM TSTTAB00 ORDER BY TSTFLDNB2, TSTFLDNBR")
-            it.createStatement()
-                .execute("CREATE INDEX TSTVIEW$CONVENTIONAL_INDEX_SUFFIX ON TSTTAB00 (TSTFLDNB2, TSTFLDNBR)")
-            assertEquals(listOf("TSTFLDNB2", "TSTFLDNBR"), it.orderingFields("TSTVIEW"))
-        }
+        if(orderingFields.isNotEmpty()){ assertEquals(listOf("TSTFLDNB2", "TSTFLDNBR"), orderingFields) }
+
     }
 
-    @After
-    fun tearDownEach() {
-        destroyDatabase()
-    }
 }

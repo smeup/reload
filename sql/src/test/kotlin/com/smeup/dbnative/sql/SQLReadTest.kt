@@ -44,6 +44,8 @@ class SQLReadTest {
         @JvmStatic
         fun tearDown() {
             destroyDatabase()
+            destroyView()
+            destroyIndex()
         }
     }
 
