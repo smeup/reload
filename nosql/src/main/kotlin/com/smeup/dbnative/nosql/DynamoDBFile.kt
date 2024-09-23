@@ -14,6 +14,7 @@ import com.smeup.dbnative.file.Result
 import com.smeup.dbnative.log.Logger
 import com.smeup.dbnative.log.LoggingKey
 import com.smeup.dbnative.log.NativeMethod
+import com.smeup.dbnative.log.TelemetrySpan
 import com.smeup.dbnative.model.FileMetadata
 import com.smeup.dbnative.utils.matchFileKeys
 import kotlin.system.measureTimeMillis
@@ -106,6 +107,7 @@ class DynamoDBFile(
     }
 
     override fun chain(keys: List<String>): Result {
+        val telemetrySpan = TelemetrySpan("CHAIN Execution")
         lastNativeMethod = NativeMethod.chain
         logEvent(LoggingKey.native_access_method, "Executing chain on keys $keys")
         var item: Item? = null
@@ -122,6 +124,7 @@ class DynamoDBFile(
         }.apply {
             logEvent(LoggingKey.native_access_method, "chain executed, result: $item", this)
         }
+        telemetrySpan.endSpan()
         return if (item == null) {
             eof = true
             Result(Record())
@@ -131,6 +134,7 @@ class DynamoDBFile(
     }
 
     override fun read(): Result {
+        val telemetrySpan = TelemetrySpan("READ Execution")
         lastNativeMethod = NativeMethod.read
         logEvent(LoggingKey.native_access_method, "Executing read")
 
@@ -140,6 +144,7 @@ class DynamoDBFile(
         }.apply {
             logEvent(LoggingKey.native_access_method, "read executed, result: $resultItem", this)
         }
+        telemetrySpan.endSpan()
         return if (resultItem != null) {
             eof = false
             Result(record = documentToRecord(resultItem!!))
@@ -160,6 +165,7 @@ class DynamoDBFile(
     }
 
     override fun readEqual(keys: List<String>): Result {
+        val telemetrySpan = TelemetrySpan("READE Execution")
         lastNativeMethod = NativeMethod.readEqual
         logEvent(LoggingKey.native_access_method, "Executing readEqual on keys $keys")
 
@@ -177,6 +183,7 @@ class DynamoDBFile(
         }.apply {
             logEvent(LoggingKey.native_access_method, "readEqual executed, result: $resultItem", this)
         }
+        telemetrySpan.endSpan()
         return if (isMatch && resultItem != null) {
             eof = false
             Result(record = documentToRecord(resultItem!!))
@@ -207,6 +214,7 @@ class DynamoDBFile(
 
     override fun write(record: Record): Result {
         lastNativeMethod = NativeMethod.write
+        val telemetrySpan = TelemetrySpan("WRITE Execution")
         logEvent(LoggingKey.native_access_method, "Executing write")
 
         return try {
@@ -235,6 +243,8 @@ class DynamoDBFile(
                 logEvent(LoggingKey.native_access_method, "write executed", this)
             }
 
+            telemetrySpan.endSpan()
+
             Result(record = record).also {
                 lastNativeMethod = null
             }
@@ -255,6 +265,7 @@ class DynamoDBFile(
 
     override fun update(record: Record): Result {
         lastNativeMethod = NativeMethod.update
+        val telemetrySpan = TelemetrySpan("UPDATE Execution")
         logEvent(LoggingKey.native_access_method, "Executing update")
 
         return try {
@@ -275,6 +286,7 @@ class DynamoDBFile(
             }.apply {
                 logEvent(LoggingKey.native_access_method, "update executed", this)
             }
+            telemetrySpan.endSpan()
             Result(record = record).also {
                 lastNativeMethod = null
             }
@@ -290,6 +302,7 @@ class DynamoDBFile(
 
     override fun delete(record: Record): Result {
         lastNativeMethod = NativeMethod.delete
+        val telemetrySpan = TelemetrySpan("DELETE Execution")
         logEvent(LoggingKey.native_access_method, "Executing delete")
 
         return try {
@@ -303,6 +316,8 @@ class DynamoDBFile(
             }.apply {
                 logEvent(LoggingKey.native_access_method, "delete executed", this)
             }
+
+            telemetrySpan.endSpan()
 
             Result(record = record).also {
                 lastNativeMethod = null
