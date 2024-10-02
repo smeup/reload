@@ -32,7 +32,7 @@ interface DBMManager : AutoCloseable{
 
     fun existFile(name: String): Boolean
     fun registerMetadata(metadata: FileMetadata, overwrite: Boolean)
-    fun metadataOf(name: String): FileMetadata
+    fun metadataOf(name: String): FileMetadata?
     fun openFile(name: String): DBFile
     fun closeFile(name: String)
     fun unregisterMetadata(name: String)

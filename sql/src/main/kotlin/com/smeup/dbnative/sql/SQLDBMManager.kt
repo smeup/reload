@@ -65,8 +65,13 @@ open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBMa
     }
 
     override fun openFile(name: String): SQLDBFile {
-        require(this.existFile(name))
-        return SQLDBFile(name = name, fileMetadata = metadataOf(name), connection = connection, logger)
+        // Ensure file exists in database
+        require(this.existFile(name)) { "File '$name' do not exists in database." }
+        // Ensure metadata is not null
+        val fileMetadata = metadataOf(name)
+        require(fileMetadata != null) { "Metadata for file '$name' is null." }
+
+        return SQLDBFile(name = name, fileMetadata = fileMetadata, connection = connection, logger)
     }
 
     override fun closeFile(name: String) {

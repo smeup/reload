@@ -20,7 +20,7 @@ package com.smeup.dbnative
 
 import com.smeup.dbnative.log.Logger
 import com.smeup.dbnative.metadata.MetadataRegister
-import com.smeup.dbnative.metadata.file.FSMetadataRegisterImpl
+import com.smeup.dbnative.metadata.memory.MemoryMetadataRegisterImpl
 import com.smeup.dbnative.model.FileMetadata
 import java.util.*
 
@@ -34,8 +34,8 @@ abstract class DBManagerBaseImpl : DBMManager {
 
     */
 
-    override fun metadataOf(name: String): FileMetadata {
-        return getMetadataRegister().getMetadata(name.toUpperCase())
+    override fun metadataOf(name: String): FileMetadata? {
+        return getMetadataRegister().getMetadata(name.uppercase(Locale.getDefault()))
     }
 
     override fun registerMetadata(metadata: FileMetadata, overwrite: Boolean) {
@@ -62,7 +62,8 @@ abstract class DBManagerBaseImpl : DBMManager {
 
         val register: MetadataRegister
             get() {
-                return FSMetadataRegisterImpl
+                //return FSMetadataRegisterImpl
+                return MemoryMetadataRegisterImpl
             }
 
         fun getMetadataRegister(): MetadataRegister {
@@ -85,8 +86,8 @@ abstract class DBManagerBaseImpl : DBMManager {
             }
         }
 
-        fun staticGetMetadata(name: String): FileMetadata {
-            return getMetadataRegister().getMetadata(name);
+        fun staticGetMetadata(name: String): FileMetadata? {
+            return getMetadataRegister().getMetadata(name)
         }
     }
 }

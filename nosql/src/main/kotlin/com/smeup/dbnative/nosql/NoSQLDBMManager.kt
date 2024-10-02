@@ -173,9 +173,12 @@ class NoSQLDBMManager (override val connectionConfig: ConnectionConfig) : DBMana
         }
 
         return openedFiles.getOrPut(name) {
+            // Ensure metadata is not null
+            val fileMetadata = metadataOf(name)
+            require(fileMetadata != null) { "Metadata for file '$name' is null." }
             when (databaseType) {
-                DatabaseType.MONGO -> NoSQLDBFile(name, metadataOf(name), mongoDatabase, logger)
-                DatabaseType.DYNAMO -> DynamoDBFile(name, metadataOf(name), dynamoDBAsyncClient, logger)
+                DatabaseType.MONGO -> NoSQLDBFile(name, fileMetadata, mongoDatabase, logger)
+                DatabaseType.DYNAMO -> DynamoDBFile(name, fileMetadata, dynamoDBAsyncClient, logger)
             }
         }
     }

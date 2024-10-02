@@ -18,19 +18,20 @@
 package com.smeup.dbnative.nosql.utils
 
 import com.github.doyaaaaaken.kotlincsv.dsl.csvReader
-import com.mongodb.BasicDBObject
 import com.smeup.dbnative.ConnectionConfig
 import com.smeup.dbnative.file.DBFile
 import com.smeup.dbnative.file.Record
 import com.smeup.dbnative.file.RecordField
 import com.smeup.dbnative.log.Logger
 import com.smeup.dbnative.log.LoggingLevel
-import com.smeup.dbnative.model.*
+import com.smeup.dbnative.model.CharacterType
+import com.smeup.dbnative.model.DecimalType
+import com.smeup.dbnative.model.FileMetadata
+import com.smeup.dbnative.model.VarcharType
 import com.smeup.dbnative.nosql.NoSQLDBMManager
 import com.smeup.dbnative.utils.TypedField
 import com.smeup.dbnative.utils.TypedMetadata
 import com.smeup.dbnative.utils.fieldByType
-import com.smeup.dbnative.utils.getFieldTypeInstance
 import org.bson.Document
 import org.junit.Assert
 import java.io.File
@@ -66,8 +67,8 @@ fun createAndPopulateTestTable(dbManager: NoSQLDBMManager) {
     Assert.assertTrue(dbManager.existFile(tMetadata.name))
     Assert.assertTrue(dbManager.metadataOf(tMetadata.name) == tMetadata.fileMetadata())
 
-    val dbfile: DBFile? = dbManager.openFile(tMetadata.name)
-    dbfile!!.write(Record(RecordField("TSTFLDCHR", "XXX"), RecordField("TSTFLDNBR", "123.45")))
+    val dbfile: DBFile = dbManager.openFile(tMetadata.name)
+    dbfile.write(Record(RecordField("TSTFLDCHR", "XXX"), RecordField("TSTFLDNBR", "123.45")))
     dbManager.closeFile(tMetadata.name)
 }
 
@@ -127,7 +128,7 @@ private fun createAndPopulateTable(dbManager: NoSQLDBMManager, tableName: String
 
         createFile(tMetadata, dbManager)
         Assert.assertTrue(dbManager.existFile(tableName))
-        var dbFile = dbManager.openFile(tableName)
+        val dbFile = dbManager.openFile(tableName)
         val dataFile = File(dataFilePath)
         val dataRows: List<Map<String, String>> = csvReader().readAllWithHeader(dataFile)
 
@@ -149,7 +150,7 @@ private fun createAndPopulateTable(dbManager: NoSQLDBMManager, tableName: String
 
 fun createFile(tMetadata: TypedMetadata, dbManager: NoSQLDBMManager) {
     // Find table registration in library metadata file
-    val metadata: FileMetadata = tMetadata.fileMetadata();
+    val metadata: FileMetadata = tMetadata.fileMetadata()
 
     if (dbManager.existFile(metadata.name) == false) {
 
