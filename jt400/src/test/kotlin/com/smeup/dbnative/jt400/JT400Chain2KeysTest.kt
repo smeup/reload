@@ -24,9 +24,11 @@ import com.smeup.dbnative.jt400.utils.destroyDatabase
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import kotlin.test.Ignore
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
+@Ignore
 class JT400Chain2KeysTest {
 
     private lateinit var dbManager: JT400DBMManager

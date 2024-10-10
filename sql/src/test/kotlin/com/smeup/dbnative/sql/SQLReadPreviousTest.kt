@@ -22,6 +22,7 @@ import org.junit.AfterClass
 import org.junit.BeforeClass
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class SQLReadPreviousTest {
@@ -47,29 +48,57 @@ class SQLReadPreviousTest {
 
     @Test
     fun findRecordsIfSetllFromLastRecord() {
-        val dbFile = SQLReadPreviousTest.dbManager.openFile(EMPLOYEE_TABLE_NAME)
+        val dbFile = dbManager.openFile(EMPLOYEE_TABLE_NAME)
         assertTrue(dbFile.setll("200340"))
         assertEquals("HELENA WONG", getEmployeeName(dbFile.readPrevious().record))
         assertEquals("MICHELLE SPRINGER", getEmployeeName(dbFile.readPrevious().record))
-        SQLReadPreviousTest.dbManager.closeFile(EMPLOYEE_TABLE_NAME)
+        dbManager.closeFile(EMPLOYEE_TABLE_NAME)
     }
 
     @Test
     fun findRecordsIfSetGtFromLastRecord() {
-        val dbFile = SQLReadPreviousTest.dbManager.openFile(EMPLOYEE_TABLE_NAME)
+        val dbFile = dbManager.openFile(EMPLOYEE_TABLE_NAME)
         assertTrue(dbFile.setgt("200340"))
         assertEquals("ROY ALONZO", getEmployeeName(dbFile.readPrevious().record))
         assertEquals("HELENA WONG", getEmployeeName(dbFile.readPrevious().record))
         assertEquals("MICHELLE SPRINGER", getEmployeeName(dbFile.readPrevious().record))
-        SQLReadPreviousTest.dbManager.closeFile(EMPLOYEE_TABLE_NAME)
+        dbManager.closeFile(EMPLOYEE_TABLE_NAME)
     }
 
     @Test
     fun setllReadpe() {
-        val dbFile = SQLReadPreviousTest.dbManager.openFile(MUNICIPALITY_TABLE_NAME)
+        val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
         assertTrue(dbFile.setll(buildMunicipalityKey("IT", "LOM", "BS", "ERBUSCO")))
         assertEquals("EDOLO", getMunicipalityName(dbFile.readPreviousEqual(buildMunicipalityKey("IT", "LOM")).record))
-        SQLReadPreviousTest.dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
+        dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
+    }
+
+    /**
+     * An incoherent call is a REAPE that changes the keys set by the previous
+     * positioning instruction.
+     */
+    @Test
+    fun testUncoherentReadError() {
+        // Wrong mode: make a IT-CAL-CS readpe on a previous IT-LOM-BS pointing
+        val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
+        assertTrue(dbFile.setgt(buildMunicipalityKey("IT", "LOM", "BS")))
+        var result = dbFile.readPreviousEqual(buildMunicipalityKey("IT", "LOM", "BS"))
+        assertEquals("ZONE", getMunicipalityName(result.record))
+        assertFailsWith<IllegalArgumentException>() {
+            dbFile.readPreviousEqual(buildMunicipalityKey("IT", "CAL", "CS"))
+        }
+
+        // Right mode: repoint to IT-CAL-CS before change readpe keys from IT-LOM-BS to
+        // IT-CAL-CS
+        assertTrue(dbFile.setgt(buildMunicipalityKey("IT", "LOM", "BS")))
+        result = dbFile.readPreviousEqual(buildMunicipalityKey("IT", "LOM", "BS"))
+        assertEquals("ZONE", getMunicipalityName(result.record))
+
+        assertTrue(dbFile.setgt(buildMunicipalityKey("IT", "CAL", "CS")))
+        result = dbFile.readPreviousEqual(buildMunicipalityKey("IT", "CAL", "CS"))
+        assertEquals("ZUMPANO", getMunicipalityName(result.record))
+
+        dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
 
 }

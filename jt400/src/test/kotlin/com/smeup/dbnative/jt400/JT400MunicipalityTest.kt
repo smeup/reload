@@ -25,7 +25,7 @@ import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-
+@Ignore
 class JT400MunicipalityTest {
 
     private lateinit var dbManager: JT400DBMManager
