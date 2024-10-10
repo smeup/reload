@@ -42,17 +42,18 @@ class SQLChainTest {
         }
     }
 
+
     @Test
     fun chainNotExisting() {
-        val dbFile = SQLChainTest.dbManager.openFile(MUNICIPALITY_TABLE_NAME)
+        val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
         val chainResult1 = dbFile.chain(buildMunicipalityKey("IT", "LOM", "BS", "ERBASCO"))
         assertEquals(0, chainResult1.record.size)
-        SQLChainTest.dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
+        dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
 
     @Test
     fun chainWithReducedKeys() {
-        val dbFile = SQLChainTest.dbManager.openFile(MUNICIPALITY_TABLE_NAME)
+        val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
         var chainResult = dbFile.chain(buildCountryKey("IT", "LOM", "BS"))
         assertEquals("ACQUAFREDDA", getMunicipalityName(chainResult.record))
         chainResult = dbFile.chain(buildCountryKey("IT", "LOM", "CO"))
@@ -61,47 +62,47 @@ class SQLChainTest {
         assertEquals("ADRARA SAN MARTINO", getMunicipalityName(chainResult.record))
         chainResult = dbFile.chain(buildNationKey("IT"))
         assertEquals("ACCIANO", getMunicipalityName(chainResult.record))
-        SQLChainTest.dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
+        dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
 
     @Test
     fun chainExisting1() {
-        val dbFile = SQLChainTest.dbManager.openFile(MUNICIPALITY_TABLE_NAME)
+        val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
         val chainResult2 = dbFile.chain(buildMunicipalityKey("IT", "LOM", "BS", "ERBUSCO"))
         assertEquals("ERBUSCO", getMunicipalityName(chainResult2.record))
-        SQLChainTest.dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
+        dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
 
     @Test
     fun chainExisting2() {
-        val dbFile = SQLChainTest.dbManager.openFile(MUNICIPALITY_TABLE_NAME)
+        val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
         val chainResult2 = dbFile.chain(buildMunicipalityKey("IT", "LOM", "BS", "ROVATO"))
         assertEquals("ROVATO", getMunicipalityName(chainResult2.record))
-        SQLChainTest.dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
+        dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
 
     @Test
     fun multipleChainExisting() {
-        val dbFile = SQLChainTest.dbManager.openFile(MUNICIPALITY_TABLE_NAME)
+        val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
         val chainResult = dbFile.chain(buildMunicipalityKey("IT", "LOM", "BS", "ERBUSCO"))
         assertEquals("ERBUSCO", getMunicipalityName(chainResult.record))
         val chainResult2 = dbFile.chain(buildMunicipalityKey("IT", "LOM", "BS", "ROVATO"))
         assertEquals("ROVATO", getMunicipalityName(chainResult2.record))
-        SQLChainTest.dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
+        dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
 
     @Test
     fun readAndChain() {
-        val dbFile = SQLChainTest.dbManager.openFile(MUNICIPALITY_TABLE_NAME)
+        val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
 
         dbFile.setll(buildMunicipalityKey("IT", "LOM", "BS", "ERBUSCO"))
         val readResult = dbFile.read()
         assertEquals("ERBUSCO", getMunicipalityName(readResult.record))
 
         // Chain to another record
-        var chainResult = dbFile.chain(buildMunicipalityKey("IT", "LOM", "BS", "ADRO"))
+        val chainResult = dbFile.chain(buildMunicipalityKey("IT", "LOM", "BS", "ADRO"))
         assertEquals("ADRO", getMunicipalityName(chainResult.record))
-        SQLChainTest.dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
+        dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
 }
 

@@ -43,8 +43,6 @@ class SQLDBFile(
 
     private var lastNativeMethod: NativeMethod? = null
 
-    private var nextResult: Result? = null
-
     //Search from: metadata, primary key, unique index, view ordering fields
     //private val thisFileKeys: List<String> by lazy {
     //    // TODO: think about a right way (local file maybe?) to retrieve keylist
@@ -85,7 +83,6 @@ class SQLDBFile(
 
         adapter.setPositioning(PositioningMethod.SETGT, keys)
         return true
-
     }
 
     override fun chain(key: String): Result {
@@ -94,14 +91,13 @@ class SQLDBFile(
 
     override fun chain(keys: List<String>): Result {
         val telemetrySpan = TelemetrySpan("CHAIN Execution")
-        nextResult = null
         lastNativeMethod = NativeMethod.chain
         logEvent(LoggingKey.native_access_method, "Executing chain on keys $keys")
         adapter.setRead(ReadMethod.CHAIN, keys)
         val read: Result
         measureTimeMillis {
             executeQuery(adapter.getSQLStatement())
-            read = readNextFromResultSet(false)
+            read = readNextFromResultSet()
         }.apply {
             logEvent(LoggingKey.native_access_method, "chain executed", this)
         }
@@ -125,7 +121,7 @@ class SQLDBFile(
                     logEvent(LoggingKey.native_access_method, "Query execution failed: " + e.message)
                 }
             }
-            read = readNextFromResultSet(true)
+            read = readNextFromResultSet()
             read.indicatorLO = queryError
         }.apply {
             logEvent(LoggingKey.native_access_method, "read executed", this)
@@ -150,7 +146,7 @@ class SQLDBFile(
                     logEvent(LoggingKey.native_access_method, "Query execution failed: " + e.message)
                 }
             }
-            read = readNextFromResultSet(true)
+            read = readNextFromResultSet()
             read.indicatorLO = queryError
         }.apply {
             logEvent(LoggingKey.native_access_method, "readPrevious executed", this)
@@ -190,7 +186,7 @@ class SQLDBFile(
                     logEvent(LoggingKey.native_access_method, "Query execution failed: " + e.message)
                 }
             }
-            read = readNextFromResultSet(true)
+            read = readNextFromResultSet()
             read.indicatorLO = queryError
         }.apply {
             logEvent(LoggingKey.native_access_method, "readEqual executed", this)
@@ -223,7 +219,7 @@ class SQLDBFile(
                     logEvent(LoggingKey.native_access_method, "Query execution failed: " + e.message)
                 }
             }
-            read = readNextFromResultSet(true)
+            read = readNextFromResultSet()
             read.indicatorLO = queryError
         }.apply {
             logEvent(LoggingKey.native_access_method, "readPreviousEqual executed", this)
@@ -357,35 +353,26 @@ class SQLDBFile(
     }
 
 
-    private fun readNextFromResultSet(loadNext: Boolean): Result {
-        if (nextResult?.record.isNullOrEmpty()) {
-            nextResult = Result(resultSet.toValues())
-        }
-
-        val result = nextResult
+    private fun readNextFromResultSet(): Result {
         var found = false
+        var result = Result(resultSet.toValues())
         while (!found && !eof) {
-            if (adapter.lastReadMatchRecord(result!!.record)) {
+            if (result.record.isEmpty()) {
+                eof = true
+                result.indicatorEQ = true
+                closeResultSet()
+                logEvent(LoggingKey.read_data, "No more record to read")
+            }
+            else if (adapter.lastReadMatchRecord(result.record)) {
                 logEvent(LoggingKey.read_data, "Record read: ${result.record}")
                 actualRecord = result.record.duplicate()
                 eof = false
                 found = true
-            }
-
-            if (loadNext) {
-                nextResult = Result(resultSet.toValues())
-
-                if (nextResult!!.record.isEmpty()) {
-                    eof = true
-                    result.indicatorEQ = true
-                    closeResultSet()
-                    logEvent(LoggingKey.read_data, "No more record to read")
-                }
             } else {
-                eof = true
+                result = Result(resultSet.toValues())
             }
         }
-        return result!!
+        return result
     }
 
     private fun closeResultSet() {

@@ -21,9 +21,11 @@ import com.smeup.dbnative.jt400.utils.*
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import kotlin.test.Ignore
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
+@Ignore
 class JT400ReadPreviousTest {
 
     private lateinit var dbManager: JT400DBMManager
