@@ -7,129 +7,24 @@ import com.smeup.dbnative.file.DBFile
 import com.smeup.dbnative.file.Record
 import com.smeup.dbnative.file.Result
 import com.smeup.dbnative.log.Logger
+import com.smeup.dbnative.mock.MockDBManager
 import com.smeup.dbnative.model.Field
 import com.smeup.dbnative.model.FileMetadata
 import kotlin.test.Test
 import kotlin.test.fail
 
-private val MOCK_METADATA = FileMetadata(
-    name = "mock",
-    tableName = "mock",
-    fields = listOf(
-        Field("field1"),
-        Field("field2"),
-    ),
-    fileKeys = listOf("field1")
-)
-
-/**
- * Mock implementation of DBManagerBaseImpl
- */
-class MockDBManager(override val connectionConfig: ConnectionConfig) : DBManagerBaseImpl() {
-
-    override fun validateConfig() {
-    }
-
-    override fun close() {
-    }
-
-    override fun openFile(name: String) = MockDBFile()
-
-    override fun closeFile(name: String) {
-    }
-}
-
-/**
- * Mock implementation of DBFile.
- * All methods are not implemented.
- */
-class MockDBFile(override var name: String, override var fileMetadata: FileMetadata, override var logger: Logger?) :
-    DBFile {
-
-    constructor() : this(
-        "mock",
-        MOCK_METADATA,
-        null
-    )
-
-    override fun eof(): Boolean {
-        TODO("Not yet implemented")
-    }
-
-    override fun equal(): Boolean {
-        TODO("Not yet implemented")
-    }
-
-    override fun setll(key: String): Boolean {
-        TODO("Not yet implemented")
-    }
-
-    override fun setll(keys: List<String>): Boolean {
-        TODO("Not yet implemented")
-    }
-
-    override fun setgt(key: String): Boolean {
-        TODO("Not yet implemented")
-    }
-
-    override fun setgt(keys: List<String>): Boolean {
-        TODO("Not yet implemented")
-    }
-
-    override fun chain(key: String): Result {
-        TODO("Not yet implemented")
-    }
-
-    override fun chain(keys: List<String>): Result {
-        TODO("Not yet implemented")
-    }
-
-    override fun read(): Result {
-        TODO("Not yet implemented")
-    }
-
-    override fun readPrevious(): Result {
-        TODO("Not yet implemented")
-    }
-
-    override fun readEqual(): Result {
-        TODO("Not yet implemented")
-    }
-
-    override fun readEqual(key: String): Result {
-        TODO("Not yet implemented")
-    }
-
-    override fun readEqual(keys: List<String>): Result {
-        TODO("Not yet implemented")
-    }
-
-    override fun readPreviousEqual(): Result {
-        TODO("Not yet implemented")
-    }
-
-    override fun readPreviousEqual(key: String): Result {
-        TODO("Not yet implemented")
-    }
-
-    override fun readPreviousEqual(keys: List<String>): Result {
-        TODO("Not yet implemented")
-    }
-
-    override fun write(record: Record): Result {
-        TODO("Not yet implemented")
-    }
-
-    override fun update(record: Record): Result {
-        TODO("Not yet implemented")
-    }
-
-    override fun delete(record: Record): Result {
-        TODO("Not yet implemented")
-    }
-}
 
 class MockDBMManagerTest {
+
+    private val MOCK_METADATA = FileMetadata(
+        name = "mock",
+        tableName = "mock",
+        fields = listOf(
+            Field("field1"),
+            Field("field2"),
+        ),
+        fileKeys = listOf("field1")
+    )
 
     /***
      * Test that the mock: protocol is not handled for default
