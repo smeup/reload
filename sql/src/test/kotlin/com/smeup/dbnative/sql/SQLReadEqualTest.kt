@@ -21,7 +21,7 @@ import com.smeup.dbnative.file.Result
 import com.smeup.dbnative.sql.utils.*
 import org.junit.AfterClass
 import org.junit.BeforeClass
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.Ignore
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
