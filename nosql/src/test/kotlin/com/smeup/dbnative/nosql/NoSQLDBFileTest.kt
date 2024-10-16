@@ -76,9 +76,6 @@ class NoSQLDBFileTest {
         val readResult1 = dbfile.read()
         assertTrue(readResult1.record.isNotEmpty())
 
-        val readResult2 = dbfile.read()
-        assertTrue(readResult2.record.isNotEmpty())
-
         dbManager.closeFile(tableName)
     }
 

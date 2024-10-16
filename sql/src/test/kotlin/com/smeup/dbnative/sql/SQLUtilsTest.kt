@@ -32,7 +32,7 @@ class SQLUtilsTest {
             RecordField("TSTFLDCHR", "XXX"),
             RecordField("TSTFLDNBR", "123.45")
         )
-        assertEquals("INSERT INTO TSTTAB (\"TSTFLDCHR\", \"TSTFLDNBR\") VALUES(?, ?)", "TSTTAB".insertSQL(record))
+        assertEquals("INSERT INTO \"TSTTAB\" (\"TSTFLDCHR\", \"TSTFLDNBR\") VALUES(?, ?)", "TSTTAB".insertSQL(record))
     }
 
     @Test

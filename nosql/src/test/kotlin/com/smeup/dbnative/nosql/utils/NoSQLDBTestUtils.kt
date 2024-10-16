@@ -38,12 +38,17 @@ import java.io.File
 const val TSTAB_TABLE_NAME = "TSTAB01"
 const val MUNICIPALITY_TABLE_NAME = "MUNICIPALITY"
 const val TEST_LOG = false
-private val LOGGING_LEVEL = LoggingLevel.OFF
+private val LOGGING_LEVEL = LoggingLevel.TRACE
 
 fun dbManagerForTest(): NoSQLDBMManager {
     testLog("Creating NOSQLDBManager with db type MONGO")
     return NoSQLDBMManager(ConnectionConfig("*", "mongodb://localhost:27017/W_TEST", "", "")).apply { logger = Logger.getSimpleInstance(LOGGING_LEVEL) }
 }
+
+fun deleteMunicipalityTable(dbManager: NoSQLDBMManager) {
+    dbManager.mongoDatabase.getCollection(MUNICIPALITY_TABLE_NAME).drop()
+}
+
 
 fun createAndPopulateTestTable(dbManager: NoSQLDBMManager) {
     // Create file
@@ -68,7 +73,7 @@ fun createAndPopulateTestTable(dbManager: NoSQLDBMManager) {
 
 fun createAndPopulateMunicipalityTable(dbManager: NoSQLDBMManager) {
 
-    if (!dbManager.existFile(MUNICIPALITY_TABLE_NAME)) {
+    if (dbManager.existFile(MUNICIPALITY_TABLE_NAME)) {
 
         val fields = listOf(
             "£NAZ" fieldByType  CharacterType(2),
@@ -103,6 +108,10 @@ fun getMunicipalityName(record: Record): String {
     return name.trim()
 }
 
+fun getMunicipalityProv(record: Record): String {
+    return (record["PROV"]?.trim() ?: "")
+}
+
 fun testLog(message: String) {
     if (TEST_LOG) {
         println(message)
@@ -114,7 +123,7 @@ private fun createAndPopulateTable(dbManager: NoSQLDBMManager, tableName: String
     val tMetadata = TypedMetadata(tableName, tableName, fields, keys)
 
     //if not exist file on mongodb create and populate with data
-    if (dbManager.existFile(tableName) == false) {
+    if (dbManager.existFile(tableName)) {
 
         createFile(tMetadata, dbManager)
         Assert.assertTrue(dbManager.existFile(tableName))
