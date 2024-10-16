@@ -7,129 +7,39 @@ import com.smeup.dbnative.file.DBFile
 import com.smeup.dbnative.file.Record
 import com.smeup.dbnative.file.Result
 import com.smeup.dbnative.log.Logger
+import com.smeup.dbnative.mock.MockDBManager
 import com.smeup.dbnative.model.Field
 import com.smeup.dbnative.model.FileMetadata
 import kotlin.test.Test
+import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
 import kotlin.test.fail
 
-private val MOCK_METADATA = FileMetadata(
-    name = "mock",
-    tableName = "mock",
-    fields = listOf(
-        Field("field1"),
-        Field("field2"),
-    ),
-    fileKeys = listOf("field1")
-)
-
-/**
- * Mock implementation of DBManagerBaseImpl
- */
-class MockDBManager(override val connectionConfig: ConnectionConfig) : DBManagerBaseImpl() {
-
-    override fun validateConfig() {
-    }
-
-    override fun close() {
-    }
-
-    override fun openFile(name: String) = MockDBFile()
-
-    override fun closeFile(name: String) {
-    }
-}
-
-/**
- * Mock implementation of DBFile.
- * All methods are not implemented.
- */
-class MockDBFile(override var name: String, override var fileMetadata: FileMetadata, override var logger: Logger?) :
-    DBFile {
-
-    constructor() : this(
-        "mock",
-        MOCK_METADATA,
-        null
-    )
-
-    override fun eof(): Boolean {
-        TODO("Not yet implemented")
-    }
-
-    override fun equal(): Boolean {
-        TODO("Not yet implemented")
-    }
-
-    override fun setll(key: String): Boolean {
-        TODO("Not yet implemented")
-    }
-
-    override fun setll(keys: List<String>): Boolean {
-        TODO("Not yet implemented")
-    }
-
-    override fun setgt(key: String): Boolean {
-        TODO("Not yet implemented")
-    }
-
-    override fun setgt(keys: List<String>): Boolean {
-        TODO("Not yet implemented")
-    }
-
-    override fun chain(key: String): Result {
-        TODO("Not yet implemented")
-    }
-
-    override fun chain(keys: List<String>): Result {
-        TODO("Not yet implemented")
-    }
-
-    override fun read(): Result {
-        TODO("Not yet implemented")
-    }
-
-    override fun readPrevious(): Result {
-        TODO("Not yet implemented")
-    }
-
-    override fun readEqual(): Result {
-        TODO("Not yet implemented")
-    }
-
-    override fun readEqual(key: String): Result {
-        TODO("Not yet implemented")
-    }
-
-    override fun readEqual(keys: List<String>): Result {
-        TODO("Not yet implemented")
-    }
-
-    override fun readPreviousEqual(): Result {
-        TODO("Not yet implemented")
-    }
-
-    override fun readPreviousEqual(key: String): Result {
-        TODO("Not yet implemented")
-    }
-
-    override fun readPreviousEqual(keys: List<String>): Result {
-        TODO("Not yet implemented")
-    }
-
-    override fun write(record: Record): Result {
-        TODO("Not yet implemented")
-    }
-
-    override fun update(record: Record): Result {
-        TODO("Not yet implemented")
-    }
-
-    override fun delete(record: Record): Result {
-        TODO("Not yet implemented")
-    }
-}
 
 class MockDBMManagerTest {
+
+    private val MOCK_METADATA = FileMetadata(
+        name = "mock",
+        tableName = "mock",
+        fields = listOf(
+            Field("field1"),
+            Field("field2"),
+        ),
+        fileKeys = listOf("field1")
+    )
+
+    // I say that
+    // - all the files (fileName = "*")
+    // - with the mock: protocol (url = "mock:")
+    // - with any user and password
+    // - will be managed by the MockDBManager class
+    val connectionConfig = ConnectionConfig(
+        fileName = "*",
+        url = "mock:",
+        user = "*",
+        password = "*",
+        impl = MockDBManager::class.java.name
+    )
 
     /***
      * Test that the mock: protocol is not handled for default
@@ -161,30 +71,80 @@ class MockDBMManagerTest {
      */
     @Test
     fun testMockProtocolHandled() {
-        // I say that
-        // - all the files (fileName = "*")
-        // - with the mock: protocol (url = "mock:")
-        // - with any user and password
-        // - will be managed by the MockDBManager class
-        val connectionConfig = ConnectionConfig(
-            fileName = "*",
-            url = "mock:",
-            user = "*",
-            password = "*",
-            impl = MockDBManager::class.java.name
-        )
+
         val nativeAccessConfig =
             DBNativeAccessConfig(connectionsConfig = listOf(connectionConfig))
         DBFileFactory(nativeAccessConfig).use { dbFileFactory ->
             val dbFile = dbFileFactory.open(fileName = "mock", fileMetadata = MOCK_METADATA)
+            var eof = true
             kotlin.runCatching {
-                dbFile.eof()
+                eof = dbFile.eof()
             }.onSuccess {
-                fail("Should not be able to call eof")
+                assertFalse(eof)
             }.onFailure {
                 assert(it is NotImplementedError)
             }
         }
     }
+
+    @Test
+    fun testDifferentResultsForDifferentFiles() {
+
+        val metadata = FileMetadata(
+            name = "mock2",
+            tableName = "mock2",
+            fields = listOf(
+                Field("foo"),
+                Field("bar"),
+                Field("M240DATA"),
+            ),
+            fileKeys = listOf("foo")
+        )
+
+        val nativeAccessConfig =
+            DBNativeAccessConfig(connectionsConfig = listOf(connectionConfig))
+        DBFileFactory(nativeAccessConfig).use { dbFileFactory ->
+            val dbFile = dbFileFactory.open(fileName = "mock", fileMetadata = MOCK_METADATA)
+            val dbFile2 = dbFileFactory.open(fileName = "mock2", fileMetadata = metadata)
+
+            var result: Result
+            var result2: Result
+
+            result = dbFile.chain("smth")
+            result2 = dbFile2.chain("smth")
+
+            assertNotEquals(result.record.keys, result2.record.keys)
+
+        }
+    }
+
+    @Test
+    fun testDifferentResultsForSequentialCalls() {
+
+        val metadata = FileMetadata(
+            name = "mock2",
+            tableName = "mock2",
+            fields = listOf(
+                Field("foo"),
+                Field("bar"),
+            ),
+            fileKeys = listOf("foo")
+        )
+
+        val nativeAccessConfig =
+            DBNativeAccessConfig(connectionsConfig = listOf(connectionConfig))
+        DBFileFactory(nativeAccessConfig).use { dbFileFactory ->
+            val dbFile = dbFileFactory.open(fileName = "mock2", fileMetadata = metadata)
+
+            val result: Result = dbFile.chain("smth")
+            val result2: Result = dbFile.chain("x")
+
+            assertNotEquals(result.record.values, result2.record.values)
+            assertNotEquals(result.record["M240DATA"], result2.record["M240DATA"])
+
+
+        }
+    }
+
 
 }
