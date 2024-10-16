@@ -35,7 +35,6 @@ import org.junit.Assert
 import java.io.File
 import java.sql.Connection
 import java.sql.ResultSet
-import java.util.*
 
 const val EMPLOYEE_TABLE_NAME = "EMPLOYEE"
 const val EMPLOYEE_VIEW_NAME = "EMPLOYEE_VIEW"
@@ -190,9 +189,9 @@ fun destroyDatabase(testSQLDBType: TestSQLDBType) {
 fun createAndPopulateEmployeeTable(dbManager: SQLDBMManager?) {
     val fields = listOf(
         "EMPNO" fieldByType CharacterType(6),
-        "FIRSTNME" fieldByType VarcharType(12),
-        "MIDINIT" fieldByType VarcharType(1),
-        "LASTNAME" fieldByType VarcharType(15),
+        "FIRSTNME" fieldByType CharacterType(12),
+        "MIDINIT" fieldByType CharacterType(1),
+        "LASTNAME" fieldByType CharacterType(15),
         "WORKDEPT" fieldByType CharacterType(3)
     )
 
@@ -243,9 +242,9 @@ fun createAndPopulateEmployeeView(dbManager: SQLDBMManager?) {
 
     val fields = listOf(
         "EMPNO" fieldByType CharacterType(6),
-        "FIRSTNME" fieldByType VarcharType(12),
-        "MIDINIT" fieldByType VarcharType(1),
-        "LASTNAME" fieldByType VarcharType(15),
+        "FIRSTNME" fieldByType CharacterType(12),
+        "MIDINIT" fieldByType CharacterType(1),
+        "LASTNAME" fieldByType CharacterType(15),
         "WORKDEPT" fieldByType CharacterType(3)
     )
 
@@ -268,7 +267,7 @@ fun createAndPopulateMunicipalityTable(dbManager: SQLDBMManager?) {
         "NAZ" fieldByType CharacterType(2),
         "REG" fieldByType CharacterType(3),
         "PROV" fieldByType CharacterType(2),
-        "CITTA" fieldByType VarcharType(35),
+        "CITTA" fieldByType CharacterType(35),
         "CAP" fieldByType CharacterType(5),
         "PREF" fieldByType CharacterType(4),
         "COMUNE" fieldByType CharacterType(4),
@@ -294,7 +293,7 @@ fun createAndPopulateMunicipalityTable(dbManager: SQLDBMManager?) {
 }
 
 fun getEmployeeName(record: Record): String {
-    return record["FIRSTNME"].toString() + " " + record["LASTNAME"].toString()
+    return record["FIRSTNME"].toString().trim() + " " + record["LASTNAME"].toString().trim()
 }
 
 fun getMunicipalityName(record: Record): String {

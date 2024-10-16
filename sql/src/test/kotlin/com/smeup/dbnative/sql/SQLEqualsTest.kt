@@ -20,7 +20,7 @@ package com.smeup.dbnative.sql
 import com.smeup.dbnative.sql.utils.*
 import org.junit.AfterClass
 import org.junit.BeforeClass
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertTrue
 
 class SQLEqualsTest {
@@ -49,18 +49,18 @@ class SQLEqualsTest {
 
     @Test
     fun equal() {
-        val dbFile = SQLEqualsTest.dbManager.openFile(MUNICIPALITY_TABLE_NAME)
+        val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
         dbFile.setll(buildMunicipalityKey("IT", "LOM", "BS", "ERBUSCO"))
         assertTrue(dbFile.equal())
-        SQLEqualsTest.dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
+        dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
 
     @Test
     fun notEqual() {
-        val dbFile = SQLEqualsTest.dbManager.openFile(MUNICIPALITY_TABLE_NAME)
+        val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
         dbFile.setll(buildMunicipalityKey("IT", "LOM", "BS", "ERBASCO"))
         assertTrue(!dbFile.equal())
-        SQLEqualsTest.dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
+        dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
 }
 

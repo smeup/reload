@@ -22,10 +22,11 @@ import com.smeup.dbnative.file.Record
 import com.smeup.dbnative.file.RecordField
 import com.smeup.dbnative.metadata.file.MetadataSerializer
 import com.smeup.dbnative.sql.utils.*
-import org.junit.Test
 import kotlin.test.Ignore
-import kotlin.test.assertEquals
+import kotlin.test.Test
 import kotlin.test.assertFalse
+import kotlin.test.assertEquals
+
 
 @Ignore
 class DB2400PerfTest {
@@ -44,7 +45,7 @@ class DB2400PerfTest {
             val fileMetadata =
                 MetadataSerializer.jsonToMetadata("src/test/resources/dds/", "VERAPG0L")
             it!!.registerMetadata(fileMetadata, false)
-            val dbFile = it!!.openFile("VERAPG0L")
+            val dbFile = it.openFile("VERAPG0L")
             for(i in 1..10) {
                 var record = Record(RecordField("V£IDOJ", "A3L00000X1"),
                     RecordField("V£DATA", "20210117"),
@@ -57,7 +58,7 @@ class DB2400PerfTest {
                     dbFile.delete(record)
                 }
             }
-            it!!.close()
+            it.close()
         }
     }
 
@@ -68,13 +69,13 @@ class DB2400PerfTest {
             val fileMetadata =
                 MetadataSerializer.jsonToMetadata("src/test/resources/dds/", "VERAPG0L")
             it!!.registerMetadata(fileMetadata, false)
-            val dbFile = it!!.openFile("VERAPG0L")
+            val dbFile = it.openFile("VERAPG0L")
 
-            var record = dbFile.chain(arrayListOf("A3L00000X1")).record
+            val record = dbFile.chain(arrayListOf("A3L00000X1")).record
             if (!dbFile.eof()) {
                 dbFile.delete(record)
             }
-            it!!.closeFile("VERAPG0L")
+            it.closeFile("VERAPG0L")
         }
     }
 
@@ -86,7 +87,7 @@ class DB2400PerfTest {
             val fileMetadata =
                 MetadataSerializer.jsonToMetadata("src/test/resources/dds/", "VERAPG0L")
             it!!.registerMetadata(fileMetadata, false)
-            val dbFile = it!!.openFile("VERAPG0L")
+            val dbFile = it.openFile("VERAPG0L")
 
             var record = dbFile.chain(arrayListOf("A3L0000001")).record
             if (dbFile.eof()) {
@@ -118,8 +119,8 @@ class DB2400PerfTest {
             val fileMetadata =
                 MetadataSerializer.jsonToMetadata("src/test/resources/dds/", "VERAPG9L")
             it!!.registerMetadata(fileMetadata, false)
-            val dbFile = it!!.openFile("VERAPG9L")
-            var keys = arrayListOf("20210117", "SMEGL.001      ")
+            val dbFile = it.openFile("VERAPG9L")
+            val keys = arrayListOf("20210117", "SMEGL.001      ")
             dbFile.setll(keys)
             dbFile.readEqual(keys)
         }
@@ -132,7 +133,7 @@ class DB2400PerfTest {
             val fileMetadata =
                 MetadataSerializer.jsonToMetadata("src/test/resources/dds/", "BRARTI0L")
             it!!.registerMetadata(fileMetadata, false)
-            val dbFile = it!!.openFile("BRARTI0L")
+            val dbFile = it.openFile("BRARTI0L")
             var keys = arrayListOf("ASACC0001")
             doChain(keys, dbFile)
 
@@ -148,7 +149,7 @@ class DB2400PerfTest {
             keys = arrayListOf("ASACC0005")
             doChain(keys, dbFile)
 
-            it!!.closeFile("BRARTI0L")
+            it.closeFile("BRARTI0L")
         }
     }
 
