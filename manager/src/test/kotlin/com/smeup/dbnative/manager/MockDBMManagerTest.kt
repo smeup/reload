@@ -89,7 +89,6 @@ class MockDBMManagerTest {
             fields = listOf(
                 Field("foo"),
                 Field("bar"),
-                Field("M240DATA"),
             ),
             fileKeys = listOf("foo")
         )
