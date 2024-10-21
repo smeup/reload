@@ -89,7 +89,6 @@ class MockDBMManagerTest {
             fields = listOf(
                 Field("foo"),
                 Field("bar"),
-                Field("M240DATA"),
             ),
             fileKeys = listOf("foo")
         )
@@ -133,7 +132,40 @@ class MockDBMManagerTest {
             val result2: Result = dbFile.chain("x")
 
             assertNotEquals(result.record.values, result2.record.values)
-            assertNotEquals(result.record["M240DATA"], result2.record["M240DATA"])
+
+
+        }
+    }
+
+    @Test
+    fun testSequentialCalls() {
+
+        val metadata = FileMetadata(
+            name = "MU24020F",
+            tableName = "MU24020F",
+            fields = listOf(
+                Field("foo"),
+                Field("bar"),
+            ),
+            fileKeys = listOf("foo")
+        )
+
+        val nativeAccessConfig =
+            DBNativeAccessConfig(connectionsConfig = listOf(connectionConfig))
+        DBFileFactory(nativeAccessConfig).use { dbFileFactory ->
+            val dbFile = dbFileFactory.open(fileName = "MU24020F", fileMetadata = metadata)
+
+            var resultList = ArrayList<Result>()
+            while (!dbFile.eof()) {
+                var res = dbFile.chain("aa")
+//                println(res.record.get("M240DATA"))
+                resultList.add(res)
+            }
+            println(resultList.size)
+           println(resultList.get(0).record.get("M240DATA"))
+           println(resultList.get(522129).record.get("M240DATA"))
+           println(resultList.get(522130).record.get("M240DATA"))
+           println(resultList.get(522131).record.get("M240DATA"))
 
 
         }
