@@ -16,13 +16,12 @@ import java.time.format.DateTimeFormatter
 class MockDBFile(override var name: String, override var fileMetadata: FileMetadata, override var logger: Logger?) :
     DBFile {
 
-    val maxMockRecords = 522131
+    val maxMockRecords = 522132
     var returnedRecords = 0
     lateinit var mockedResult: Result
 
 
     private fun nextIteration(): Result {
-        returnedRecords++
 
         var allFields = when (fileMetadata.tableName) {
             "BRENTI0F" -> getBRENTI()
@@ -36,23 +35,25 @@ class MockDBFile(override var name: String, override var fileMetadata: FileMetad
                 }.toList()
             }
         }
+        if (returnedRecords == 522131 ){
+            var dataField = allFields.find { rField -> rField.name == "M240DATA" }
 
-        var dataField = allFields.find { rField -> rField.name == "M240DATA" }
 
+            val previousData = dataField?.value
 
-        val previousData = dataField?.value
-
-        if (previousData != null) {
-            val formatter = DateTimeFormatter.ofPattern("yyyyMMdd")
-            val previousDate = LocalDate.parse(previousData, formatter)
-            val nextDate = previousDate.plusDays(1)
-            allFields = allFields.filter { recordField -> recordField.name != "M240DATA" }
-            allFields = allFields.plus(RecordField("M240DATA", nextDate.format(formatter)))
+            if (previousData != null) {
+                val formatter = DateTimeFormatter.ofPattern("yyyyMMdd")
+                val previousDate = LocalDate.parse(previousData, formatter)
+                val nextDate = previousDate.plusDays(1)
+                allFields = allFields.filter { recordField -> recordField.name != "M240DATA" }
+                allFields = allFields.plus(RecordField("M240DATA", nextDate.format(formatter)))
+            }
         }
-
         val record = Record(*allFields.toTypedArray())
 
         mockedResult = Result(record = record)
+
+        returnedRecords++
 
         return mockedResult
     }
