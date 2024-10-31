@@ -146,6 +146,23 @@ class SQLReadEqualTest {
     }
 
     @Test
+    fun setllsetllReadeEof() {
+        val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
+
+        assertTrue(dbFile.setll(buildMunicipalityKey("IT", "LOM", "BS")))
+        var result = dbFile.readEqual(buildMunicipalityKey("IT", "LOM", "BS"))
+        var count = 0;
+        while (!dbFile.eof()) {
+            result = dbFile.readEqual(buildMunicipalityKey("IT", "LOM", "BS"))
+            count++;
+        }
+        assertEquals("", getMunicipalityName(result.record))
+        assertEquals(206, count)
+
+        dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
+    }
+
+    @Test
     fun doesNotFindRecordsIfReadEWithKeyNotExistingKey() {
         val dbFile = dbManager.openFile(EMPLOYEE_VIEW_NAME)
         assertEquals(0, dbFile.readEqual("XXX").record.size)
