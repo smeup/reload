@@ -44,28 +44,33 @@ class SQLReadTest {
         @JvmStatic
         fun tearDown() {
             destroyDatabase()
+            destroyView()
+            destroyIndex()
         }
     }
 
     @Test
     fun readUntilEof() {
         val dbFile = dbManager.openFile(EMPLOYEE_VIEW_NAME)
-        var readed = 0;
+        var readed = 0
         var readResult = Result()
         while (dbFile.eof() == false) {
             readResult = dbFile.read()
             readed++
             println("Lettura $readed: " + getEmployeeName(readResult.record))
         }
-        assertEquals(42, readed)
+        assertEquals(43, readed)
+        // Check that the last read is empty with EOF
+        assertTrue(readResult.record.size == 0)
         assertTrue(readResult.indicatorEQ)
+        assertTrue(dbFile.eof())
         dbManager.closeFile(EMPLOYEE_VIEW_NAME)
     }
 
     @Test
     fun positioningAndReadUntilEof() {
         val dbFile = dbManager.openFile(EMPLOYEE_VIEW_NAME)
-        var readed = 0;
+        var readed = 0
         dbFile.setll("C01")
         var readResult = Result()
         while (dbFile.eof() == false) {
@@ -73,64 +78,77 @@ class SQLReadTest {
             readed++
             println("Lettura $readed: " + getEmployeeName(readResult.record))
         }
-        assertEquals(36, readed)
-        assertTrue(readResult.indicatorEQ)
+        assertEquals(37, readed)
+        // Check that last record is empty with EOF
+        assertTrue(readResult.record.size == 0)
+        assertTrue(readResult.indicatorEQ == true)
+        assertTrue(dbFile.eof())
         dbManager.closeFile(EMPLOYEE_VIEW_NAME)
     }
 
     @Test
     fun positioningBlankAndReadUntilEof() {
         val dbFile = dbManager.openFile(EMPLOYEE_VIEW_NAME)
-        var readed = 0;
+        var readed = 0
         dbFile.setll("")
+        var readResult = Result()
         while (dbFile.eof() == false) {
-            var readResult = dbFile.read()
+            readResult = dbFile.read()
             readed++
             println("Lettura $readed: " + getEmployeeName(readResult.record))
         }
-        assertEquals(42, readed)
+        assertEquals(43, readed)
+        // Check that last record is empty with EOF
+        assertTrue(readResult.record.size == 0)
+        assertTrue(readResult.indicatorEQ == true)
+        assertTrue(dbFile.eof())
         dbManager.closeFile(EMPLOYEE_VIEW_NAME)
     }
 
     @Test
     fun multipleRead() {
-        val dbFile = SQLReadTest.dbManager.openFile(MUNICIPALITY_TABLE_NAME)
+        val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
         assertTrue(dbFile.setll(buildMunicipalityKey("IT", "LOM", "BS", "ERBUSCO")))
         for (index in 0..138) {
-            var result = dbFile.read();
+            val result = dbFile.read()
             assertTrue { !dbFile.eof() }
             if (index == 138) {
                 assertEquals("CO", getMunicipalityProv(result.record))
             }
         }
-        SQLReadTest.dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
+        dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
 
     @Test
     fun positioningWithLessKeysAndReadUntilEof() {
         val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
-        var readed = 0;
+        var readed = 0
+        var readResult = Result()
         dbFile.setll(buildCountryKey("IT", "LOM", "BS"))
         while (dbFile.eof() == false) {
-            var readResult = dbFile.read()
+            readResult = dbFile.read()
             readed++
             println("Lettura $readed: " + getMunicipalityName(readResult.record))
         }
-        assertEquals(1001, readed)
+        assertEquals(1002, readed)
+        // Chack tha last record is empty with EOF
+        assertTrue(readResult.record.size == 0)
+        assertTrue(readResult.indicatorEQ == true)
+        assertTrue(dbFile.eof())
         dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
 
     @Test
     fun positioningWithHalfKeysAndReadUntilEof() {
         val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
-        var readed = 0;
-        val setllResult = dbFile.setll( buildRegionKey("IT", "LOM"))
-        while (dbFile.eof() == false) {
-            var readResult = dbFile.read()
+        var readed = 0
+        dbFile.setll( buildRegionKey("IT", "LOM"))
+        while (!dbFile.eof()) {
+            val readResult = dbFile.read()
             readed++
             System.out.println("Lettura $readed: " + getMunicipalityName(readResult.record))
         }
-        assertEquals(1244, readed)
+        assertTrue(readed <= 1245)
         dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
 }

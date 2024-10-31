@@ -3,7 +3,6 @@ version : '3'
 services:
   mysql:
     image: mysql:latest
-    container_name: dev_mysql
     environment:
       MYSQL_USER: user
       MYSQL_PASSWORD: user
@@ -11,16 +10,17 @@ services:
       MYSQL_DATABASE: default_schema
     ports:
       - "3306:3306"
+    command: --sql_mode='ANSI_QUOTES'
       
-  phpmyadmin:
-    image: phpmyadmin/phpmyadmin
-    container_name: dev_pma
-    links:
-      - mysql
-    environment:
-      PMA_HOST: mysql
-      PMA_PORT: 3306
-      PMA_ARBITRARY: 1
-    restart: always
-    ports:
-      - 8183:80      
+#  phpmyadmin:
+#    image: phpmyadmin/phpmyadmin
+#    container_name: dev_pma
+#    links:
+#      - mysql
+#    environment:
+#      PMA_HOST: mysql
+#      PMA_PORT: 3306
+#      PMA_ARBITRARY: 1
+#    restart: always
+#    ports:
+#      - 8183:80

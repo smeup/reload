@@ -24,6 +24,7 @@ import com.smeup.dbnative.file.Result
 import com.smeup.dbnative.log.Logger
 import com.smeup.dbnative.log.LoggingKey
 import com.smeup.dbnative.log.NativeMethod
+import com.smeup.dbnative.log.TelemetrySpan
 import com.smeup.dbnative.model.FileMetadata
 import java.sql.Connection
 import java.sql.PreparedStatement
@@ -41,8 +42,6 @@ class SQLDBFile(
     private var actualRecord: Record? = null
 
     private var lastNativeMethod: NativeMethod? = null
-
-    private var nextResult: Result? = null
 
     //Search from: metadata, primary key, unique index, view ordering fields
     //private val thisFileKeys: List<String> by lazy {
@@ -84,7 +83,6 @@ class SQLDBFile(
 
         adapter.setPositioning(PositioningMethod.SETGT, keys)
         return true
-
     }
 
     override fun chain(key: String): Result {
@@ -92,22 +90,24 @@ class SQLDBFile(
     }
 
     override fun chain(keys: List<String>): Result {
-        nextResult = null
+        val telemetrySpan = TelemetrySpan("CHAIN Execution")
         lastNativeMethod = NativeMethod.chain
         logEvent(LoggingKey.native_access_method, "Executing chain on keys $keys")
         adapter.setRead(ReadMethod.CHAIN, keys)
         val read: Result
         measureTimeMillis {
-            executeQuery(adapter.getSQLSatement())
-            read = readNextFromResultSet(false)
+            executeQuery(adapter.getSQLStatement())
+            read = readNextFromResultSet()
         }.apply {
             logEvent(LoggingKey.native_access_method, "chain executed", this)
         }
         lastNativeMethod = null
+        telemetrySpan.endSpan()
         return read
     }
 
     override fun read(): Result {
+        val telemetrySpan = TelemetrySpan("READ Execution")
         lastNativeMethod = NativeMethod.read
         logEvent(LoggingKey.native_access_method, "Executing read")
         val read: Result
@@ -115,22 +115,24 @@ class SQLDBFile(
         measureTimeMillis {
             if (adapter.setRead(ReadMethod.READ)) {
                 try {
-                    executeQuery(adapter.getSQLSatement())
+                    executeQuery(adapter.getSQLStatement())
                 } catch (e: Exception) {
                     queryError = true
                     logEvent(LoggingKey.native_access_method, "Query execution failed: " + e.message)
                 }
             }
-            read = readNextFromResultSet(true)
+            read = readNextFromResultSet()
             read.indicatorLO = queryError
         }.apply {
             logEvent(LoggingKey.native_access_method, "read executed", this)
         }
         lastNativeMethod = null
+        telemetrySpan.endSpan()
         return read
     }
 
     override fun readPrevious(): Result {
+        val telemetrySpan = TelemetrySpan("READP Execution")
         lastNativeMethod = NativeMethod.readPrevious
         logEvent(LoggingKey.native_access_method, "Executing readPrevious")
         val read: Result
@@ -138,28 +140,31 @@ class SQLDBFile(
         measureTimeMillis {
             if (adapter.setRead(ReadMethod.READP)) {
                 try {
-                    executeQuery(adapter.getSQLSatement())
+                    executeQuery(adapter.getSQLStatement())
                 } catch (e: Exception) {
                     queryError = true
                     logEvent(LoggingKey.native_access_method, "Query execution failed: " + e.message)
                 }
             }
-            read = readNextFromResultSet(true)
+            read = readNextFromResultSet()
             read.indicatorLO = queryError
         }.apply {
             logEvent(LoggingKey.native_access_method, "readPrevious executed", this)
         }
         lastNativeMethod = null
+        telemetrySpan.endSpan()
         return read
     }
 
     override fun readEqual(): Result {
+        val telemetrySpan = TelemetrySpan("READE Execution")
         var result = Result()
         try {
             result = readEqual(adapter.getLastKeys())
         } catch (exc: Exception) {
             result.indicatorLO = true
         }
+        telemetrySpan.endSpan()
         return result
     }
 
@@ -175,13 +180,13 @@ class SQLDBFile(
         measureTimeMillis {
             if (adapter.setRead(ReadMethod.READE, keys)) {
                 try {
-                    executeQuery(adapter.getSQLSatement())
+                    executeQuery(adapter.getSQLStatement())
                 } catch (e: Exception) {
                     queryError = true
                     logEvent(LoggingKey.native_access_method, "Query execution failed: " + e.message)
                 }
             }
-            read = readNextFromResultSet(true)
+            read = readNextFromResultSet()
             read.indicatorLO = queryError
         }.apply {
             logEvent(LoggingKey.native_access_method, "readEqual executed", this)
@@ -201,29 +206,32 @@ class SQLDBFile(
 
     override fun readPreviousEqual(keys: List<String>): Result {
         lastNativeMethod = NativeMethod.readPreviousEqual
+        val telemetrySpan = TelemetrySpan("READPE Execution")
         logEvent(LoggingKey.native_access_method, "Executing readPreviousEqual on keys $keys")
         val read: Result
         var queryError = false
         measureTimeMillis {
             if (adapter.setRead(ReadMethod.READPE, keys)) {
                 try {
-                    executeQuery(adapter.getSQLSatement())
+                    executeQuery(adapter.getSQLStatement())
                 } catch (e: Exception) {
                     queryError = true
                     logEvent(LoggingKey.native_access_method, "Query execution failed: " + e.message)
                 }
             }
-            read = readNextFromResultSet(true)
+            read = readNextFromResultSet()
             read.indicatorLO = queryError
         }.apply {
             logEvent(LoggingKey.native_access_method, "readPreviousEqual executed", this)
         }
         lastNativeMethod = null
+        telemetrySpan.endSpan()
         return read
     }
 
     override fun write(record: Record): Result {
         lastNativeMethod = NativeMethod.write
+        val telemetrySpan = TelemetrySpan("WRITE Execution")
         logEvent(
             LoggingKey.native_access_method,
             "Executing write for record $record: with autocommit=${connection.autoCommit}"
@@ -239,6 +247,7 @@ class SQLDBFile(
             logEvent(LoggingKey.native_access_method, "write executed", this)
         }
         lastNativeMethod = null
+        telemetrySpan.endSpan()
         return Result(record)
     }
 
@@ -265,6 +274,7 @@ class SQLDBFile(
         require(getResultSet() != null) {
             "Positioning required before update "
         }
+        val telemetrySpan = TelemetrySpan("UPDATE Execution")
         lastNativeMethod = NativeMethod.update
         logEvent(
             LoggingKey.native_access_method,
@@ -288,12 +298,14 @@ class SQLDBFile(
             logEvent(LoggingKey.native_access_method, "update executed", this)
         }
         lastNativeMethod = null
+        telemetrySpan.endSpan()
         return Result(record)
     }
 
 
     override fun delete(record: Record): Result {
         lastNativeMethod = NativeMethod.delete
+        val telemetrySpan = TelemetrySpan("DELETE Execution")
         logEvent(
             LoggingKey.native_access_method,
             "Executing delete for current record $actualRecord with autocommit=${connection.autoCommit}"
@@ -308,6 +320,7 @@ class SQLDBFile(
             logEvent(LoggingKey.native_access_method, "delete executed", this)
         }
         lastNativeMethod = null
+        telemetrySpan.endSpan()
         return Result(record)
     }
 
@@ -321,12 +334,13 @@ class SQLDBFile(
         logEvent(LoggingKey.execute_inquiry, "Preparing statement for query: $sql with bingings: $values")
         val stm: PreparedStatement
         measureTimeMillis {
-            stm = preparedStatements.get(sql) ?: connection.prepareStatement(
-                sql,
-                ResultSet.TYPE_FORWARD_ONLY,
-                ResultSet.CONCUR_UPDATABLE
-            )
-            preparedStatements.putIfAbsent(sql, stm);
+            stm = preparedStatements.getOrPut(sql) {
+                connection.prepareStatement(
+                    sql,
+                    ResultSet.TYPE_FORWARD_ONLY,
+                    ResultSet.CONCUR_UPDATABLE
+                )
+            }
             stm.bind(values)
         }.apply {
             logEvent(LoggingKey.execute_inquiry, "Statement prepared, executing query for statement", this)
@@ -339,33 +353,26 @@ class SQLDBFile(
     }
 
 
-    private fun readNextFromResultSet(loadNext: Boolean): Result {
-        if (nextResult == null || nextResult!!.record.isEmpty()) nextResult = Result(resultSet.toValues())
-        val result = nextResult
-
-        var found: Boolean = false
+    private fun readNextFromResultSet(): Result {
+        var found = false
+        var result = Result(resultSet.toValues())
         while (!found && !eof) {
-            if (adapter.lastReadMatchRecord(result!!.record)) {
+            if (result.record.isEmpty()) {
+                eof = true
+                result.indicatorEQ = true
+                closeResultSet()
+                logEvent(LoggingKey.read_data, "No more record to read")
+            }
+            else if (adapter.lastReadMatchRecord(result.record)) {
                 logEvent(LoggingKey.read_data, "Record read: ${result.record}")
                 actualRecord = result.record.duplicate()
                 eof = false
                 found = true
-            }
-
-            if (loadNext) {
-                nextResult = Result(resultSet.toValues());
-
-                if (nextResult!!.record.isEmpty()) {
-                    eof = true
-                    result.indicatorEQ = true
-                    closeResultSet()
-                    logEvent(LoggingKey.read_data, "No more record to read")
-                }
             } else {
-                eof = true;
+                result = Result(resultSet.toValues())
             }
         }
-        return result!!
+        return result
     }
 
     private fun closeResultSet() {
@@ -380,22 +387,21 @@ class SQLDBFile(
         logEvent(LoggingKey.read_data, "Read current record for equal")
         lastNativeMethod = NativeMethod.equal
         val result: Boolean
-        if (!adapter.isLastOperationSet()) {
-            result = false
-        } else {
-
+        if (adapter.isLastOperationSet()) {
             measureTimeMillis {
                 executeQuery(adapter.getReadSqlStatement())
                 result = resultSet?.next() ?: false
             }.apply {
                 logEvent(LoggingKey.read_data, "Record for equal read", this)
             }
+        } else {
+            result = false
         }
         lastNativeMethod = null
         return result
     }
 
-    fun getResultSet(): ResultSet? {
+    private fun getResultSet(): ResultSet? {
         return this.resultSet
     }
 

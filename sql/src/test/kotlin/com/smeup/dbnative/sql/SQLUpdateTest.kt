@@ -17,8 +17,6 @@
  */
 package com.smeup.dbnative.sql
 
-import com.smeup.dbnative.file.Record
-import com.smeup.dbnative.file.RecordField
 import com.smeup.dbnative.sql.utils.*
 import org.junit.AfterClass
 import org.junit.BeforeClass
@@ -47,7 +45,7 @@ class SQLUpdateTest {
 
     @Test
     fun update() {
-        val dbFile = SQLUpdateTest.dbManager.openFile(MUNICIPALITY_TABLE_NAME)
+        val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
 
         // Chain to record to modify
         var chainResult = dbFile.chain(buildMunicipalityKey("IT", "LOM", "BG", "DALMINE"))
@@ -64,8 +62,8 @@ class SQLUpdateTest {
         assertEquals("BS", getMunicipalityProv(chainResult.record))
 
         // Verify that old record is missing
-        chainResult = dbFile.chain(buildMunicipalityKey("IT", "LOM", "BS", "DALMINE"))
-        assertTrue(dbFile.eof())
+        chainResult = dbFile.chain(buildMunicipalityKey("IT", "LOM", "BG", "DALMINE"))
+        assertTrue(chainResult.record.size == 0)
         SQLUpdateTest.dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
 
