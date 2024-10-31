@@ -40,7 +40,7 @@ public class SQLJAsinchLoggingTest {
     }
 
     private String getEmployeeName(Record record){
-        return record.get("FIRSTNME") + " " + record.get("LASTNAME");
+        return record.get("FIRSTNME").trim() + " " + record.get("LASTNAME").trim();
     }
 
     @Test
