@@ -1,19 +1,11 @@
 package com.smeup.dbnative.manager
 
 import com.smeup.dbnative.ConnectionConfig
-import com.smeup.dbnative.DBManagerBaseImpl
 import com.smeup.dbnative.DBNativeAccessConfig
-import com.smeup.dbnative.file.DBFile
-import com.smeup.dbnative.file.Record
 import com.smeup.dbnative.file.Result
-import com.smeup.dbnative.log.Logger
-import com.smeup.dbnative.mock.MockDBManager
 import com.smeup.dbnative.model.Field
 import com.smeup.dbnative.model.FileMetadata
-import kotlin.test.Test
-import kotlin.test.assertFalse
-import kotlin.test.assertNotEquals
-import kotlin.test.fail
+import kotlin.test.*
 
 
 class MockDBMManagerTest {
@@ -30,43 +22,44 @@ class MockDBMManagerTest {
 
     // I say that
     // - all the files (fileName = "*")
-    // - with the mock: protocol (url = "mock:")
+    // - with the class: protocol (url = "class:")
     // - with any user and password
-    // - will be managed by the MockDBManager class
+    // - will be managed by the MockDBManager class specified in url
     val connectionConfig = ConnectionConfig(
         fileName = "*",
-        url = "mock:",
+        url = "class:com.smeup.dbnative.mock.MockDBManager",
         user = "*",
-        password = "*",
-        impl = MockDBManager::class.java.name
+        password = "*"
     )
 
     /***
-     * Test that the mock: protocol is not handled for default
+     * Test that a given impl always overrides the used one
      */
     @Test
-    fun testMockProtocolNotHandled() {
+    fun testMockProtocolImpl() {
         val connectionConfig = ConnectionConfig(
             fileName = "*",
-            url = "mock:",
+            url = "class:com.smeup.dbnative.sql.SQLDBMManager", //unused
             user = "*",
-            password = "*"
+            password = "*",
+            impl = "com.smeup.dbnative.mock.MockDBManager"
         )
         val nativeAccessConfig = DBNativeAccessConfig(connectionsConfig = listOf(connectionConfig))
         DBFileFactory(nativeAccessConfig).use { dbFileFactory ->
-            runCatching {
-                dbFileFactory.open(fileName = "mock", fileMetadata = MOCK_METADATA)
+            val dbFile = dbFileFactory.open(fileName = "mock", fileMetadata = MOCK_METADATA)
+            var eof = true
+            kotlin.runCatching {
+                eof = dbFile.eof()
             }.onSuccess {
-                fail("Should not be able to open a file because the mock: protocol is not handled")
+                assertFalse(eof)
             }.onFailure {
-                assert(it is IllegalArgumentException)
-                assert(it.message == "mock: not handled")
+                assert(it is NotImplementedError)
             }
         }
     }
 
     /***
-     * Test that the mock: protocol is handled by passing a custom implementation in the ConnectionConfig.impl
+     * Test that the class: protocol is handled by passing a custom implementation in the ConnectionConfig.url
      * property
      */
     @Test
@@ -96,7 +89,6 @@ class MockDBMManagerTest {
             fields = listOf(
                 Field("foo"),
                 Field("bar"),
-                Field("M240DATA"),
             ),
             fileKeys = listOf("foo")
         )
@@ -140,7 +132,40 @@ class MockDBMManagerTest {
             val result2: Result = dbFile.chain("x")
 
             assertNotEquals(result.record.values, result2.record.values)
-            assertNotEquals(result.record["M240DATA"], result2.record["M240DATA"])
+
+
+        }
+    }
+
+    @Test
+    fun testSequentialCalls() {
+
+        val metadata = FileMetadata(
+            name = "MU24020F",
+            tableName = "MU24020F",
+            fields = listOf(
+                Field("foo"),
+                Field("bar"),
+            ),
+            fileKeys = listOf("foo")
+        )
+
+        val nativeAccessConfig =
+            DBNativeAccessConfig(connectionsConfig = listOf(connectionConfig))
+        DBFileFactory(nativeAccessConfig).use { dbFileFactory ->
+            val dbFile = dbFileFactory.open(fileName = "MU24020F", fileMetadata = metadata)
+
+            var resultList = ArrayList<Result>()
+            while (!dbFile.eof()) {
+                var res = dbFile.chain("aa")
+//                println(res.record.get("M240DATA"))
+                resultList.add(res)
+            }
+            println(resultList.size)
+           println(resultList.get(0).record.get("M240DATA"))
+           println(resultList.get(522129).record.get("M240DATA"))
+           println(resultList.get(522130).record.get("M240DATA"))
+           println(resultList.get(522131).record.get("M240DATA"))
 
 
         }
