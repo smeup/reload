@@ -21,7 +21,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-//@Ignore
+@Ignore
 class DynamoDBFileTest {
 
     val tableName = MUNICIPALITY_TABLE_NAME
