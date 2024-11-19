@@ -32,7 +32,8 @@ import java.sql.ResultSet
 import kotlin.system.measureTimeMillis
 
 class SQLDBFile(
-    override var name: String, override var fileMetadata: FileMetadata,
+    override var name: String,
+    override var fileMetadata: FileMetadata,
     var connection: Connection,
     override var logger: Logger? = null
 ) : DBFile {
@@ -108,6 +109,8 @@ class SQLDBFile(
 
     override fun read(): Result {
         val telemetrySpan = TelemetrySpan("READ Execution")
+        connection.autoCommit = false;
+
         lastNativeMethod = NativeMethod.read
         logEvent(LoggingKey.native_access_method, "Executing read")
         val read: Result
@@ -128,6 +131,7 @@ class SQLDBFile(
         }
         lastNativeMethod = null
         telemetrySpan.endSpan()
+
         return read
     }
 
@@ -228,28 +232,56 @@ class SQLDBFile(
         telemetrySpan.endSpan()
         return read
     }
-
     override fun write(record: Record): Result {
         lastNativeMethod = NativeMethod.write
         val telemetrySpan = TelemetrySpan("WRITE Execution")
-        logEvent(
-            LoggingKey.native_access_method,
-            "Executing write for record $record: with autocommit=${connection.autoCommit}"
-        )
-        measureTimeMillis {
-            // TODO: manage errors
-            val sql = fileMetadata.tableName.insertSQL(record)
-            connection.prepareStatement(sql).use { it ->
-                it.bind(record.values.map { it })
-                it.execute()
+        logEvent(LoggingKey.native_access_method, "Executing write for record $record")
+
+        try {
+            measureTimeMillis {
+                val sql = fileMetadata.tableName.insertSQL(record)
+                connection.prepareStatement(sql).use { stm ->
+                    stm.bind(record.values.map { it })
+                    stm.execute()
+                }
+            }.apply {
+                logEvent(LoggingKey.native_access_method, "write executed", this)
             }
-        }.apply {
-            logEvent(LoggingKey.native_access_method, "write executed", this)
+
+            // Commit after successful write
+            commitTransaction()
+        } catch (e: Exception) {
+            logEvent(LoggingKey.native_access_method, "Error during write operation: ${e.message}")
+            rollbackTransaction()
+            throw e
+        } finally {
+            lastNativeMethod = null
+            telemetrySpan.endSpan()
         }
-        lastNativeMethod = null
-        telemetrySpan.endSpan()
+
         return Result(record)
     }
+
+    private fun commitTransaction() {
+        try {
+            connection.commit()
+            logEvent(LoggingKey.native_access_method, "Transaction committed successfully")
+        } catch (e: Exception) {
+            logEvent(LoggingKey.native_access_method, "Failed to commit transaction: ${e.message}")
+            throw e
+        }
+    }
+
+    private fun rollbackTransaction() {
+        try {
+            connection.rollback()
+            logEvent(LoggingKey.native_access_method, "Transaction rolled back successfully")
+        } catch (e: Exception) {
+            logEvent(LoggingKey.native_access_method, "Failed to rollback transaction: ${e.message}")
+            throw e
+        }
+    }
+
 
     /*
     override fun update(record: Record): Result {
@@ -269,38 +301,43 @@ class SQLDBFile(
         return Result(record)
     }
     */
-
     override fun update(record: Record): Result {
-        require(getResultSet() != null) {
-            "Positioning required before update "
-        }
-        val telemetrySpan = TelemetrySpan("UPDATE Execution")
+        require(actualRecord != null) { "Positioning required before update" }
         lastNativeMethod = NativeMethod.update
-        logEvent(
-            LoggingKey.native_access_method,
-            "Executing update record $actualRecord to $record with autocommit=${connection.autoCommit}"
-        )
-        measureTimeMillis {
-            // record before update is "actualRecord"
-            // record post update will be "record"
-            var atLeastOneFieldChanged = false
-            actualRecord?.forEach {
-                val fieldValue = record.getValue(it.key)
-                if (fieldValue != it.value) {
-                    atLeastOneFieldChanged = true
-                    this.getResultSet()?.updateObject(it.key, fieldValue)
+        val telemetrySpan = TelemetrySpan("UPDATE Execution")
+        logEvent(LoggingKey.native_access_method, "Executing update for record $record")
+
+        try {
+            measureTimeMillis {
+                var atLeastOneFieldChanged = false
+                actualRecord?.forEach {
+                    val fieldValue = record.getValue(it.key)
+                    if (fieldValue != it.value) {
+                        atLeastOneFieldChanged = true
+                        getResultSet()?.updateObject(it.key, fieldValue)
+                    }
                 }
-            } ?: logEvent(LoggingKey.native_access_method, "No previous read executed, nothing to update")
-            if (atLeastOneFieldChanged) {
-                this.getResultSet()?.updateRow()
+                if (atLeastOneFieldChanged) {
+                    getResultSet()?.updateRow()
+                }
+            }.apply {
+                logEvent(LoggingKey.native_access_method, "update executed", this)
             }
-        }.apply {
-            logEvent(LoggingKey.native_access_method, "update executed", this)
+
+            // Commit after successful update
+            commitTransaction()
+        } catch (e: Exception) {
+            logEvent(LoggingKey.native_access_method, "Error during update operation: ${e.message}")
+            rollbackTransaction()
+            throw e
+        } finally {
+            lastNativeMethod = null
+            telemetrySpan.endSpan()
         }
-        lastNativeMethod = null
-        telemetrySpan.endSpan()
+
         return Result(record)
     }
+
 
 
     override fun delete(record: Record): Result {
@@ -339,7 +376,9 @@ class SQLDBFile(
                     sql,
                     ResultSet.TYPE_FORWARD_ONLY,
                     ResultSet.CONCUR_UPDATABLE
-                )
+                ).apply {
+                    fetchSize = 5000 // Enable streaming
+                }
             }
             stm.bind(values)
         }.apply {
@@ -350,6 +389,7 @@ class SQLDBFile(
         }.apply {
             logEvent(LoggingKey.execute_inquiry, "Query succesfully executed", this)
         }
+
     }
 
 
@@ -406,7 +446,23 @@ class SQLDBFile(
     }
 
     override fun close() {
-        resultSet.closeIfOpen()
-        preparedStatements.values.forEach { it.close() }
+        try {
+            if (!connection.autoCommit) {
+                commitTransaction()
+            }
+        } catch (e: Exception) {
+            logEvent(LoggingKey.native_access_method, "Failed to commit during close: ${e.message}")
+        } finally {
+            preparedStatements.values.forEach {
+                try {
+                    it.close()
+                } catch (e: Exception) {
+                    logEvent(LoggingKey.native_access_method, "Failed to close PreparedStatement: ${e.message}")
+                }
+            }
+            resultSet?.closeIfOpen()
+            connection.close()
+        }
     }
+
 }
