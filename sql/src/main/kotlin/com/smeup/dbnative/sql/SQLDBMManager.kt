@@ -34,12 +34,12 @@ open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBMa
     val connection: Connection by lazy {
         logger?.logEvent(LoggingKey.connection, "Opening SQL connection on url ${connectionConfig.url}")
         val conn: Connection
+        val connectionProps = Properties()
         measureTimeMillis {
             connectionConfig.driver?.let {
                 Class.forName(connectionConfig.driver)
             }
 
-            val connectionProps = Properties()
             connectionProps["user"] = connectionConfig.user
             connectionProps["password"] = connectionConfig.password
 
@@ -50,7 +50,7 @@ open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBMa
             }
             conn = DriverManager.getConnection(connectionConfig.url, connectionProps)
         }.apply {
-            logger?.logEvent(LoggingKey.connection, "SQL connection successfully opened", this)
+            logger?.logEvent(LoggingKey.connection, "SQL connection successfully opened with props: ${connectionProps.filter { it.key != "user" && it.key != "password" }}", this)
         }
         conn
     }

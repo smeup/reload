@@ -109,7 +109,7 @@ class SQLDBFile(
 
     override fun read(): Result {
         val telemetrySpan = TelemetrySpan("READ Execution")
-        connection.autoCommit = false;
+        connection.autoCommit = false
 
         lastNativeMethod = NativeMethod.read
         logEvent(LoggingKey.native_access_method, "Executing read")
@@ -376,9 +376,7 @@ class SQLDBFile(
                     sql,
                     ResultSet.TYPE_FORWARD_ONLY,
                     ResultSet.CONCUR_UPDATABLE
-                ).apply {
-                    fetchSize = 5000 // Enable streaming
-                }
+                )
             }
             stm.bind(values)
         }.apply {
