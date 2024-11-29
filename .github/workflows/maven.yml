@@ -2,7 +2,7 @@ name: Deploy to Maven Central
 
 on:
   push:
-    branches: [main]  # Restrict deployment to the main branch
+    branches: [master]  # Restrict deployment to the main branch
   workflow_dispatch:
 
 jobs:
