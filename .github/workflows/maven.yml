@@ -1,30 +1,25 @@
-name: Deploy to Maven Central
-
+name: Deploy to maven central
 on:
   push:
-    branches: [master]  # Restrict deployment to the main branch
-  workflow_dispatch:
-
+    branches: [master, develop]
+  workflow_dispatch:  
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      # Check out the code
       - uses: actions/checkout@v4
-
-      # Set up Java and Maven credentials
       - name: Set up Maven Central Repository
         uses: actions/setup-java@v4
         with:
           java-version: 11
-          distribution: zulu
           server-id: ossrh
-          server-username: ${{ secrets.OSSRH_USERNAME }}
-          server-password: ${{ secrets.OSSRH_TOKEN }}
+          server-username: MAVEN_USERNAME
+          server-password: MAVEN_PASSWORD
           gpg-private-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
-          gpg-passphrase: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
-
-      # Deploy with Maven
+          gpg-passphrase: MAVEN_GPG_PASSPHRASE
       - name: Deploy with Maven
-        run: mvn -B clean deploy -DautoDropAfterRelease=true -DskipTests -Pci-cd
+        run: mvn -B clean pre-site deploy -DautoDropAfterRelease=true -DskipTests -Pci-cd
+        env:
+          MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+          MAVEN_PASSWORD: ${{ secrets.OSSRH_TOKEN }}
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
