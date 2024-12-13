@@ -97,7 +97,7 @@ class SQLDBFile(
         val read: Result
         measureTimeMillis {
             executeQuery(adapter.getSQLStatement())
-            read = readNextFromResultSet()
+            read = readNextFromResultSet(true)
         }.apply {
             logEvent(LoggingKey.native_access_method, "chain executed", this)
         }
@@ -121,7 +121,7 @@ class SQLDBFile(
                     logEvent(LoggingKey.native_access_method, "Query execution failed: " + e.message)
                 }
             }
-            read = readNextFromResultSet()
+            read = readNextFromResultSet(false)
             read.indicatorLO = queryError
         }.apply {
             logEvent(LoggingKey.native_access_method, "read executed", this)
@@ -146,7 +146,7 @@ class SQLDBFile(
                     logEvent(LoggingKey.native_access_method, "Query execution failed: " + e.message)
                 }
             }
-            read = readNextFromResultSet()
+            read = readNextFromResultSet(false)
             read.indicatorLO = queryError
         }.apply {
             logEvent(LoggingKey.native_access_method, "readPrevious executed", this)
@@ -186,7 +186,7 @@ class SQLDBFile(
                     logEvent(LoggingKey.native_access_method, "Query execution failed: " + e.message)
                 }
             }
-            read = readNextFromResultSet()
+            read = readNextFromResultSet(true)
             read.indicatorLO = queryError
         }.apply {
             logEvent(LoggingKey.native_access_method, "readEqual executed", this)
@@ -219,7 +219,7 @@ class SQLDBFile(
                     logEvent(LoggingKey.native_access_method, "Query execution failed: " + e.message)
                 }
             }
-            read = readNextFromResultSet()
+            read = readNextFromResultSet(true)
             read.indicatorLO = queryError
         }.apply {
             logEvent(LoggingKey.native_access_method, "readPreviousEqual executed", this)
@@ -353,10 +353,12 @@ class SQLDBFile(
     }
 
 
-    private fun readNextFromResultSet(): Result {
+    private fun readNextFromResultSet(exitOnUnmatch: Boolean): Result {
         var found = false
         var result = Result(resultSet.toValues())
+        var count = 0
         while (!found && !eof) {
+            count++
             if (result.record.isEmpty()) {
                 eof = true
                 result.indicatorEQ = true
@@ -369,7 +371,15 @@ class SQLDBFile(
                 eof = false
                 found = true
             } else {
-                result = Result(resultSet.toValues())
+                logEvent(LoggingKey.read_data, "Readed records: ${count}")
+                if (exitOnUnmatch) {
+                    eof = true
+                    found = false
+                    result = Result()
+                    result.indicatorEQ = true
+                } else {
+                    result = Result(resultSet.toValues())
+                }
             }
         }
         return result
