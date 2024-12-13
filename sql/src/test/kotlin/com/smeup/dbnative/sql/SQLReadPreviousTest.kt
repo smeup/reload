@@ -73,6 +73,14 @@ class SQLReadPreviousTest {
         dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
 
+    @Test
+    fun setgtReadpe() {
+        val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
+        assertTrue(dbFile.setgt(buildMunicipalityKey("IT", "LOM", "BS", "ERBUSCO")))
+        assertEquals("ERBUSCO", getMunicipalityName(dbFile.readPreviousEqual(buildMunicipalityKey("IT", "LOM")).record))
+        dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
+    }
+
     /**
      * An incoherent call is a REAPE that changes the keys set by the previous
      * positioning instruction.
