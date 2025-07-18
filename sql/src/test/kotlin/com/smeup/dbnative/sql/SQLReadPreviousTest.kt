@@ -109,4 +109,14 @@ class SQLReadPreviousTest {
         dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
 
+    @Test
+    fun setgtReadp() {
+        val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
+        assertTrue(dbFile.setgt(buildMunicipalityKey("IT", "CAL", "CS")))
+        val result = dbFile.readPrevious()
+        assertEquals("ZUMPANO", getMunicipalityName(result.record))
+        dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
+    }
+
+
 }
