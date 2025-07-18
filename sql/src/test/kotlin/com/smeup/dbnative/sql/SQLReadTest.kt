@@ -151,5 +151,14 @@ class SQLReadTest {
         assertTrue(readed <= 1245)
         dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
+
+    @Test
+    fun setgtRead() {
+        val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
+        assertTrue(dbFile.setgt(buildMunicipalityKey("IT", "CAL", "CS")))
+        val result = dbFile.read()
+        assertEquals("ALBI", getMunicipalityName(result.record))
+        dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
+    }
 }
 
