@@ -94,16 +94,22 @@ class SQLDBFile(
         lastNativeMethod = NativeMethod.chain
         logEvent(LoggingKey.native_access_method, "Executing chain on keys $keys")
         adapter.setRead(ReadMethod.CHAIN, keys)
-        val read: Result
+        val result: Result
         measureTimeMillis {
             executeQuery(adapter.getSQLStatement())
-            read = readNextFromResultSet(true)
+            result = readNextFromResultSet(true)
         }.apply {
             logEvent(LoggingKey.native_access_method, "chain executed", this)
         }
         lastNativeMethod = null
         telemetrySpan.endSpan()
-        return read
+
+        if (result.record.isEmpty()) {
+            result.indicatorHI = true
+            result.indicatorEQ = false
+        }
+
+        return result
     }
 
     override fun read(): Result {
