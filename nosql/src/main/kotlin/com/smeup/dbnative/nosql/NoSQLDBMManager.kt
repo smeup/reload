@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     https://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,12 +17,6 @@
 
 package com.smeup.dbnative.nosql
 
-import com.amazonaws.auth.AWSStaticCredentialsProvider
-import com.amazonaws.auth.BasicAWSCredentials
-import com.amazonaws.client.builder.AwsClientBuilder
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBAsync
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBAsyncClientBuilder
-import com.amazonaws.services.dynamodbv2.document.DynamoDB
 import com.mongodb.client.MongoClient
 import com.mongodb.client.MongoClients
 import com.mongodb.client.MongoDatabase
@@ -31,20 +25,14 @@ import com.smeup.dbnative.DBManagerBaseImpl
 import com.smeup.dbnative.file.DBFile
 
 /**
- *  Assign table:
+ * Assign table:
  *
- *  Library (i.e W_TEST) --> Database
- *  File (i.e. BRARTIOF) --> Collection
- *  Record --> Object in collection
+ * Library (i.e W_TEST) --> Database
+ * File (i.e. BRARTIOF) --> Collection
+ * Record --> Object in collection
  */
 
 class NoSQLDBMManager (override val connectionConfig: ConnectionConfig) : DBManagerBaseImpl() {
-
-    private enum class DatabaseType {
-        MONGO, DYNAMO
-    }
-
-    private val databaseType: DatabaseType = determineDatabaseType()
 
     // MongoDB-related fields
     private var host: String = ""
@@ -55,34 +43,15 @@ class NoSQLDBMManager (override val connectionConfig: ConnectionConfig) : DBMana
     private lateinit var mongoClient: MongoClient
     lateinit var mongoDatabase: MongoDatabase
 
-    // DynamoDB-related fields
-    lateinit var dynamoDBAsyncClient: AmazonDynamoDBAsync
-    lateinit var dynamoDB: DynamoDB
-
     private val openedFiles = mutableMapOf<String, DBFile>()
 
     init {
         validateConfig()
-        when (databaseType) {
-            DatabaseType.MONGO -> setupMongoClient()
-            DatabaseType.DYNAMO -> setupDynamoDBClient()
-        }
-    }
-
-    private fun determineDatabaseType(): DatabaseType {
-        return if (connectionConfig.url.startsWith("mongodb", ignoreCase = true)) {
-            DatabaseType.MONGO
-        } else {
-            DatabaseType.DYNAMO
-        }
+        setupMongoClient()
     }
 
     private fun setupMongoClient() {
-        val match = parseMongoConnectionString(connectionConfig.url)
-        if (!match) {
-            throw RuntimeException("Invalid MongoDB URL format")
-        }
-
+        // The check is already in validateConfig, here we just connect
         mongoClient = MongoClients.create(connectionConfig.url)
         mongoDatabase = mongoClient.getDatabase(dataBase)
     }
@@ -109,62 +78,19 @@ class NoSQLDBMManager (override val connectionConfig: ConnectionConfig) : DBMana
         } ?: false
     }
 
-    private fun setupDynamoDBClient() {
-        val region = connectionConfig.properties["REGION"] ?: throw RuntimeException("REGION is required")
-        val endpoint = connectionConfig.url
-
-        val clientBuilder = AmazonDynamoDBAsyncClientBuilder.standard()
-            .withEndpointConfiguration(AwsClientBuilder.EndpointConfiguration(endpoint, region))
-
-
-        val awsAccessKeyId = connectionConfig.properties["AWS_ACCESS_KEY_ID"]
-            ?: throw RuntimeException("AWS_ACCESS_KEY_ID is required")
-        val awsSecretAccessKey = connectionConfig.properties["AWS_SECRET_ACCESS_KEY"]
-            ?: throw RuntimeException("AWS_SECRET_ACCESS_KEY is required")
-
-        val credentials = BasicAWSCredentials(awsAccessKeyId, awsSecretAccessKey)
-        clientBuilder.withCredentials(AWSStaticCredentialsProvider(credentials))
-
-
-        dynamoDBAsyncClient = clientBuilder.build()
-        dynamoDB = DynamoDB(dynamoDBAsyncClient)
-    }
-
-
     override fun validateConfig() {
         if (connectionConfig.url.isBlank()) {
             throw RuntimeException("Database endpoint URL is required")
         }
-        when (databaseType) {
-            DatabaseType.MONGO -> {
-                if (!parseMongoConnectionString(connectionConfig.url)) {
-                    throw RuntimeException("Invalid MongoDB URL format")
-                }
-            }
-
-            DatabaseType.DYNAMO -> {
-                if (connectionConfig.properties["AWS_ACCESS_KEY_ID"].isNullOrBlank()) {
-                    throw RuntimeException("AWS_ACCESS_KEY_ID is required")
-                }
-                if (connectionConfig.properties["AWS_SECRET_ACCESS_KEY"].isNullOrBlank()) {
-                    throw RuntimeException("AWS_SECRET_ACCESS_KEY is required")
-                }
-
-                if (connectionConfig.properties["REGION"].isNullOrBlank()) {
-                    throw RuntimeException("REGION is required")
-                }
-            }
+        if (!connectionConfig.url.startsWith("mongodb", ignoreCase = true) || !parseMongoConnectionString(connectionConfig.url)) {
+            throw RuntimeException("Invalid MongoDB URL format. Expected: mongodb://[username:password@]host:port/database")
         }
     }
 
     override fun close() {
         openedFiles.values.forEach { it.close() }
         openedFiles.clear()
-
-        when (databaseType) {
-            DatabaseType.MONGO -> mongoClient.close()
-            DatabaseType.DYNAMO -> dynamoDBAsyncClient.shutdown()
-        }
+        mongoClient.close()
     }
 
     override fun openFile(name: String): DBFile {
@@ -173,10 +99,7 @@ class NoSQLDBMManager (override val connectionConfig: ConnectionConfig) : DBMana
         }
 
         return openedFiles.getOrPut(name) {
-            when (databaseType) {
-                DatabaseType.MONGO -> NoSQLDBFile(name, metadataOf(name), mongoDatabase, logger)
-                DatabaseType.DYNAMO -> DynamoDBFile(name, metadataOf(name), dynamoDBAsyncClient, logger)
-            }
+            NoSQLDBFile(name, metadataOf(name), mongoDatabase, logger)
         }
     }
 
