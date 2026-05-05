@@ -19,27 +19,37 @@ package com.smeup.dbnative
 
 import com.smeup.dbnative.log.Logger
 
+/**
+ * Configuration for DB native access.
+ *
+ * @param connectionsConfig List of available connection configurations.
+ * @param logger Optional logger implementation.
+ */
 data class DBNativeAccessConfig (val connectionsConfig: List<ConnectionConfig>, val logger: Logger? = null){
     constructor(connectionsConfig: List<ConnectionConfig>):this(connectionsConfig, null)
 }
 
 /**
- * Create a new instance of connection configuratio for a single file or file groups.
- * @param fileName File or file group identifier, wildcard "*" is admitted.
- * I.E. file=*tablename is for all files starts with <code>tablename</code>
- * @param url Connection url, protocol could be customized
- * @param user The user
- * @param password The password
- * @param driver If needed
- * @param impl DBMManager implementation. If doesn't specified is assumed by url
- * @param properties Others connection properties
+ * Creates a connection configuration for a single file or a file group.
+ *
+ * @param fileName File or file-group identifier. The `*` wildcard is supported
+ * (for example, `*tablename` matches files ending with `tablename`).
+ * @param url Connection URL. The protocol can be customized.
+ * @param user Username.
+ * @param password Password.
+ * @param driver JDBC driver class name, when required.
+ * @param impl DB manager implementation. If not specified, it is inferred from `url`.
+ * @param properties Additional connection properties.
+ * @param poolConfig Connection pool configuration.
  * */
-data class ConnectionConfig (
+data class ConnectionConfig @JvmOverloads constructor(
     val fileName: String,
     val url: String,
     val user: String,
     val password: String,
     val driver: String? = null,
     val impl: String? = null,
-    val properties : Map<String, String> = mutableMapOf())
+    val properties: Map<String, String> = mutableMapOf(),
+    val poolConfig: PoolConfig = PoolConfig()
+)
 

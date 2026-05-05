@@ -19,6 +19,7 @@ package com.smeup.dbnative.manager
 
 import com.smeup.dbnative.ConnectionConfig
 import com.smeup.dbnative.DBNativeAccessConfig
+import com.smeup.dbnative.findConnectionConfigFor
 import com.smeup.dbnative.log.Logger
 import com.smeup.dbnative.log.LoggingLevel
 import com.smeup.dbnative.model.CharacterType
