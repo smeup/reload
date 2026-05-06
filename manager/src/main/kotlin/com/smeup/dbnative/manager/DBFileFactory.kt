@@ -115,6 +115,19 @@ internal fun createDBManager(config: ConnectionConfig, logger: Logger? = null): 
     }!!
 }
 
+/**
+ * Use [com.smeup.dbnative.findConnectionConfigFor] instead.
+ */
+@Deprecated(
+    message = "Moved to com.smeup.dbnative.findConnectionConfigFor",
+    replaceWith = ReplaceWith(
+        "findConnectionConfigFor(fileName, connectionsConfig)",
+        "com.smeup.dbnative.findConnectionConfigFor"
+    )
+)
+fun findConnectionConfigFor(fileName: String, connectionsConfig: List<ConnectionConfig>): com.smeup.dbnative.ConnectionConfig =
+    findConnectionConfigFor(fileName, connectionsConfig)
+
 private fun getImplByUrl(config: ConnectionConfig): String {
     return when {
         config.impl != null && config.impl!!.trim().isNotEmpty() -> config.impl!!

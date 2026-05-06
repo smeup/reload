@@ -95,7 +95,7 @@ class DBFileFactoryConnectionSharingTest {
             val ds = scopedMgr.toDataSource()
             assertNotNull(ds)
             val dsConn = ds.getConnection()
-            assertSame(providerConn, dsConn)
+            assertSame(providerConn, dsConn.unwrap(java.sql.Connection::class.java))
         }
         factory.close()
     }
