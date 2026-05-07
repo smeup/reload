@@ -11,7 +11,9 @@ import java.sql.Connection
 open class SQLConnectionPool(private val connectionConfig: ConnectionConfig) : AutoCloseable {
 
     private val hikariDataSource: HikariDataSource = run {
-        val pool = connectionConfig.poolConfig
+        val pool = requireNotNull(connectionConfig.poolConfig) {
+            "poolConfig must not be null to create SQLConnectionPool"
+        }
         val hikariConfig = HikariConfig().apply {
             jdbcUrl = connectionConfig.url
             username = connectionConfig.user

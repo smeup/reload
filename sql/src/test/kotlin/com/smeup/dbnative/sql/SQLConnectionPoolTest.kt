@@ -59,4 +59,17 @@ class SQLConnectionPoolTest {
             pool.getConnection()
         }
     }
+
+    @Test
+    fun constructor_throwsWhenPoolConfigIsNull() {
+        val configWithoutPool = ConnectionConfig(
+            fileName = "*",
+            url = "jdbc:hsqldb:mem:NO_POOL_TEST",
+            user = "sa",
+            password = "root"
+        )
+        assertFailsWith<IllegalArgumentException> {
+            SQLConnectionPool(configWithoutPool)
+        }
+    }
 }

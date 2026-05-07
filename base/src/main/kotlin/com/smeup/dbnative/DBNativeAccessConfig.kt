@@ -50,6 +50,6 @@ data class ConnectionConfig @JvmOverloads constructor(
     val driver: String? = null,
     val impl: String? = null,
     val properties: Map<String, String> = mutableMapOf(),
-    val poolConfig: PoolConfig = PoolConfig()
+    val poolConfig: PoolConfig? = null
 )
 

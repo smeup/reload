@@ -28,12 +28,15 @@ fun ConnectionProvider.requireDataSource(fileName: String): DataSource =
  * @return A handle that closes all created pools.
  */
 fun ConnectionProvider.configureWithPool(config: DBNativeAccessConfig): AutoCloseable {
-    // One pool per unique (url, user) — many tables share the same database
+    // One pool per unique (url, user) — only for configs that have an explicit poolConfig
     val pools = config.connectionsConfig
+        .filter { it.poolConfig != null }
         .distinctBy { it.url to it.user }
         .associateBy({ it.url to it.user }) { SQLConnectionPool(it) }
     configure(config) { connConfig ->
-        SQLPooledDBMManager(connConfig, requireNotNull(pools[connConfig.url to connConfig.user]) { "No pool for ${connConfig.url}" })
+        val pool = pools[connConfig.url to connConfig.user]
+        if (pool != null) SQLPooledDBMManager(connConfig, pool)
+        else SQLDBMManager(connConfig)
     }
     return AutoCloseable { pools.values.forEach { it.close() } }
 }

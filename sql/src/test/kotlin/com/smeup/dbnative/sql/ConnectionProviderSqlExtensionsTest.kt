@@ -3,13 +3,16 @@ package com.smeup.dbnative.sql
 import com.smeup.dbnative.ConnectionConfig
 import com.smeup.dbnative.ConnectionProvider
 import com.smeup.dbnative.DBNativeAccessConfig
+import com.smeup.dbnative.PoolConfig
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertSame
+import kotlin.test.assertTrue
 
 private val SQL_CONFIG = ConnectionConfig(
     fileName = "*",
@@ -23,6 +26,14 @@ private val SQL_CONFIG_B = ConnectionConfig(
     url = "jdbc:hsqldb:mem:CP_SQL_TEST_B",
     user = "sa",
     password = "root"
+)
+
+private val POOLED_CONFIG = ConnectionConfig(
+    fileName = "POOLED",
+    url = "jdbc:hsqldb:mem:CP_POOLED_TEST",
+    user = "sa",
+    password = "root",
+    poolConfig = PoolConfig(maximumPoolSize = 2)
 )
 
 private fun sqlFactory(cfg: com.smeup.dbnative.ConnectionConfig): com.smeup.dbnative.DBMManager =
@@ -119,5 +130,51 @@ class ConnectionProviderSqlExtensionsTest {
         handle.close()
         // Re-configure with non-pooled to restore state for other tests
         ConnectionProvider.configure(DBNativeAccessConfig(listOf(SQL_CONFIG)), ::sqlFactory)
+    }
+
+    @Test
+    fun configureWithPool_withExplicitPoolConfig_createsSQLPooledDBMManager() {
+        val config = DBNativeAccessConfig(listOf(POOLED_CONFIG))
+        val handle = ConnectionProvider.configureWithPool(config)
+        try {
+            ConnectionProvider.withScope {
+                val manager = ConnectionProvider.currentManager("POOLED")
+                assertTrue(manager is SQLPooledDBMManager)
+            }
+        } finally {
+            handle.close()
+        }
+    }
+
+    @Test
+    fun configureWithPool_withoutPoolConfig_fallsBackToSQLDBMManager() {
+        val config = DBNativeAccessConfig(listOf(SQL_CONFIG))
+        val handle = ConnectionProvider.configureWithPool(config)
+        try {
+            ConnectionProvider.withScope {
+                val manager = ConnectionProvider.currentManager("FILEA")
+                assertTrue(manager is SQLDBMManager)
+                assertFalse(manager is SQLPooledDBMManager)
+            }
+        } finally {
+            handle.close()
+        }
+    }
+
+    @Test
+    fun configureWithPool_mixedConfigs_routesCorrectly() {
+        val config = DBNativeAccessConfig(listOf(POOLED_CONFIG, SQL_CONFIG))
+        val handle = ConnectionProvider.configureWithPool(config)
+        try {
+            ConnectionProvider.withScope {
+                val pooledManager = ConnectionProvider.currentManager("POOLED")
+                val nonPooledManager = ConnectionProvider.currentManager("FILEA")
+                assertTrue(pooledManager is SQLPooledDBMManager)
+                assertTrue(nonPooledManager is SQLDBMManager)
+                assertFalse(nonPooledManager is SQLPooledDBMManager)
+            }
+        } finally {
+            handle.close()
+        }
     }
 }
