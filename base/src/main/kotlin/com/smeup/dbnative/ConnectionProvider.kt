@@ -19,6 +19,11 @@ object ConnectionProvider {
     }
 
     /**
+     * Returns `true` if [configure] (or [configureWithPool]) has been called.
+     */
+    fun isConfigured(): Boolean = config != null
+
+    /**
      * Functional interface used by [withScope] to execute a scoped block.
      */
     fun interface ScopedBlock {
