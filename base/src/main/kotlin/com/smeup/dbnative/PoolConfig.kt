@@ -14,5 +14,7 @@ data class PoolConfig @JvmOverloads constructor(
     val minimumIdle: Int = 2,
     val connectionTimeoutMs: Long = 30_000,
     val idleTimeoutMs: Long = 600_000,
-    val maxLifetimeMs: Long = 1_800_000
+    val maxLifetimeMs: Long = 1_800_000,
+    // Set when the JDBC driver does not implement Connection.isValid() (e.g. AS400).
+    val connectionTestQuery: String? = null
 )

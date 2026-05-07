@@ -61,6 +61,26 @@ class SQLConnectionPoolTest {
     }
 
     @Test
+    fun getConnection_withConnectionTestQuery_returnsOpenConnection() {
+        val config = ConnectionConfig(
+            fileName = "*",
+            url = "jdbc:hsqldb:mem:CTQ_TEST",
+            user = "sa",
+            password = "root",
+            poolConfig = PoolConfig(maximumPoolSize = 2, connectionTestQuery = "VALUES 1")
+        )
+        val ctqPool = SQLConnectionPool(config)
+        try {
+            val conn = ctqPool.getConnection()
+            assertNotNull(conn)
+            assertFalse(conn.isClosed)
+            conn.close()
+        } finally {
+            ctqPool.close()
+        }
+    }
+
+    @Test
     fun constructor_throwsWhenPoolConfigIsNull() {
         val configWithoutPool = ConnectionConfig(
             fileName = "*",

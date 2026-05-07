@@ -24,6 +24,7 @@ open class SQLConnectionPool(private val connectionConfig: ConnectionConfig) : A
             connectionTimeout = pool.connectionTimeoutMs
             idleTimeout = pool.idleTimeoutMs
             maxLifetime = pool.maxLifetimeMs
+            pool.connectionTestQuery?.let { setConnectionTestQuery(it) }
             initializationFailTimeout = -1  // don't validate connection eagerly at pool creation
             connectionConfig.properties.forEach { (k, v) -> addDataSourceProperty(k, v) }
         }
