@@ -2,6 +2,7 @@ package com.smeup.dbnative.sql
 
 import com.smeup.dbnative.ConnectionProvider
 import com.smeup.dbnative.DBNativeAccessConfig
+import com.smeup.dbnative.log.LoggingKey
 import javax.sql.DataSource
 
 /**
@@ -32,11 +33,21 @@ fun ConnectionProvider.configureWithPool(config: DBNativeAccessConfig): AutoClos
     val pools = config.connectionsConfig
         .filter { it.poolConfig != null }
         .distinctBy { it.url to it.user }
-        .associateBy({ it.url to it.user }) { SQLConnectionPool(it) }
+        .associateBy({ it.url to it.user }) { SQLConnectionPool(it, config.logger) }
+    pools.forEach { (key, _) ->
+        config.logger?.logEvent(LoggingKey.connection, "Created SQL connection pool for url=${key.first} user=${key.second}")
+    }
     configure(config) { connConfig ->
         val pool = pools[connConfig.url to connConfig.user]
-        if (pool != null) SQLPooledDBMManager(connConfig, pool)
-        else SQLDBMManager(connConfig)
+        val manager = if (pool != null) SQLPooledDBMManager(connConfig, pool)
+                      else SQLDBMManager(connConfig)
+        manager.logger = config.logger
+        manager
     }
-    return AutoCloseable { pools.values.forEach { it.close() } }
+    return AutoCloseable {
+        pools.entries.forEach { (key, pool) ->
+            config.logger?.logEvent(LoggingKey.connection, "Shutting down SQL connection pool for url=${key.first} user=${key.second}")
+            pool.close()
+        }
+    }
 }

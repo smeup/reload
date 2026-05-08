@@ -28,6 +28,7 @@ import kotlin.system.measureTimeMillis
 open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBManagerBaseImpl() {
 
     private var sqlLog: Boolean = false
+    private var connectionOpenedAt: Long = 0L
 
     //private var openedFile = mutableMapOf<String, SQLDBFile>()
 
@@ -50,6 +51,7 @@ open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBMa
             }
             conn = DriverManager.getConnection(connectionConfig.url, connectionProps)
         }.apply {
+            connectionOpenedAt = System.currentTimeMillis()
             logger?.logEvent(LoggingKey.connection, "SQL connection successfully opened", this)
         }
         conn
@@ -61,6 +63,8 @@ open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBMa
     override fun close() {
         //openedFile.values.forEach { it.close()}
         //openedFile.clear()
+        val lifetime = if (connectionOpenedAt > 0L) System.currentTimeMillis() - connectionOpenedAt else null
+        logger?.logEvent(LoggingKey.connection, "Closing SQL connection on url ${connectionConfig.url}", lifetime)
         connection.close()
     }
 
