@@ -26,6 +26,7 @@ import com.smeup.dbnative.DBNativeAccessConfig
 import com.smeup.dbnative.file.DBFile
 import com.smeup.dbnative.findConnectionConfigFor
 import com.smeup.dbnative.log.Logger
+import com.smeup.dbnative.log.LoggingKey
 import com.smeup.dbnative.model.FileMetadata
 
 /**
@@ -64,6 +65,9 @@ class DBFileFactory(
         // as Java service code on this thread. Falls back to own manager when scope is absent.
         val dbmManager = ConnectionProvider.currentManagerOrNull(fileNameNormalized)
             ?: run {
+                if (ConnectionProvider.isConfigured()) {
+                    config.logger?.logEvent(LoggingKey.connection, "open('$fileNameNormalized') without active scope — using factory-owned connection")
+                }
                 val configMatch = findConnectionConfigFor(fileNameNormalized, config.connectionsConfig)
                 managers.getOrPut(configMatch) { createDBManager(configMatch, config.logger).apply { validateConfig() } }
             }
