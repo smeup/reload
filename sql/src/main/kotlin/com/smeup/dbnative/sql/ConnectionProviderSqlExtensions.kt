@@ -6,10 +6,11 @@ import com.smeup.dbnative.log.LoggingKey
 import javax.sql.DataSource
 
 /**
- * Returns a thread-scoped [DataSource] for [fileName], or `null` for non-SQL managers.
+ * Returns a thread-scoped [DataSource] for [fileName], or `null` if no scope is active,
+ * the provider is not configured, or the manager is not SQL-based.
  */
 fun ConnectionProvider.currentDataSource(fileName: String): DataSource? =
-    currentManager(fileName).toDataSource()
+    currentManagerOrNull(fileName)?.toDataSource()
 
 /**
  * Returns a thread-scoped SQL [DataSource] for [fileName].
