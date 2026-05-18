@@ -19,7 +19,6 @@ package com.smeup.dbnative.sql
 
 import com.smeup.dbnative.file.Record
 import com.smeup.dbnative.file.RecordField
-import com.smeup.dbnative.model.*
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.ResultSet
@@ -161,7 +160,7 @@ fun Connection.orderingFields(tableName: String): List<String> {
         it.executeQuery().use {
             if (it.next()) {
                 // TODO handle DESC and ASC keywords
-                val fields = it.getString(field).toUpperCase().substringAfter("ORDER BY").split(",")
+                val fields = it.getString(field).uppercase().substringAfter("ORDER BY").split(",")
                 result.addAll(fields.map { fl: String -> fl.substring(fl.lastIndexOf('.') + 1).trim('`', ' ')  })
             }
         }

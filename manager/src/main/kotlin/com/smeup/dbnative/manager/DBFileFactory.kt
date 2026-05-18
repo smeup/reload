@@ -98,8 +98,8 @@ class DBFileFactory(
  * */
 fun findConnectionConfigFor(fileName: String, connectionsConfig: List<ConnectionConfig>) : ConnectionConfig {
     val configList = connectionsConfig.filter {
-        it.fileName.toUpperCase() == fileName.toUpperCase() || it.fileName == "*" ||
-                fileName.toUpperCase().matches(Regex(it.fileName.toUpperCase().replace("*", ".*")))
+        it.fileName.uppercase() == fileName.uppercase() || it.fileName == "*" ||
+                fileName.uppercase().matches(Regex(it.fileName.uppercase().replace("*", ".*")))
     }
     require(configList.isNotEmpty()) {
         "Wrong configuration. Not found a ConnectionConfig entry matching name: $fileName"
