@@ -134,13 +134,13 @@ class SQLReadEqualTest {
     @Test
     fun setllReadsetllReade() {
         val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
-        assertTrue(dbFile.setll(buildMunicipalityKey("IT", "LOM", "BS")))
+        assertTrue(dbFile.setll(buildMunicipalityKey("IT", "CAL", "CS")))
         while (!dbFile.eof()) {
             dbFile.read()
         }
-        assertTrue(dbFile.setll(buildMunicipalityKey("IT", "LOM", "BS")))
-        val result = dbFile.readEqual(buildMunicipalityKey("IT", "LOM", "BS"))
-        assertEquals("ACQUAFREDDA", getMunicipalityName(result.record))
+        assertTrue(dbFile.setll(buildMunicipalityKey("IT", "CAL", "CS")))
+        val result = dbFile.readEqual(buildMunicipalityKey("IT", "CAL", "CS"))
+        assertEquals("ACQUAFORMOSA", getMunicipalityName(result.record))
 
         dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
@@ -149,15 +149,49 @@ class SQLReadEqualTest {
     fun setllsetllReadeEof() {
         val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
 
-        assertTrue(dbFile.setll(buildMunicipalityKey("IT", "LOM", "BS")))
-        var result = dbFile.readEqual(buildMunicipalityKey("IT", "LOM", "BS"))
-        var count = 0;
+        assertTrue(dbFile.setll(buildMunicipalityKey("IT", "CAL", "CS")))
+        var result = dbFile.readEqual(buildMunicipalityKey("IT", "CAL", "CS"))
+        var count = 0
         while (!dbFile.eof()) {
-            result = dbFile.readEqual(buildMunicipalityKey("IT", "LOM", "BS"))
-            count++;
+            result = dbFile.readEqual(buildMunicipalityKey("IT", "CAL", "CS"))
+            count++
         }
         assertEquals("", getMunicipalityName(result.record))
-        assertEquals(206, count)
+        assertEquals(155, count)
+
+        dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
+    }
+
+    @Test
+    fun setllReadeWithLessKeyEof() {
+        val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
+
+        assertTrue(dbFile.setll(buildMunicipalityKey("IT", "CAL",  "CS")))
+        var result = dbFile.readEqual(buildMunicipalityKey("IT", "CAL"))
+        var count = 0
+        while (!dbFile.eof()) {
+            result = dbFile.readEqual(buildMunicipalityKey("IT", "CAL"))
+            count++
+        }
+        assertEquals("", getMunicipalityName(result.record))
+        assertEquals(155, count)
+
+        dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
+    }
+
+    @Test
+    fun setGtReadeEof() {
+        val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
+
+        assertTrue(dbFile.setgt(buildMunicipalityKey("IT", "LAZ", "FR")))
+        var result = dbFile.readEqual(buildMunicipalityKey("IT", "LAZ"))
+        var count = 0
+        while (!dbFile.eof()) {
+            result = dbFile.readEqual(buildMunicipalityKey("IT", "LAZ"))
+            count++
+        }
+        assertEquals("", getMunicipalityName(result.record))
+        assertEquals(287, count)
 
         dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
@@ -184,9 +218,9 @@ class SQLReadEqualTest {
     @Test
     fun setgtReade() {
         val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
-        assertTrue(dbFile.setgt(buildMunicipalityKey("IT", "LOM", "BS")))
-        val result = dbFile.readEqual(buildMunicipalityKey("IT", "LOM"))
-        assertEquals("ALBAVILLA", getMunicipalityName(result.record))
+        assertTrue(dbFile.setgt(buildMunicipalityKey("IT", "CAL", "CS")))
+        val result = dbFile.readEqual(buildMunicipalityKey("IT", "CAL"))
+        assertEquals("ALBI", getMunicipalityName(result.record))
         dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
 
@@ -218,13 +252,13 @@ class SQLReadEqualTest {
     @Test
     fun setGtReadsetGtReade() {
         val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
-        assertTrue(dbFile.setll(buildMunicipalityKey("IT", "LOM", "BS")))
+        assertTrue(dbFile.setll(buildMunicipalityKey("IT", "CAL", "CS")))
         while(!dbFile.eof()) {
             dbFile.read()
         }
-        assertTrue(dbFile.setll(buildMunicipalityKey("IT", "LOM", "BS")))
-        val result = dbFile.readEqual(buildMunicipalityKey("IT", "LOM", "BS"))
-        assertEquals("ACQUAFREDDA", getMunicipalityName(result.record))
+        assertTrue(dbFile.setll(buildMunicipalityKey("IT", "CAL", "CS")))
+        val result = dbFile.readEqual(buildMunicipalityKey("IT", "CAL", "CS"))
+        assertEquals("ACQUAFORMOSA", getMunicipalityName(result.record))
 
         dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
@@ -234,9 +268,9 @@ class SQLReadEqualTest {
     @Test
     fun setLlReadEWithMoreKeys() {
         val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
-        assertTrue(dbFile.setll(buildMunicipalityKey("IT", "LOM")))
-        val result = dbFile.readEqual(buildMunicipalityKey("IT", "LOM", "BS"))
-        assertEquals("ACQUAFREDDA", getMunicipalityName(result.record))
+        assertTrue(dbFile.setll(buildMunicipalityKey("IT", "CAL")))
+        val result = dbFile.readEqual(buildMunicipalityKey("IT", "CAL", "CS"))
+        assertEquals("ACQUAFORMOSA", getMunicipalityName(result.record))
 
         dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }

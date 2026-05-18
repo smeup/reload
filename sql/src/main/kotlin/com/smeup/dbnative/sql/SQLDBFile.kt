@@ -94,16 +94,22 @@ class SQLDBFile(
         lastNativeMethod = NativeMethod.chain
         logEvent(LoggingKey.native_access_method, "Executing chain on keys $keys")
         adapter.setRead(ReadMethod.CHAIN, keys)
-        val read: Result
+        val result: Result
         measureTimeMillis {
             executeQuery(adapter.getSQLStatement())
-            read = readNextFromResultSet()
+            result = readNextFromResultSet(true)
         }.apply {
             logEvent(LoggingKey.native_access_method, "chain executed", this)
         }
         lastNativeMethod = null
         telemetrySpan.endSpan()
-        return read
+
+        if (result.record.isEmpty()) {
+            result.indicatorHI = true
+            result.indicatorEQ = false
+        }
+
+        return result
     }
 
     override fun read(): Result {
@@ -121,7 +127,7 @@ class SQLDBFile(
                     logEvent(LoggingKey.native_access_method, "Query execution failed: " + e.message)
                 }
             }
-            read = readNextFromResultSet()
+            read = readNextFromResultSet(false)
             read.indicatorLO = queryError
         }.apply {
             logEvent(LoggingKey.native_access_method, "read executed", this)
@@ -146,7 +152,7 @@ class SQLDBFile(
                     logEvent(LoggingKey.native_access_method, "Query execution failed: " + e.message)
                 }
             }
-            read = readNextFromResultSet()
+            read = readNextFromResultSet(false)
             read.indicatorLO = queryError
         }.apply {
             logEvent(LoggingKey.native_access_method, "readPrevious executed", this)
@@ -186,7 +192,7 @@ class SQLDBFile(
                     logEvent(LoggingKey.native_access_method, "Query execution failed: " + e.message)
                 }
             }
-            read = readNextFromResultSet()
+            read = readNextFromResultSet(true)
             read.indicatorLO = queryError
         }.apply {
             logEvent(LoggingKey.native_access_method, "readEqual executed", this)
@@ -219,7 +225,7 @@ class SQLDBFile(
                     logEvent(LoggingKey.native_access_method, "Query execution failed: " + e.message)
                 }
             }
-            read = readNextFromResultSet()
+            read = readNextFromResultSet(true)
             read.indicatorLO = queryError
         }.apply {
             logEvent(LoggingKey.native_access_method, "readPreviousEqual executed", this)
@@ -353,10 +359,12 @@ class SQLDBFile(
     }
 
 
-    private fun readNextFromResultSet(): Result {
+    private fun readNextFromResultSet(exitOnUnmatch: Boolean): Result {
         var found = false
         var result = Result(resultSet.toValues())
+        var count = 0
         while (!found && !eof) {
+            count++
             if (result.record.isEmpty()) {
                 eof = true
                 result.indicatorEQ = true
@@ -369,7 +377,15 @@ class SQLDBFile(
                 eof = false
                 found = true
             } else {
-                result = Result(resultSet.toValues())
+                logEvent(LoggingKey.read_data, "Readed records: ${count}")
+                if (exitOnUnmatch) {
+                    eof = true
+                    found = false
+                    result = Result()
+                    result.indicatorEQ = true
+                } else {
+                    result = Result(resultSet.toValues())
+                }
             }
         }
         return result
