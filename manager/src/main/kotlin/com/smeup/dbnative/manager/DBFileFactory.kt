@@ -104,7 +104,24 @@ class DBFileFactory(
     }
 }
 
-internal fun createDBManager(config: ConnectionConfig, logger: Logger? = null): DBMManager {
+/**
+ * Find a ConnectionConfig for file
+ * @param fileName file name
+ * @param connectionsConfig ConnectionConfig entries
+ * */
+fun findConnectionConfigFor(fileName: String, connectionsConfig: List<ConnectionConfig>) : ConnectionConfig {
+    val configList = connectionsConfig.filter {
+        it.fileName.uppercase() == fileName.uppercase() || it.fileName == "*" ||
+                fileName.uppercase().matches(Regex(it.fileName.uppercase().replace("*", ".*")))
+    }
+    require(configList.isNotEmpty()) {
+        "Wrong configuration. Not found a ConnectionConfig entry matching name: $fileName"
+    }
+    //At the top of the list we have ConnectionConfig whose property file does not have wildcards
+    return configList.sortedWith(DBFileFactory.COMPARATOR)[0]
+}
+
+private fun createDBManager(config: ConnectionConfig, logger: Logger? = null): DBMManager {
     val impl = getImplByUrl(config)
 
     val clazz: Class<DBMManager>? = Class.forName(impl) as Class<DBMManager>?

@@ -52,7 +52,7 @@ infix fun String.fieldByType(type: FieldType): TypedField = TypedField(Field(thi
 
 fun String.getFieldTypeInstance(columnSize: Int, decimalDigits: Int): FieldType {
 
-    val fieldTypeObject = when (this.toUpperCase()) {
+    val fieldTypeObject = when (this.uppercase()) {
         "CHAR","CHARACTER" -> CharacterType(columnSize)
         "VARCHAR" -> VarcharType(columnSize)
         "INT", "INTEGER" -> IntegerType
@@ -74,7 +74,7 @@ fun String.getFieldTypeInstance(columnSize: Int, decimalDigits: Int): FieldType 
 }
 
 fun propertiesToTypedMetadata(propertiesDirPath: String, fileName: String): TypedMetadata {
-    val propertiesFile = FileInputStream(File("$propertiesDirPath${File.separatorChar}${fileName.toUpperCase()}.properties"))
+    val propertiesFile = FileInputStream(File("$propertiesDirPath${File.separatorChar}${fileName.uppercase()}.properties"))
     //val properties = Properties()
     //properties.load(InputStreamReader(propertiesFile, Charset.forName("UTF-8")))
 

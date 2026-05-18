@@ -19,7 +19,7 @@ package com.smeup.dbnative.nosql.utils
 
 import com.smeup.dbnative.file.Record
 import com.smeup.dbnative.model.FileMetadata
-
+import java.util.Locale.getDefault
 
 fun FileMetadata.buildInsertCommand(filename: String, record: Record): String {
     //TODO: insert controls beetwen metadata and record format
@@ -32,7 +32,7 @@ fun FileMetadata.buildInsertCommand(filename: String, record: Record): String {
 
     val result = """
     {
-        insert: "${filename.toUpperCase()}",
+        insert: "${filename.uppercase()}",
         documents: [ $documents ]
     }
     """
@@ -81,11 +81,11 @@ fun FileMetadata.buildIndexCommand(): String{
 
     val result = """
     {
-        createIndexes: "${this.tableName.toUpperCase()}",
+        createIndexes: "${tableName.uppercase(getDefault())}",
         indexes: [
         {
             key: ${keys},
-            name: "${this.tableName.toUpperCase()}_index",
+            name: "${tableName.uppercase(getDefault())}_index",
             unique: false
         }
         ],
@@ -123,7 +123,7 @@ fun FileMetadata.buildUpdateCommand(filename: String, record: Record, upsert:Boo
 
     val result = """
     {
-        update: "${filename.toUpperCase()}",
+        update: "${filename.uppercase(getDefault())}",
         updates: [
             {
                 q: $filter,
@@ -148,7 +148,7 @@ fun FileMetadata.buildDeleteCommand(filename: String, record: Record): String {
 
     val result = """
     {
-        delete: "${filename.toUpperCase()}",
+        delete: "${filename.uppercase(getDefault())}",
         deletes: [
             {
                 q: $filter,
