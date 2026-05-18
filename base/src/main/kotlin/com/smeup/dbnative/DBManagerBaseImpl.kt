@@ -35,7 +35,7 @@ abstract class DBManagerBaseImpl : DBMManager {
     */
 
     override fun metadataOf(name: String): FileMetadata {
-        return getMetadataRegister().getMetadata(name.toUpperCase())
+        return getMetadataRegister().getMetadata(name.uppercase())
     }
 
     override fun registerMetadata(metadata: FileMetadata, overwrite: Boolean) {
@@ -86,7 +86,7 @@ abstract class DBManagerBaseImpl : DBMManager {
         }
 
         fun staticGetMetadata(name: String): FileMetadata {
-            return getMetadataRegister().getMetadata(name);
+            return getMetadataRegister().getMetadata(name)
         }
     }
 }

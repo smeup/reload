@@ -93,7 +93,7 @@ class JT400DBFile(override var name: String,
         try {
             file.positionCursor(keys2Array(keys), KeyedFile.KEY_EQ)
             this.equalFlag = true
-        } catch (e: AS400Exception) {
+        } catch (_: AS400Exception) {
         }
         try {
             //file.positionCursorBefore(keys2Array(keys))
@@ -120,7 +120,7 @@ class JT400DBFile(override var name: String,
         try {
             file.positionCursor(keys2Array(keys), KeyedFile.KEY_EQ)
             this.equalFlag = true
-        } catch (e: AS400Exception) {
+        } catch (_: AS400Exception) {
         }
         try {
             file.positionCursor(keys2Array(keys), KeyedFile.KEY_GT)
@@ -326,7 +326,7 @@ class JT400DBFile(override var name: String,
     private fun handleAS400Error(e: AS400Exception) {
         //CPF5001 	End of file reached
         //CPF5006 	Record not found
-        val eid = as400ErrorID(e).toUpperCase()
+        val eid = as400ErrorID(e).uppercase()
         if (eid.startsWith("CPF5001")) {
             this.eofReached = true
             return
