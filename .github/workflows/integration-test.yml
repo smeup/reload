@@ -31,7 +31,7 @@ jobs:
               echo "Docker Compose is installed."
           fi
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Set up Docker Containers
         uses: adambirds/docker-compose-action@v1.5.0
         with:
