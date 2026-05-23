@@ -1,5 +1,6 @@
 package com.smeup.dbnative.sql
 
+import com.smeup.dbnative.ConnectionConfig
 import com.smeup.dbnative.ConnectionProvider
 import com.smeup.dbnative.DBNativeAccessConfig
 import com.smeup.dbnative.log.LoggingKey
@@ -25,29 +26,39 @@ fun ConnectionProvider.requireDataSource(fileName: String): DataSource =
 /**
  * Configures [ConnectionProvider] with pooled SQL managers.
  *
- * One pool is created per unique (`url`, `user`) pair.
+ * One HikariCP pool is created per unique (`url`, `user`) pair across all apps —
+ * apps that share the same database share a single pool.
  *
- * @return A handle that closes all created pools.
+ * @param configMap One [DBNativeAccessConfig] per application key.
+ * @return A handle that closes all created pools on [AutoCloseable.close].
  */
-fun ConnectionProvider.configureWithPool(config: DBNativeAccessConfig): AutoCloseable {
-    // One pool per unique (url, user) — only for configs that have an explicit poolConfig
-    val pools = config.connectionsConfig
+fun ConnectionProvider.configureWithPool(configMap: Map<String, DBNativeAccessConfig>): AutoCloseable {
+    val logger = configMap.values.firstNotNullOfOrNull { it.logger }
+    val allConfigs = configMap.values.flatMap { it.connectionsConfig }
+
+    val pools = allConfigs
         .filter { it.poolConfig != null }
         .distinctBy { it.url to it.user }
-        .associateBy({ it.url to it.user }) { SQLConnectionPool(it, config.logger) }
+        .associateBy({ it.url to it.user }) { SQLConnectionPool(it, logger) }
+
     pools.forEach { (key, _) ->
-        config.logger?.logEvent(LoggingKey.connection, "Created SQL connection pool for url=${key.first} user=${key.second}")
+        logger?.logEvent(LoggingKey.connection, "Created SQL connection pool for url=${key.first} user=${key.second}")
     }
-    configure(config) { connConfig ->
-        val pool = pools[connConfig.url to connConfig.user]
-        val manager = if (pool != null) SQLPooledDBMManager(connConfig, pool)
-                      else SQLDBMManager(connConfig)
-        manager.logger = config.logger
-        manager
+
+    val factoryMap = configMap.mapValues { (_, cfg) ->
+        { connConfig: ConnectionConfig ->
+            val pool = pools[connConfig.url to connConfig.user]
+            val manager = if (pool != null) SQLPooledDBMManager(connConfig, pool)
+                          else SQLDBMManager(connConfig)
+            manager.logger = cfg.logger
+            manager
+        }
     }
+    configure(configMap, factoryMap)
+
     return AutoCloseable {
-        pools.entries.forEach { (key, pool) ->
-            config.logger?.logEvent(LoggingKey.connection, "Shutting down SQL connection pool for url=${key.first} user=${key.second}")
+        pools.forEach { (key, pool) ->
+            logger?.logEvent(LoggingKey.connection, "Shutting down SQL connection pool for url=${key.first} user=${key.second}")
             pool.close()
         }
     }

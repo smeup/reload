@@ -15,6 +15,8 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
+private const val TEST_APP = "test"
+
 private val LOG_SQL_CONFIG = ConnectionConfig(
     fileName = "*",
     url = "jdbc:hsqldb:mem:LOG_NONPOOL_TEST",
@@ -43,21 +45,23 @@ class ConnectionLoggingTest {
 
     @Before
     fun setUp() {
-        ConnectionProvider.configure(DBNativeAccessConfig(listOf(LOG_SQL_CONFIG))) { SQLDBMManager(it) }
+        val cfg = mapOf(TEST_APP to DBNativeAccessConfig(listOf(LOG_SQL_CONFIG)))
+        ConnectionProvider.configure(cfg, cfg.mapValues { { c: ConnectionConfig -> SQLDBMManager(c) } })
     }
 
     @After
     fun tearDown() {
-        ConnectionProvider.configure(DBNativeAccessConfig(listOf(LOG_SQL_CONFIG))) { SQLDBMManager(it) }
+        val cfg = mapOf(TEST_APP to DBNativeAccessConfig(listOf(LOG_SQL_CONFIG)))
+        ConnectionProvider.configure(cfg, cfg.mapValues { { c: ConnectionConfig -> SQLDBMManager(c) } })
     }
 
     @Test
     fun logger_propagatedToNonPooledManager() {
         val (logger, events) = captureLogger()
-        val config = DBNativeAccessConfig(listOf(LOG_SQL_CONFIG), logger)
-        val handle = ConnectionProvider.configureWithPool(config)
+        val configMap = mapOf(TEST_APP to DBNativeAccessConfig(listOf(LOG_SQL_CONFIG), logger))
+        val handle = ConnectionProvider.configureWithPool(configMap)
         try {
-            ConnectionProvider.withScope {
+            ConnectionProvider.withScope(TEST_APP) {
                 ConnectionProvider.requireDataSource("FILEA").getConnection()
             }
         } finally {
@@ -70,10 +74,10 @@ class ConnectionLoggingTest {
     @Test
     fun nonPooledManager_closeEventCarriesLifetime() {
         val (logger, events) = captureLogger()
-        val config = DBNativeAccessConfig(listOf(LOG_SQL_CONFIG), logger)
-        val handle = ConnectionProvider.configureWithPool(config)
+        val configMap = mapOf(TEST_APP to DBNativeAccessConfig(listOf(LOG_SQL_CONFIG), logger))
+        val handle = ConnectionProvider.configureWithPool(configMap)
         try {
-            ConnectionProvider.withScope {
+            ConnectionProvider.withScope(TEST_APP) {
                 ConnectionProvider.requireDataSource("FILEA").getConnection()
             }
         } finally {
@@ -87,10 +91,10 @@ class ConnectionLoggingTest {
     @Test
     fun pooledManager_borrowEventCarriesTiming() {
         val (logger, events) = captureLogger()
-        val config = DBNativeAccessConfig(listOf(LOG_POOLED_CONFIG), logger)
-        val handle = ConnectionProvider.configureWithPool(config)
+        val configMap = mapOf(TEST_APP to DBNativeAccessConfig(listOf(LOG_POOLED_CONFIG), logger))
+        val handle = ConnectionProvider.configureWithPool(configMap)
         try {
-            ConnectionProvider.withScope {
+            ConnectionProvider.withScope(TEST_APP) {
                 ConnectionProvider.requireDataSource("FILEA").getConnection()
             }
         } finally {
@@ -104,10 +108,10 @@ class ConnectionLoggingTest {
     @Test
     fun pooledManager_returnEventIsEmittedAfterScope() {
         val (logger, events) = captureLogger()
-        val config = DBNativeAccessConfig(listOf(LOG_POOLED_CONFIG), logger)
-        val handle = ConnectionProvider.configureWithPool(config)
+        val configMap = mapOf(TEST_APP to DBNativeAccessConfig(listOf(LOG_POOLED_CONFIG), logger))
+        val handle = ConnectionProvider.configureWithPool(configMap)
         try {
-            ConnectionProvider.withScope {
+            ConnectionProvider.withScope(TEST_APP) {
                 ConnectionProvider.requireDataSource("FILEA").getConnection()
             }
         } finally {
@@ -120,11 +124,11 @@ class ConnectionLoggingTest {
     @Test
     fun pooledManager_noReturnEventWhenConnectionNeverAccessed() {
         val (logger, events) = captureLogger()
-        val config = DBNativeAccessConfig(listOf(LOG_POOLED_CONFIG), logger)
-        val handle = ConnectionProvider.configureWithPool(config)
+        val configMap = mapOf(TEST_APP to DBNativeAccessConfig(listOf(LOG_POOLED_CONFIG), logger))
+        val handle = ConnectionProvider.configureWithPool(configMap)
         try {
-            ConnectionProvider.withScope {
-                ConnectionProvider.currentManager("FILEA") // creates manager but does not borrow connection
+            ConnectionProvider.withScope(TEST_APP) {
+                ConnectionProvider.currentManager("FILEA")
             }
         } finally {
             handle.close()
@@ -136,8 +140,8 @@ class ConnectionLoggingTest {
     @Test
     fun configureWithPool_logsPoolCreationAndShutdown() {
         val (logger, events) = captureLogger()
-        val config = DBNativeAccessConfig(listOf(LOG_POOLED_CONFIG), logger)
-        val handle = ConnectionProvider.configureWithPool(config)
+        val configMap = mapOf(TEST_APP to DBNativeAccessConfig(listOf(LOG_POOLED_CONFIG), logger))
+        val handle = ConnectionProvider.configureWithPool(configMap)
         try {
             assertTrue(events.any { it.eventKey == LoggingKey.connection && "Created" in it.message },
                 "Expected pool creation event on configureWithPool")

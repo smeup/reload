@@ -4,7 +4,6 @@ import com.smeup.dbnative.ConnectionConfig
 import com.smeup.dbnative.ConnectionProvider
 import com.smeup.dbnative.DBNativeAccessConfig
 import com.smeup.dbnative.model.CharacterType
-import com.smeup.dbnative.model.FileMetadata
 import com.smeup.dbnative.sql.SQLDBMManager
 import com.smeup.dbnative.sql.toDataSource
 import com.smeup.dbnative.utils.TypedField
@@ -18,6 +17,8 @@ import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
+private const val TEST_APP = "test"
+
 private val SHARING_CONNECTION_CONFIG = ConnectionConfig(
     fileName = "*",
     url = "jdbc:hsqldb:mem:SHARING_TEST",
@@ -27,7 +28,7 @@ private val SHARING_CONNECTION_CONFIG = ConnectionConfig(
 
 private val SHARING_ACCESS_CONFIG = DBNativeAccessConfig(listOf(SHARING_CONNECTION_CONFIG))
 
-private val TABLE_METADATA = FileMetadata(
+private val TABLE_METADATA = com.smeup.dbnative.model.FileMetadata(
     "SHARE1L",
     "SHARE1F",
     listOf<TypedField>("NAME" fieldByType CharacterType(20)).fieldList(),
@@ -48,7 +49,7 @@ class DBFileFactoryConnectionSharingTest {
             it.executeUpdate("CREATE TABLE IF NOT EXISTS SHARE1F (NAME CHAR(20))")
         }
         bootstrapManager.registerMetadata(TABLE_METADATA, true)
-        ConnectionProvider.configure(SHARING_ACCESS_CONFIG, null)
+        ConnectionProvider.configure(mapOf(TEST_APP to SHARING_ACCESS_CONFIG), null)
     }
 
     @After
@@ -63,9 +64,8 @@ class DBFileFactoryConnectionSharingTest {
     @Test
     fun open_insideScope_reusesManagerFromScope() {
         val factory = DBFileFactory(SHARING_ACCESS_CONFIG)
-        var scopedManager: com.smeup.dbnative.DBMManager? = null
-        ConnectionProvider.withScope {
-            scopedManager = ConnectionProvider.currentManager("SHARE1L")
+        ConnectionProvider.withScope(TEST_APP) {
+            ConnectionProvider.currentManager("SHARE1L")
             val dbFile = factory.open("SHARE1L", null)
             assertNotNull(dbFile)
             dbFile.close()
@@ -87,7 +87,7 @@ class DBFileFactoryConnectionSharingTest {
     @Test
     fun open_insideScope_sameConnectionAsProvider() {
         val factory = DBFileFactory(SHARING_ACCESS_CONFIG)
-        ConnectionProvider.withScope {
+        ConnectionProvider.withScope(TEST_APP) {
             val scopedMgr = ConnectionProvider.currentManager("SHARE1L") as? SQLDBMManager
             assertNotNull(scopedMgr)
             val providerConn = scopedMgr.connection
