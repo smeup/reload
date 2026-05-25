@@ -16,6 +16,20 @@ object ConnectionProvider {
     @Volatile private var factoryMap: Map<String, (ConnectionConfig) -> DBMManager>? = null
 
     /**
+     * Configures the provider with a single config and factory, bound to the `"default"` app key.
+     *
+     * @deprecated Use [configure] with explicit app-keyed maps instead.
+     */
+    @Deprecated(
+        message = "Use configure(configMap, factoryMap) with explicit app-keyed maps instead.",
+        replaceWith = ReplaceWith("configure(mapOf(\"default\" to config), mapOf(\"default\" to factory))")
+    )
+    fun configure(
+        config: DBNativeAccessConfig,
+        factory: (ConnectionConfig) -> DBMManager
+    ) = configure(mapOf("default" to config), mapOf("default" to factory))
+
+    /**
      * Configures the provider with one config and factory per application key.
      */
     fun configure(
