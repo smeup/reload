@@ -23,6 +23,19 @@ fun ConnectionProvider.requireDataSource(fileName: String): DataSource =
         "Manager for '$fileName' is not SQL-based"
     }
 
+
+/**
+ * Configures [ConnectionProvider] with pooled SQL managers for the `"default"` app key.
+ *
+ * @deprecated Use [configureWithPool] with an explicit app-keyed map instead.
+ */
+@Deprecated(
+    message = "Use configureWithPool(configMap) with an explicit app-keyed map instead.",
+    replaceWith = ReplaceWith("configureWithPool(mapOf(\"default\" to config))")
+)
+fun ConnectionProvider.configureWithPool(config: DBNativeAccessConfig): AutoCloseable =
+    configureWithPool(mapOf("default" to config))
+
 /**
  * Configures [ConnectionProvider] with pooled SQL managers.
  *

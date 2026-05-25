@@ -5,6 +5,19 @@ import com.smeup.dbnative.ConnectionProvider
 import com.smeup.dbnative.DBNativeAccessConfig
 import com.smeup.dbnative.log.Logger
 
+
+/**
+ * Configures [ConnectionProvider] using the manager module factory, bound to the `"default"` app key.
+ *
+ * @deprecated Use [configure] with an explicit app-keyed map instead.
+ */
+@Deprecated(
+    message = "Use configure(configMap, logger) with an explicit app-keyed map instead.",
+    replaceWith = ReplaceWith("configure(mapOf(\"default\" to config), logger)")
+)
+fun ConnectionProvider.configure(config: DBNativeAccessConfig, logger: Logger? = null) =
+    configure(mapOf("default" to config), logger)
+
 /**
  * Configures [ConnectionProvider] using the manager module factory.
  *
