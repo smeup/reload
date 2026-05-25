@@ -40,6 +40,19 @@ object ConnectionProvider {
     }
 
     /**
+     * Runs [block] in a thread-local scope bound to `"default"`, then closes all managers
+     * created during that scope.
+     *
+     * @deprecated Use [withScope] with an explicit [app] key instead.
+     */
+    @Deprecated(
+        message = "Use withScope(app, block) with an explicit app key instead.",
+        replaceWith = ReplaceWith("withScope(\"default\", block)")
+    )
+    @Throws(Exception::class)
+    fun withScope(block: ScopedBlock) = withScope("default", block)
+
+    /**
      * Runs [block] in a thread-local scope bound to [app], then closes all managers
      * created during that scope.
      *
