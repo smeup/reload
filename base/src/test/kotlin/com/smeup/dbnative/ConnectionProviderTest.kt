@@ -11,6 +11,9 @@ import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
+private const val TEST_APP = "test"
+private const val OTHER_APP = "other"
+
 private val TEST_CONFIG = ConnectionConfig(
     fileName = "*",
     url = "class:com.smeup.dbnative.mock.MockDBManager",
@@ -26,6 +29,10 @@ private val TEST_CONFIG_B = ConnectionConfig(
 )
 
 private val ACCESS_CONFIG = DBNativeAccessConfig(listOf(TEST_CONFIG_B, TEST_CONFIG))
+private val CONFIG_MAP = mapOf(TEST_APP to ACCESS_CONFIG)
+
+private fun spyFactory(configMap: Map<String, DBNativeAccessConfig>): Map<String, (ConnectionConfig) -> DBMManager> =
+    configMap.mapValues { { connConfig: ConnectionConfig -> SpyDBMManager(connConfig) } }
 
 /**
  * Unit tests for [ConnectionProvider] scoped lifecycle and lookup behavior.
@@ -34,18 +41,17 @@ class ConnectionProviderTest {
 
     @Before
     fun setUp() {
-        ConnectionProvider.configure(ACCESS_CONFIG) { connConfig -> SpyDBMManager(connConfig) }
+        ConnectionProvider.configure(CONFIG_MAP, spyFactory(CONFIG_MAP))
     }
 
     @After
     fun tearDown() {
-        // Reset state between tests by re-configuring with a no-op factory;
-        // the real clean-up is handled by withScope's finally block.
+        // Reset state between tests by re-configuring; the real clean-up is in withScope's finally block.
     }
 
     @Test
     fun withScope_createsManagerOnDemand() {
-        ConnectionProvider.withScope {
+        ConnectionProvider.withScope(TEST_APP) {
             val manager = ConnectionProvider.currentManager("FILEA")
             assertNotNull(manager)
         }
@@ -53,7 +59,7 @@ class ConnectionProviderTest {
 
     @Test
     fun withScope_sameManagerForSameFile() {
-        ConnectionProvider.withScope {
+        ConnectionProvider.withScope(TEST_APP) {
             val m1 = ConnectionProvider.currentManager("FILEA")
             val m2 = ConnectionProvider.currentManager("FILEA")
             assertSame(m1, m2)
@@ -62,7 +68,7 @@ class ConnectionProviderTest {
 
     @Test
     fun withScope_differentManagerForDifferentConfig() {
-        ConnectionProvider.withScope {
+        ConnectionProvider.withScope(TEST_APP) {
             val mA = ConnectionProvider.currentManager("FILEA")
             val mB = ConnectionProvider.currentManager("FILEB")
             assertTrue(mA !== mB)
@@ -72,10 +78,11 @@ class ConnectionProviderTest {
     @Test
     fun withScope_closesManagersOnExit() {
         val spies = mutableListOf<SpyDBMManager>()
-        ConnectionProvider.configure(ACCESS_CONFIG) { connConfig ->
+        val collectingFactory = CONFIG_MAP.mapValues { { connConfig: ConnectionConfig ->
             SpyDBMManager(connConfig).also { spies.add(it) }
-        }
-        ConnectionProvider.withScope {
+        } }
+        ConnectionProvider.configure(CONFIG_MAP, collectingFactory)
+        ConnectionProvider.withScope(TEST_APP) {
             ConnectionProvider.currentManager("FILEA")
             ConnectionProvider.currentManager("FILEB")
         }
@@ -92,8 +99,9 @@ class ConnectionProviderTest {
     @Test
     fun currentManagerOrNull_returnsNullForUnknownFile() {
         val isolatedConfig = DBNativeAccessConfig(listOf(TEST_CONFIG_B))
-        ConnectionProvider.configure(isolatedConfig) { connConfig -> SpyDBMManager(connConfig) }
-        ConnectionProvider.withScope {
+        val isolatedMap = mapOf(TEST_APP to isolatedConfig)
+        ConnectionProvider.configure(isolatedMap, spyFactory(isolatedMap))
+        ConnectionProvider.withScope(TEST_APP) {
             val result = ConnectionProvider.currentManagerOrNull("UNKNOWN_NO_WILDCARD")
             assertNull(result)
         }
@@ -101,15 +109,12 @@ class ConnectionProviderTest {
 
     @Test
     fun withScope_throwsWhenNotConfigured() {
-        // Temporarily point to a fresh unconfigured-looking provider by using a local object
-        // We test via reflection-like approach: re-create a scenario where configure was not called.
-        // Since ConnectionProvider is a singleton, we configure it with null-equivalent by
-        // configuring with an empty config and verifying the require message.
         val emptyConfig = DBNativeAccessConfig(listOf())
-        ConnectionProvider.configure(emptyConfig) { SpyDBMManager(it) }
+        val emptyMap = mapOf(TEST_APP to emptyConfig)
+        ConnectionProvider.configure(emptyMap, emptyMap.mapValues { { cfg: ConnectionConfig -> SpyDBMManager(cfg) } })
 
         assertFailsWith<IllegalArgumentException> {
-            ConnectionProvider.withScope {
+            ConnectionProvider.withScope(TEST_APP) {
                 ConnectionProvider.currentManager("ANYTHING")
             }
         }
@@ -118,7 +123,7 @@ class ConnectionProviderTest {
     @Test
     fun withScope_scopeIsThreadLocal() {
         var managerSeenFromOtherThread: DBMManager? = null
-        ConnectionProvider.withScope {
+        ConnectionProvider.withScope(TEST_APP) {
             val thread = Thread {
                 managerSeenFromOtherThread = ConnectionProvider.currentManagerOrNull("FILEA")
             }
@@ -126,6 +131,32 @@ class ConnectionProviderTest {
             thread.join()
         }
         assertNull(managerSeenFromOtherThread)
+    }
+
+    @Test
+    fun withScope_differentAppsUseIsolatedConfigs() {
+        val otherConfig = DBNativeAccessConfig(listOf(
+            ConnectionConfig(fileName = "*", url = "class:com.smeup.dbnative.mock.MockDBManager", user = "other", password = "")
+        ))
+        val multiAppMap = mapOf(TEST_APP to ACCESS_CONFIG, OTHER_APP to otherConfig)
+        ConnectionProvider.configure(multiAppMap, spyFactory(multiAppMap))
+
+        ConnectionProvider.withScope(TEST_APP) {
+            val m = ConnectionProvider.currentManager("FILEA") as SpyDBMManager
+            assertTrue(m.connectionConfig.user == "")
+        }
+        ConnectionProvider.withScope(OTHER_APP) {
+            val m = ConnectionProvider.currentManager("FILEA") as SpyDBMManager
+            assertTrue(m.connectionConfig.user == "other")
+        }
+    }
+
+    @Test
+    fun currentManagerOrNull_returnsNullForUnknownApp() {
+        ConnectionProvider.withScope("no-such-app") {
+            val result = ConnectionProvider.currentManagerOrNull("FILEA")
+            assertNull(result)
+        }
     }
 }
 
