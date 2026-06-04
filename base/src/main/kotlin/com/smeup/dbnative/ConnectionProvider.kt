@@ -46,6 +46,11 @@ object ConnectionProvider {
     fun isConfigured(): Boolean = configMap?.isNotEmpty() == true
 
     /**
+     * Returns `true` if a scope is currently active on this thread.
+     */
+    fun isScopeActive(): Boolean = threadLocal.get() != null
+
+    /**
      * Functional interface used by [withScope] to execute a scoped block.
      */
     fun interface ScopedBlock {

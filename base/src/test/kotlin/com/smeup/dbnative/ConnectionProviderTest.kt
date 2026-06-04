@@ -6,6 +6,7 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertSame
@@ -117,6 +118,18 @@ class ConnectionProviderTest {
             ConnectionProvider.withScope(TEST_APP) {
                 ConnectionProvider.currentManager("ANYTHING")
             }
+        }
+    }
+
+    @Test
+    fun isScopeActive_falseOutsideScope() {
+        assertFalse(ConnectionProvider.isScopeActive())
+    }
+
+    @Test
+    fun isScopeActive_trueInsideScope() {
+        ConnectionProvider.withScope(TEST_APP) {
+            assertTrue(ConnectionProvider.isScopeActive())
         }
     }
 
