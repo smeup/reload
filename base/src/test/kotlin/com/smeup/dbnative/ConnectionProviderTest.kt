@@ -1,10 +1,15 @@
 package com.smeup.dbnative
 
 import com.smeup.dbnative.file.DBFile
+import com.smeup.dbnative.log.Logger
+import com.smeup.dbnative.log.LoggingEvent
+import com.smeup.dbnative.log.LoggingKey
+import com.smeup.dbnative.log.LoggingLevel
 import com.smeup.dbnative.model.FileMetadata
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
@@ -170,6 +175,45 @@ class ConnectionProviderTest {
             val result = ConnectionProvider.currentManagerOrNull("FILEA")
             assertNull(result)
         }
+    }
+
+    @Test
+    fun logging_configure_emits_provider_event() {
+        val events = mutableListOf<LoggingEvent>()
+        val logger = Logger(LoggingLevel.ALL) { events.add(it) }
+        val cfg = mapOf(TEST_APP to DBNativeAccessConfig(listOf(TEST_CONFIG), logger))
+        ConnectionProvider.configure(cfg, spyFactory(cfg))
+        assertEquals(1, events.count { it.eventKey == LoggingKey.provider })
+        assertTrue(events.first { it.eventKey == LoggingKey.provider }.message.contains(TEST_APP))
+    }
+
+    @Test
+    fun logging_withScope_emits_open_and_close() {
+        val events = mutableListOf<LoggingEvent>()
+        val logger = Logger(LoggingLevel.ALL) { events.add(it) }
+        val cfg = mapOf(TEST_APP to DBNativeAccessConfig(listOf(TEST_CONFIG), logger))
+        ConnectionProvider.configure(cfg, spyFactory(cfg))
+        events.clear()
+        ConnectionProvider.withScope(TEST_APP) { /* no-op */ }
+        val scopeEvents = events.filter { it.eventKey == LoggingKey.provider }
+        assertEquals(2, scopeEvents.size)
+        assertTrue(scopeEvents[0].message.contains("opened"))
+        assertTrue(scopeEvents[1].message.contains("closed"))
+    }
+
+    @Test
+    fun logging_currentManager_emits_on_first_use_only() {
+        val events = mutableListOf<LoggingEvent>()
+        val logger = Logger(LoggingLevel.ALL) { events.add(it) }
+        val cfg = mapOf(TEST_APP to DBNativeAccessConfig(listOf(TEST_CONFIG), logger))
+        ConnectionProvider.configure(cfg, spyFactory(cfg))
+        events.clear()
+        ConnectionProvider.withScope(TEST_APP) {
+            ConnectionProvider.currentManager("FILEA")
+            ConnectionProvider.currentManager("FILEA")
+        }
+        val creationEvents = events.filter { it.eventKey == LoggingKey.provider && it.message.contains("Created manager") }
+        assertEquals(1, creationEvents.size)
     }
 }
 
