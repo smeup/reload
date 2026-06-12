@@ -1,5 +1,7 @@
 package com.smeup.dbnative
 
+import com.smeup.dbnative.log.LoggingKey
+
 /**
  * Provides thread-scoped access to [DBMManager] instances, keyed by application.
  *
@@ -14,6 +16,9 @@ object ConnectionProvider {
 
     @Volatile private var configMap: Map<String, DBNativeAccessConfig>? = null
     @Volatile private var factoryMap: Map<String, (ConnectionConfig) -> DBMManager>? = null
+
+    private fun loggerFor(app: String) = configMap?.get(app)?.logger
+    private fun anyLogger() = configMap?.values?.firstNotNullOfOrNull { it.logger }
 
     /**
      * Configures the provider with a single config and factory, bound to the `"default"` app key.
@@ -38,6 +43,7 @@ object ConnectionProvider {
     ) {
         this.configMap = configMap
         this.factoryMap = factoryMap
+        anyLogger()?.logEvent(LoggingKey.provider, "ConnectionProvider configured with apps: ${configMap.keys}")
     }
 
     /**
@@ -81,12 +87,15 @@ object ConnectionProvider {
     @Throws(Exception::class)
     fun withScope(app: String, block: ScopedBlock) {
         requireNotNull(configMap) { "ConnectionProvider not configured" }
+        val logger = loggerFor(app)
+        logger?.logEvent(LoggingKey.provider, "Scope opened for app '$app'")
         threadLocal.set(app to mutableMapOf())
         try {
             block.execute()
         } finally {
             val (_, managers) = threadLocal.get()
             threadLocal.remove()
+            logger?.logEvent(LoggingKey.provider, "Scope closed for app '$app', closing ${managers.size} manager(s)")
             managers.values.forEach { it.close() }
         }
     }
@@ -103,7 +112,10 @@ object ConnectionProvider {
         val cfg = requireNotNull(configMap?.get(app)) { "No configuration for app '$app'" }
         val factory = requireNotNull(factoryMap?.get(app)) { "No factory for app '$app'" }
         val connectionConfig = findConnectionConfigFor(fileName, cfg.connectionsConfig)
-        return managers.getOrPut(connectionConfig) { factory(connectionConfig) }
+        val isNew = !managers.containsKey(connectionConfig)
+        return managers.getOrPut(connectionConfig) { factory(connectionConfig) }.also {
+            if (isNew) loggerFor(app)?.logEvent(LoggingKey.provider, "Created manager for '$fileName' (app '$app')")
+        }
     }
 
     /**
@@ -117,7 +129,10 @@ object ConnectionProvider {
         val factory = factoryMap?.get(app) ?: return null
         return try {
             val connectionConfig = findConnectionConfigFor(fileName, cfg.connectionsConfig)
-            managers.getOrPut(connectionConfig) { factory(connectionConfig) }
+            val isNew = !managers.containsKey(connectionConfig)
+            managers.getOrPut(connectionConfig) { factory(connectionConfig) }.also {
+                if (isNew) loggerFor(app)?.logEvent(LoggingKey.provider, "Created manager for '$fileName' (app '$app')")
+            }
         } catch (e: IllegalArgumentException) {
             null
         }
