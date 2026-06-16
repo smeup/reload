@@ -297,7 +297,6 @@ class Native2SQL(val fileMetadata: FileMetadata) {
         val replacements = mutableListOf<String>()
 
         lastPositioningInstruction?.let {
-
             val conditions = it.keys.mapIndexed { index, key ->
                 val operator = if (index == it.keys.size - 1 && it.method == PositioningMethod.SETGT) ">" else ">="
                 "\"${fileMetadata.fileKeys[index]}\" $operator ?"

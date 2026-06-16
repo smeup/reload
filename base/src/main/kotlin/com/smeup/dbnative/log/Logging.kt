@@ -13,7 +13,8 @@ enum class LoggingKey(val level: LoggingLevel){
     execute_inquiry(LoggingLevel.DEBUG),
     search_data(LoggingLevel.DEBUG),
     connection(LoggingLevel.DEBUG),
-    performance_metric(LoggingLevel.DEBUG)
+    performance_metric(LoggingLevel.DEBUG),
+    provider(LoggingLevel.DEBUG)
 }
 
 enum class NativeMethod(){

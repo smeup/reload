@@ -18,11 +18,15 @@
 package com.smeup.dbnative.manager
 
 import com.smeup.dbnative.ConnectionConfig
+import com.smeup.dbnative.ConnectionConfigComparator
+import com.smeup.dbnative.ConnectionProvider
 import com.smeup.dbnative.DBMManager
 import com.smeup.dbnative.DBManagerBaseImpl
 import com.smeup.dbnative.DBNativeAccessConfig
 import com.smeup.dbnative.file.DBFile
+import com.smeup.dbnative.findConnectionConfigFor
 import com.smeup.dbnative.log.Logger
+import com.smeup.dbnative.log.LoggingKey
 import com.smeup.dbnative.model.FileMetadata
 
 /**
@@ -56,8 +60,17 @@ class DBFileFactory(
      * */
     fun open(fileName: String, fileMetadata: FileMetadata?) : DBFile {
         val fileNameNormalized = fileNameNormalizer(fileName)
-        val configMatch = findConnectionConfigFor(fileNameNormalized, config.connectionsConfig)
-        val dbmManager = managers.getOrPut(configMatch) {createDBManager(configMatch, config.logger).apply { validateConfig() }}
+
+        // Reuse the scoped manager when withScope() is active — guarantees same Connection
+        // as Java service code on this thread. Falls back to own manager when scope is absent.
+        val dbmManager = ConnectionProvider.currentManagerOrNull(fileNameNormalized)
+            ?: run {
+                if (ConnectionProvider.isConfigured()) {
+                    config.logger?.logEvent(LoggingKey.connection, "open('$fileNameNormalized') without active scope — using factory-owned connection")
+                }
+                val configMatch = findConnectionConfigFor(fileNameNormalized, config.connectionsConfig)
+                managers.getOrPut(configMatch) { createDBManager(configMatch, config.logger).apply { validateConfig() } }
+            }
 
         if (fileMetadata != null) {
             dbmManager.registerMetadata(fileMetadata, true)
@@ -91,39 +104,35 @@ class DBFileFactory(
     }
 }
 
-/**
- * Find a ConnectionConfig for file
- * @param fileName file name
- * @param connectionsConfig ConnectionConfig entries
- * */
-fun findConnectionConfigFor(fileName: String, connectionsConfig: List<ConnectionConfig>) : ConnectionConfig {
-    val configList = connectionsConfig.filter {
-        it.fileName.toUpperCase() == fileName.toUpperCase() || it.fileName == "*" ||
-                fileName.toUpperCase().matches(Regex(it.fileName.toUpperCase().replace("*", ".*")))
-    }
-    require(configList.isNotEmpty()) {
-        "Wrong configuration. Not found a ConnectionConfig entry matching name: $fileName"
-    }
-    //At the top of the list we have ConnectionConfig whose property file does not have wildcards
-    return configList.sortedWith(DBFileFactory.COMPARATOR)[0]
-}
-
-private fun createDBManager(config: ConnectionConfig, logger: Logger? = null): DBMManager {
+internal fun createDBManager(config: ConnectionConfig, logger: Logger? = null): DBMManager {
     val impl = getImplByUrl(config)
 
-    val clazz :Class<DBMManager>? = Class.forName(impl) as Class<DBMManager>?
+    val clazz: Class<DBMManager>? = Class.forName(impl) as Class<DBMManager>?
 
     return clazz?.let {
         val constructor = it.getConstructor(ConnectionConfig::class.java)
         val dbmManager = constructor.newInstance(config)
-        if(dbmManager is DBManagerBaseImpl){
+        if (dbmManager is DBManagerBaseImpl) {
             dbmManager.logger = logger
         }
         return dbmManager
     }!!
 }
 
-private fun getImplByUrl(config: ConnectionConfig) : String {
+/**
+ * Use [com.smeup.dbnative.findConnectionConfigFor] instead.
+ */
+@Deprecated(
+    message = "Moved to com.smeup.dbnative.findConnectionConfigFor",
+    replaceWith = ReplaceWith(
+        "findConnectionConfigFor(fileName, connectionsConfig)",
+        "com.smeup.dbnative.findConnectionConfigFor"
+    )
+)
+fun findConnectionConfigFor(fileName: String, connectionsConfig: List<ConnectionConfig>): com.smeup.dbnative.ConnectionConfig =
+    findConnectionConfigFor(fileName, connectionsConfig)
+
+private fun getImplByUrl(config: ConnectionConfig): String {
     return when {
         config.impl != null && config.impl!!.trim().isNotEmpty() -> config.impl!!
         config.url.startsWith("jdbc:") -> "com.smeup.dbnative.sql.SQLDBMManager"
@@ -131,22 +140,5 @@ private fun getImplByUrl(config: ConnectionConfig) : String {
         config.url.startsWith("as400:") -> "com.smeup.dbnative.jt400.JT400DBMMAnager"
         config.url.startsWith("class:") -> config.url.substringAfter("class:", "com.smeup.dbnative.mock.MockDBManager")
         else -> throw IllegalArgumentException("${config.url} not handled")
-    }
-}
-
-//ConnectionConfig.file with wildcards at the bottom
-class ConnectionConfigComparator : Comparator<ConnectionConfig> {
-
-    override fun compare(o1: ConnectionConfig?, o2: ConnectionConfig?): Int {
-        require(o1 != null)
-        require(o2 != null)
-        return when {
-            o1.fileName == "*" && o2.fileName != "*" -> 1
-            o1.fileName != "*" && o2.fileName == "*" -> -1
-            o1.fileName.contains("*") && o2.fileName.contains("*") -> o1.fileName.compareTo(o2.fileName)
-            o1.fileName.contains("*") && !o2.fileName.contains("*") -> 1
-            !o1.fileName.contains("*") && o2.fileName.contains("*") -> -1
-            else -> o1.fileName.compareTo(o2.fileName)
-        }
     }
 }

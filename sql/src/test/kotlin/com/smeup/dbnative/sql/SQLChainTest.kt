@@ -22,6 +22,8 @@ import org.junit.AfterClass
 import org.junit.BeforeClass
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class SQLChainTest {
     companion object {
@@ -48,6 +50,8 @@ class SQLChainTest {
         val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
         val chainResult1 = dbFile.chain(buildMunicipalityKey("IT", "LOM", "BS", "ERBASCO"))
         assertEquals(0, chainResult1.record.size)
+        assertTrue { chainResult1.indicatorHI }
+        assertFalse { chainResult1.indicatorEQ }
         dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
 
