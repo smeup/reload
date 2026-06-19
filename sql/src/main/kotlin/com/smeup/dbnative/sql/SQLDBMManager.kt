@@ -122,13 +122,19 @@ open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBMa
         }
     }
 
-    fun executeQuery(sql: String, values: List<Any>, resultSetType: Int, concurrency: Int): ResultSet {
+    /**
+     * WARNING: The caller is responsible for closing the returned [ResultSet] and the underlying
+     * [PreparedStatement]. Failing to do so will cause resource leaks.
+     * Prefer [executeQuery] with a lambda block instead — it handles cleanup automatically:
+     *   executeQuery(query) { rs -> ... }
+     */
+    fun executeQuery(query: SQLQuery, resultSetType: Int, concurrency: Int): ResultSet {
         val telemetrySpan = TelemetrySpan("EXECUTE CURSOR QUERY Execution")
-        logger?.logEvent(LoggingKey.execute_inquiry, "Preparing cursor query: $sql with bindings: $values")
+        logger?.logEvent(LoggingKey.execute_inquiry, "Preparing cursor query: ${query.query} with bindings: ${query.parameters}")
         val stmt: PreparedStatement
         measureTimeMillis {
-            stmt = connection.prepareStatement(sql, resultSetType, concurrency)
-            stmt.bind(values)
+            stmt = connection.prepareStatement(query.query, resultSetType, concurrency)
+            stmt.bind(query.parameters.map { it ?: "" })
         }.apply {
             logger?.logEvent(LoggingKey.execute_inquiry, "Statement prepared", this)
         }
