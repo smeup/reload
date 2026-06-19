@@ -37,7 +37,7 @@ private val TEST_CONFIG_B = ConnectionConfig(
 private val ACCESS_CONFIG = DBNativeAccessConfig(listOf(TEST_CONFIG_B, TEST_CONFIG))
 private val CONFIG_MAP = mapOf(TEST_APP to ACCESS_CONFIG)
 
-private fun spyFactory(configMap: Map<String, DBNativeAccessConfig>): Map<String, (ConnectionConfig) -> DBMManager> =
+private fun spyFactory(configMap: Map<String, DBNativeAccessConfig>): Map<String, (ConnectionConfig) -> DBMManager<*, *>> =
     configMap.mapValues { { connConfig: ConnectionConfig -> SpyDBMManager(connConfig) } }
 
 /**
@@ -84,7 +84,7 @@ class ConnectionProviderTest {
     @Test
     fun withScope_closesManagersOnExit() {
         val spies = mutableListOf<SpyDBMManager>()
-        val collectingFactory = CONFIG_MAP.mapValues { { connConfig: ConnectionConfig ->
+        val collectingFactory: Map<String, (ConnectionConfig) -> DBMManager<*, *>> = CONFIG_MAP.mapValues { { connConfig: ConnectionConfig ->
             SpyDBMManager(connConfig).also { spies.add(it) }
         } }
         ConnectionProvider.configure(CONFIG_MAP, collectingFactory)
@@ -140,7 +140,7 @@ class ConnectionProviderTest {
 
     @Test
     fun withScope_scopeIsThreadLocal() {
-        var managerSeenFromOtherThread: DBMManager? = null
+        var managerSeenFromOtherThread: DBMManager<*, *>? = null
         ConnectionProvider.withScope(TEST_APP) {
             val thread = Thread {
                 managerSeenFromOtherThread = ConnectionProvider.currentManagerOrNull("FILEA")
@@ -220,7 +220,7 @@ class ConnectionProviderTest {
 /**
  * Test double used to verify manager creation and closure semantics.
  */
-class SpyDBMManager(override val connectionConfig: ConnectionConfig) : DBMManager {
+class SpyDBMManager(override val connectionConfig: ConnectionConfig) : DBMManager<Nothing, Nothing> {
     var closed = false
 
     override fun existFile(name: String) = false
@@ -230,5 +230,6 @@ class SpyDBMManager(override val connectionConfig: ConnectionConfig) : DBMManage
     override fun closeFile(name: String) {}
     override fun unregisterMetadata(name: String) {}
     override fun validateConfig() {}
+    override fun <T> executeQuery(query: Nothing, block: (Nothing) -> T): T = throw UnsupportedOperationException()
     override fun close() { closed = true }
 }

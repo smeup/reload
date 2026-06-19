@@ -25,10 +25,12 @@ import com.smeup.dbnative.model.FileMetadata
  * You can consider data source as a container of one or more files of the same type.
  * A datasource can contains either only tables(views) or only documents.
  * File is an abstraction of table, view or document.
+ *
+ * @param Q the backend-specific query input type (e.g. SQLQuery for SQL backends)
+ * @param RS the backend-specific result set type (e.g. java.sql.ResultSet for SQL backends)
  * */
-interface DBMManager : AutoCloseable{
+interface DBMManager<Q, RS> : AutoCloseable {
     val connectionConfig : ConnectionConfig
-
 
     fun existFile(name: String): Boolean
     fun registerMetadata(metadata: FileMetadata, overwrite: Boolean)
@@ -40,4 +42,5 @@ interface DBMManager : AutoCloseable{
      * Validate connectionConfig. If validation fails, implementation has to throw an IllegalArgumentException
      * */
     fun validateConfig()
+    fun <T> executeQuery(query: Q, block: (RS) -> T): T
 }
