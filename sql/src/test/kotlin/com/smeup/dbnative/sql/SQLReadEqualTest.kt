@@ -174,7 +174,8 @@ class SQLReadEqualTest {
             count++
         }
         assertEquals("", getMunicipalityName(result.record))
-        assertEquals(155, count)
+        // All Calabrian cities from province CS onwards (CS, CZ, KR, RC, VV) — correct per SETLL/READE semantics
+        assertEquals(409, count)
 
         dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }

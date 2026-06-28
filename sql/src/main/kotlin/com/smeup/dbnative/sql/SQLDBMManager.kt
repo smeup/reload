@@ -33,6 +33,8 @@ open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBMa
     private var sqlLog: Boolean = false
     private var connectionOpenedAt: Long = 0L
 
+    open val dialect: SQLDialect by lazy { SQLDialect.forUrl(connectionConfig.url) }
+
     //private var openedFile = mutableMapOf<String, SQLDBFile>()
 
     open val connection: Connection by lazy {
@@ -53,6 +55,7 @@ open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBMa
                 }
             }
             conn = DriverManager.getConnection(connectionConfig.url, connectionProps)
+            dialect.configureConnection(conn)
         }.apply {
             connectionOpenedAt = System.currentTimeMillis()
             logger?.logEvent(LoggingKey.connection, "SQL connection successfully opened", this)
@@ -73,7 +76,7 @@ open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBMa
 
     override fun openFile(name: String): SQLDBFile {
         require(this.existFile(name))
-        return SQLDBFile(name = name, fileMetadata = metadataOf(name), connection = connection, logger)
+        return SQLDBFile(name = name, fileMetadata = metadataOf(name), connection = connection, logger, dialect)
     }
 
     override fun closeFile(name: String) {
