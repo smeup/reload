@@ -35,7 +35,7 @@ class ReadInstruction(var method: ReadMethod, var keys: List<String>) {
     fun admitEmptyKeys() = method == ReadMethod.READ || method == ReadMethod.READP
 }
 
-class Native2SQL(val fileMetadata: FileMetadata) {
+class Native2SQL(val fileMetadata: FileMetadata, val dialect: SqlDialect = SqlDialect.Default) {
     private var lastReadInstruction: ReadInstruction? = null
     private var lastPositioningInstruction: PositioningInstruction? = null
 
@@ -311,6 +311,16 @@ class Native2SQL(val fileMetadata: FileMetadata) {
         return Pair(queries.joinToString(" ") + " " + getSQLOrderByClause(), replacements)
     }
 
+    private fun getRvcComparison(): Comparison {
+        val forward = lastReadInstruction!!.method.forward
+        return when {
+            forward  && lastPositioningInstruction!!.method == PositioningMethod.SETLL -> Comparison.GE
+            forward  && lastPositioningInstruction!!.method == PositioningMethod.SETGT -> Comparison.GT
+            !forward && lastPositioningInstruction!!.method == PositioningMethod.SETLL -> Comparison.LT
+            else -> Comparison.LE
+        }
+    }
+
     private fun getCoherentSql(fullUnion: Boolean = false): Pair<String, List<String>> {
         val queries = mutableListOf<String>()
         val replacements = mutableListOf<String>()
@@ -336,6 +346,15 @@ class Native2SQL(val fileMetadata: FileMetadata) {
                     " AND "
                 ), replacements
             )
+        } else if (dialect is SqlDialect.PostgreSql && lastPositioningInstruction!!.keys.size > 1) {
+            val columns = fileMetadata.fields.joinToString(", ") { "\"${it.name}\"" }
+            val tableName = "\"${fileMetadata.tableName}\""
+            val rvcKeys = lastPositioningInstruction!!.keys
+            val keyList = rvcKeys.indices.joinToString(", ") { "\"${fileMetadata.fileKeys[it]}\"" }
+            val placeholders = rvcKeys.joinToString(", ") { "?" }
+            val op = getRvcComparison().symbol
+            val sql = "SELECT $columns FROM $tableName WHERE ($keyList) $op ($placeholders) ${getSQLOrderByClause()}"
+            return Pair(sql, buildReplacements(rvcKeys))
         } else {
             if (lastPositioningInstruction!!.keys.size == 1) {
                 queries.add(

@@ -34,7 +34,8 @@ import kotlin.system.measureTimeMillis
 class SQLDBFile(
     override var name: String, override var fileMetadata: FileMetadata,
     var connection: Connection,
-    override var logger: Logger? = null
+    override var logger: Logger? = null,
+    val dialect: SqlDialect = SqlDialect.Default
 ) : DBFile {
 
     private var preparedStatements: MutableMap<String, PreparedStatement> = mutableMapOf()
@@ -54,8 +55,9 @@ class SQLDBFile(
     //    if (indexes.isEmpty()) connection.orderingFields(fileMetadata.name) else indexes
     //}
 
-    private var adapter: Native2SQL = Native2SQL(this.fileMetadata)
+    private var adapter: Native2SQL = Native2SQL(this.fileMetadata, dialect)
     private var eof: Boolean = false
+    private var savedAutoCommit: Boolean? = null
 
     private fun logEvent(loggingKey: LoggingKey, message: String, elapsedTime: Long? = null) =
         logger?.logEvent(loggingKey, message, elapsedTime, lastNativeMethod, fileMetadata.name)
@@ -336,7 +338,7 @@ class SQLDBFile(
 
     private fun executeQuery(sql: String, values: List<String>) {
         eof = false
-        resultSet.closeIfOpen()
+        closeResultSet()
         logEvent(LoggingKey.execute_inquiry, "Preparing statement for query: $sql with bingings: $values")
         val stm: PreparedStatement
         measureTimeMillis {
@@ -346,6 +348,11 @@ class SQLDBFile(
                     ResultSet.TYPE_FORWARD_ONLY,
                     ResultSet.CONCUR_UPDATABLE
                 )
+            }
+            if (dialect.defaultFetchSize > 0) {
+                stm.fetchSize = dialect.defaultFetchSize
+                savedAutoCommit = connection.autoCommit
+                if (connection.autoCommit) connection.autoCommit = false
             }
             stm.bind(values)
         }.apply {
@@ -394,6 +401,10 @@ class SQLDBFile(
     private fun closeResultSet() {
         resultSet.closeIfOpen()
         resultSet = null
+        savedAutoCommit?.let { saved ->
+            if (!connection.isClosed) connection.autoCommit = saved
+            savedAutoCommit = null
+        }
     }
 
     override fun eof() = eof
@@ -422,7 +433,7 @@ class SQLDBFile(
     }
 
     override fun close() {
-        resultSet.closeIfOpen()
+        closeResultSet()
         preparedStatements.values.forEach { it.close() }
     }
 }

@@ -73,7 +73,8 @@ open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBMa
 
     override fun openFile(name: String): SQLDBFile {
         require(this.existFile(name))
-        return SQLDBFile(name = name, fileMetadata = metadataOf(name), connection = connection, logger)
+        val dialect = SqlDialect.fromUrl(connectionConfig.url, connectionConfig.properties)
+        return SQLDBFile(name = name, fileMetadata = metadataOf(name), connection = connection, logger = logger, dialect = dialect)
     }
 
     override fun closeFile(name: String) {
