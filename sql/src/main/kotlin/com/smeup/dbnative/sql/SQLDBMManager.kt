@@ -20,12 +20,15 @@ package com.smeup.dbnative.sql
 import com.smeup.dbnative.ConnectionConfig
 import com.smeup.dbnative.DBManagerBaseImpl
 import com.smeup.dbnative.log.LoggingKey
+import com.smeup.dbnative.log.TelemetrySpan
 import java.sql.Connection
 import java.sql.DriverManager
+import java.sql.PreparedStatement
+import java.sql.ResultSet
 import java.util.*
 import kotlin.system.measureTimeMillis
 
-open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBManagerBaseImpl() {
+open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBManagerBaseImpl<SQLQuery, ResultSet>() {
 
     private var sqlLog: Boolean = false
     private var connectionOpenedAt: Long = 0L
@@ -85,6 +88,64 @@ open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBMa
             }
             statement.executeBatch()
         }
+    }
+
+    override fun <T> executeQuery(query: SQLQuery, block: (ResultSet) -> T): T {
+        val telemetrySpan = TelemetrySpan("EXECUTE QUERY Execution")
+        logger?.logEvent(LoggingKey.execute_inquiry, "Preparing statement for query: ${query.query} with bindings: ${query.parameters}")
+
+        val stmt: PreparedStatement
+        measureTimeMillis {
+            stmt = connection.prepareStatement(query.query)
+            stmt.bind(query.parameters.map { it ?: "" })
+        }.apply {
+            logger?.logEvent(LoggingKey.execute_inquiry, "Statement prepared, executing query for statement", this)
+        }
+
+        return stmt.use {
+            val rs: ResultSet
+            measureTimeMillis {
+                rs = stmt.executeQuery()
+            }.apply {
+                logger?.logEvent(LoggingKey.execute_inquiry, "Query successfully executed", this)
+            }
+
+            val result: T
+            measureTimeMillis {
+                result = rs.use { block(it) }
+            }.apply {
+                logger?.logEvent(LoggingKey.execute_inquiry, "Consumer completed", this)
+            }
+
+            telemetrySpan.endSpan()
+            result
+        }
+    }
+
+    /**
+     * WARNING: The caller is responsible for closing the returned [ResultSet] and the underlying
+     * [PreparedStatement]. Failing to do so will cause resource leaks.
+     * Prefer [executeQuery] with a lambda block instead — it handles cleanup automatically:
+     *   executeQuery(query) { rs -> ... }
+     */
+    fun executeQuery(query: SQLQuery, resultSetType: Int, concurrency: Int): ResultSet {
+        val telemetrySpan = TelemetrySpan("EXECUTE CURSOR QUERY Execution")
+        logger?.logEvent(LoggingKey.execute_inquiry, "Preparing cursor query: ${query.query} with bindings: ${query.parameters}")
+        val stmt: PreparedStatement
+        measureTimeMillis {
+            stmt = connection.prepareStatement(query.query, resultSetType, concurrency)
+            stmt.bind(query.parameters.map { it ?: "" })
+        }.apply {
+            logger?.logEvent(LoggingKey.execute_inquiry, "Statement prepared", this)
+        }
+        val rs: ResultSet
+        measureTimeMillis {
+            rs = stmt.executeQuery()
+        }.apply {
+            logger?.logEvent(LoggingKey.execute_inquiry, "Cursor query executed", this)
+        }
+        telemetrySpan.endSpan()
+        return rs
     }
 
     fun setSQLLog(on: Boolean) {

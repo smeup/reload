@@ -24,7 +24,7 @@ import com.smeup.dbnative.metadata.file.FSMetadataRegisterImpl
 import com.smeup.dbnative.model.FileMetadata
 import java.util.*
 
-abstract class DBManagerBaseImpl : DBMManager {
+abstract class DBManagerBaseImpl<Q, RS> : DBMManager<Q, RS> {
     var logger: Logger? = null
    /*
     val metadataRegister: MetadataRegister
@@ -57,6 +57,9 @@ abstract class DBManagerBaseImpl : DBMManager {
     override fun existFile(name: String): Boolean {
         return getMetadataRegister().contains(name.uppercase(Locale.getDefault()))
     }
+
+    override fun <T> executeQuery(query: Q, block: (RS) -> T): T =
+        throw UnsupportedOperationException("executeQuery not supported by ${this::class.simpleName}")
 
     companion object {
 

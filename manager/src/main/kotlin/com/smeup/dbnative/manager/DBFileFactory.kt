@@ -47,7 +47,7 @@ class DBFileFactory(
     private val fileNameNormalizer: (String) -> String = {it}
 ) : AutoCloseable {
 
-    private val managers = mutableMapOf<ConnectionConfig, DBMManager> ()
+    private val managers = mutableMapOf<ConnectionConfig, DBMManager<*, *>>()
 
     /**
      * Open the file named fileName. A file can only be opened after registration of its metadata.
@@ -104,10 +104,11 @@ class DBFileFactory(
     }
 }
 
-internal fun createDBManager(config: ConnectionConfig, logger: Logger? = null): DBMManager {
+@Suppress("UNCHECKED_CAST")
+internal fun createDBManager(config: ConnectionConfig, logger: Logger? = null): DBMManager<*, *> {
     val impl = getImplByUrl(config)
 
-    val clazz: Class<DBMManager>? = Class.forName(impl) as Class<DBMManager>?
+    val clazz: Class<out DBMManager<*, *>>? = Class.forName(impl) as Class<out DBMManager<*, *>>?
 
     return clazz?.let {
         val constructor = it.getConstructor(ConnectionConfig::class.java)

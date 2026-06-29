@@ -12,10 +12,10 @@ import com.smeup.dbnative.log.LoggingKey
  */
 object ConnectionProvider {
 
-    private val threadLocal = ThreadLocal<Pair<String, MutableMap<ConnectionConfig, DBMManager>>>()
+    private val threadLocal = ThreadLocal<Pair<String, MutableMap<ConnectionConfig, DBMManager<*, *>>>>()
 
     @Volatile private var configMap: Map<String, DBNativeAccessConfig>? = null
-    @Volatile private var factoryMap: Map<String, (ConnectionConfig) -> DBMManager>? = null
+    @Volatile private var factoryMap: Map<String, (ConnectionConfig) -> DBMManager<*, *>>? = null
 
     private fun loggerFor(app: String) = configMap?.get(app)?.logger
     private fun anyLogger() = configMap?.values?.firstNotNullOfOrNull { it.logger }
@@ -31,7 +31,7 @@ object ConnectionProvider {
     )
     fun configure(
         config: DBNativeAccessConfig,
-        factory: (ConnectionConfig) -> DBMManager
+        factory: (ConnectionConfig) -> DBMManager<*, *>
     ) = configure(mapOf("default" to config), mapOf("default" to factory))
 
     /**
@@ -39,7 +39,7 @@ object ConnectionProvider {
      */
     fun configure(
         configMap: Map<String, DBNativeAccessConfig>,
-        factoryMap: Map<String, (ConnectionConfig) -> DBMManager>
+        factoryMap: Map<String, (ConnectionConfig) -> DBMManager<*, *>>
     ) {
         this.configMap = configMap
         this.factoryMap = factoryMap
@@ -107,7 +107,7 @@ object ConnectionProvider {
      * @throws IllegalArgumentException if the active app has no config entry or [fileName]
      *   matches no [ConnectionConfig].
      */
-    fun currentManager(fileName: String): DBMManager {
+    fun currentManager(fileName: String): DBMManager<*, *> {
         val (app, managers) = requireNotNull(threadLocal.get()) { "No active scope on this thread" }
         val cfg = requireNotNull(configMap?.get(app)) { "No configuration for app '$app'" }
         val factory = requireNotNull(factoryMap?.get(app)) { "No factory for app '$app'" }
@@ -122,7 +122,7 @@ object ConnectionProvider {
      * Like [currentManager], but returns `null` if there is no active scope, no config for
      * the active app, or no matching [ConnectionConfig] for [fileName].
      */
-    fun currentManagerOrNull(fileName: String): DBMManager? {
+    fun currentManagerOrNull(fileName: String): DBMManager<*, *>? {
         val pair = threadLocal.get() ?: return null
         val (app, managers) = pair
         val cfg = configMap?.get(app) ?: return null
