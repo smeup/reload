@@ -33,7 +33,10 @@ open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBMa
     private var sqlLog: Boolean = false
     private var connectionOpenedAt: Long = 0L
 
-    open val dialect: SQLDialect by lazy { SQLDialect.forUrl(connectionConfig.url) }
+    open val dialect: SQLDialect by lazy {
+        val enabled = connectionConfig.properties["reload.dialect.enabled"] != "false"
+        if (enabled) SQLDialect.forUrl(connectionConfig.url) else DefaultSQLDialect()
+    }
 
     //private var openedFile = mutableMapOf<String, SQLDBFile>()
 
@@ -55,7 +58,6 @@ open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBMa
                 }
             }
             conn = DriverManager.getConnection(connectionConfig.url, connectionProps)
-            dialect.configureConnection(conn)
         }.apply {
             connectionOpenedAt = System.currentTimeMillis()
             logger?.logEvent(LoggingKey.connection, "SQL connection successfully opened", this)

@@ -356,7 +356,7 @@ class SQLDBFile(
             logEvent(LoggingKey.execute_inquiry, "Statement prepared, executing query for statement", this)
         }
         measureTimeMillis {
-            resultSet = stm.executeQuery()
+            resultSet = dialect.withQueryExecution(connection) { stm.executeQuery() }
         }.apply {
             logEvent(LoggingKey.execute_inquiry, "Query succesfully executed", this)
         }

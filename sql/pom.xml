@@ -80,12 +80,6 @@
 			<artifactId>HikariCP</artifactId>
 			<version>5.1.0</version>
 		</dependency>
-		<dependency>
-			<groupId>org.testcontainers</groupId>
-			<artifactId>postgresql</artifactId>
-			<version>1.20.4</version>
-			<scope>test</scope>
-		</dependency>
 	</dependencies>
 
 	<build>

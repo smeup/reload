@@ -35,6 +35,7 @@ import org.junit.Assert
 import java.io.File
 import java.sql.Connection
 import java.sql.ResultSet
+import kotlin.use
 
 const val EMPLOYEE_TABLE_NAME = "EMPLOYEE"
 const val EMPLOYEE_VIEW_NAME = "EMPLOYEE_VIEW"
@@ -136,9 +137,10 @@ enum class TestSQLDBType(
         ConnectionConfig(
             fileName = "*",
             url = "jdbc:postgresql://localhost:5432/postgres",
-            user = "root",
-            password = "root",
-            driver = "org.postgresql.Driver"
+            user = System.getenv("PG_USER") ?: "root",
+            password = System.getenv("PG_PASSWORD") ?: "root",
+            driver = "org.postgresql.Driver",
+            properties = mapOf("reload.dialect.enabled" to (System.getenv("PG_DIALECT_ENABLED") ?: "false"))
         )
     )
 

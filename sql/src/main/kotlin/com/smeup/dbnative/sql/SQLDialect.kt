@@ -24,10 +24,10 @@ interface SQLDialect {
     fun fetchSize(): Int? = null
 
     /**
-     * Called once after the JDBC connection is created.
-     * Dialects can use this to configure connection-level settings (e.g. autoCommit).
+     * Wraps a SELECT execution, allowing dialects to adjust connection state
+     * (e.g. autoCommit) around the query and restore it afterwards.
      */
-    fun configureConnection(connection: Connection) = Unit
+    fun <T> withQueryExecution(connection: Connection, block: () -> T): T = block()
 
     companion object {
         fun forUrl(url: String): SQLDialect = when {
@@ -73,8 +73,14 @@ class PostgreSQLDialect : SQLDialect {
 
     override fun fetchSize(): Int? = 100
 
-    override fun configureConnection(connection: Connection) {
+    override fun <T> withQueryExecution(connection: Connection, block: () -> T): T {
+        val savedAutoCommit = connection.autoCommit
         connection.autoCommit = false
+        return try {
+            block()
+        } finally {
+            connection.autoCommit = savedAutoCommit
+        }
     }
 
     override fun buildPositioningConditions(
