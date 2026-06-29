@@ -90,9 +90,22 @@ class PostgreSQLDialect : SQLDialect {
         forward: Boolean,
         buildReplacements: (List<String>) -> List<String>
     ): List<Pair<String, List<String>>> {
-        val cmp = comparisonFor(method, forward).first
         val lhs = positioningKeys.indices.joinToString(", ", "(", ")") { "\"${fileKeys[it]}\"" }
         val rhs = positioningKeys.joinToString(", ", "(", ")") { "?" }
-        return listOf(Pair("$lhs ${cmp.symbol} $rhs", buildReplacements(positioningKeys)))
+        // Always use >= / <= so PostgreSQL can leverage the B-tree index on the range scan.
+        // When the semantic requires strict exclusion (SETGT forward, SETLL backward), the exact
+        // boundary row is filtered out with NOT (col = ? AND ...) rather than switching to > / <,
+        // which can block index use on multi-column row-value comparisons.
+        val cmp = if (forward) Comparison.GE else Comparison.LE
+        val replacements = buildReplacements(positioningKeys)
+        val needsExclusion = (forward && method == PositioningMethod.SETGT) ||
+                             (!forward && method == PositioningMethod.SETLL)
+        val (where, params) = if (needsExclusion) {
+            val notEq = positioningKeys.indices.joinToString(" AND ") { "\"${fileKeys[it]}\" = ?" }
+            "$lhs ${cmp.symbol} $rhs AND NOT ($notEq)" to replacements + replacements
+        } else {
+            "$lhs ${cmp.symbol} $rhs" to replacements
+        }
+        return listOf(Pair(where, params))
     }
 }
