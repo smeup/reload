@@ -141,7 +141,11 @@ enum class TestSQLDBType(
             password = System.getenv("PG_PASSWORD") ?: "root",
             driver = "org.postgresql.Driver",
             properties = mapOf("reload.dialect.enabled" to (System.getenv("RELOAD_DIALECT_ENABLED") ?: "true"))
-        )
+        ),
+        destroyDatabase = { dbaConnection ->
+            dbaConnection.prepareStatement("DROP SCHEMA IF EXISTS public CASCADE").use { it.execute() }
+            dbaConnection.prepareStatement("CREATE SCHEMA public").use { it.execute() }
+        }
     )
 
 }
@@ -218,7 +222,7 @@ fun destroyView() {
 fun destroyView(testSQLDBType: TestSQLDBType) {
     if (testSQLDBType.dbaConnectionConfig != null) {
         SQLDBMManager(testSQLDBType.dbaConnectionConfig).connection.use {
-            it.prepareStatement("DROP VIEW IF EXISTS \"$EMPLOYEE_VIEW_NAME\"")
+            it.prepareStatement("DROP VIEW IF EXISTS \"$EMPLOYEE_VIEW_NAME\"").use { stmt -> stmt.execute() }
         }
     }
 }
@@ -230,7 +234,7 @@ fun destroyIndex() {
 fun destroyIndex(testSQLDBType: TestSQLDBType) {
     if (testSQLDBType.dbaConnectionConfig != null) {
         SQLDBMManager(testSQLDBType.dbaConnectionConfig).connection.use {
-            it.prepareStatement("DROP INDEX IF EXISTS \"$EMPLOYEE_VIEW_NAME$CONVENTIONAL_INDEX_SUFFIX\"")
+            it.prepareStatement("DROP INDEX IF EXISTS \"$EMPLOYEE_VIEW_NAME$CONVENTIONAL_INDEX_SUFFIX\"").use { stmt -> stmt.execute() }
         }
     }
 }
@@ -257,10 +261,35 @@ fun createAndPopulateEmployeeView(dbManager: SQLDBMManager?) {
     val metadata = FileMetadata(EMPLOYEE_VIEW_NAME, EMPLOYEE_TABLE_NAME, fields.fieldList(), keys)
     dbManager!!.registerMetadata(metadata, true)
     try {
-        dbManager.execute(listOf(createXEMP2(), createEmployeeIndex()))
+        dbManager.execute(
+            listOf(
+                "DROP INDEX IF EXISTS \"$EMPLOYEE_VIEW_NAME$CONVENTIONAL_INDEX_SUFFIX\"",
+                "DROP VIEW IF EXISTS \"$EMPLOYEE_VIEW_NAME\"",
+                createXEMP2(),
+                createEmployeeIndex()
+            )
+        )
     } catch (e: Exception){
         println(e)
-    }}
+    }
+
+    // Physically reorders the table heap to match the (WORKDEPT, EMPNO) index.
+    // Queries that ORDER BY WORKDEPT only (single registered key) rely on a stable
+    // secondary order by EMPNO; PostgreSQL's ORDER BY is not stable on ties (unlike
+    // HSQLDB, which happens to preserve insertion/PK order), so without clustering the
+    // physical row order, ties on WORKDEPT can come back in a different EMPNO order.
+    // This only affects PostgreSQL: CLUSTER is a one-off physical reorg (not maintained
+    // on later writes), harmless/no-op-equivalent for other dialects since it's guarded here.
+    if (dbManager.connectionConfig.url.startsWith("jdbc:postgresql", ignoreCase = true)) {
+        try {
+            dbManager.connection.createStatement().use {
+                it.execute("CLUSTER \"$EMPLOYEE_TABLE_NAME\" USING \"$EMPLOYEE_VIEW_NAME$CONVENTIONAL_INDEX_SUFFIX\"")
+            }
+        } catch (e: Exception) {
+            println(e)
+        }
+    }
+}
 
 
 
@@ -391,13 +420,20 @@ fun buildNationKey(vararg values: String): List<String> {
 fun createFile(tMetadata: TypedMetadata, dbManager: SQLDBMManager) {
     val metadata: FileMetadata = tMetadata.fileMetadata()
     dbManager.connection.createStatement().use {
+        val dropSql = "DROP TABLE IF EXISTS \"${tMetadata.tableName}\" CASCADE"
+        println(dropSql)
+        try {
+            it.execute(dropSql)
+        } catch (e: Exception) {
+            println(e)
+        }
         println(tMetadata.toSQL())
         it.execute(tMetadata.toSQL())
     }
     dbManager.registerMetadata(metadata, true)
 }
 
-fun TypedMetadata.toSQL(): String = "CREATE TABLE IF NOT EXISTS \"${this.tableName}\" (${this.fields.toSQL(this)})"
+fun TypedMetadata.toSQL(): String = "CREATE TABLE \"${this.tableName}\" (${this.fields.toSQL(this)})"
 
 
 fun Collection<TypedField>.toSQL(tMetadata: TypedMetadata): String {
