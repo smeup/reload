@@ -140,7 +140,7 @@ enum class TestSQLDBType(
             user = System.getenv("PG_USER") ?: "root",
             password = System.getenv("PG_PASSWORD") ?: "root",
             driver = "org.postgresql.Driver",
-            properties = mapOf("reload.dialect.enabled" to (System.getenv("PG_DIALECT_ENABLED") ?: "false"))
+            properties = mapOf("reload.dialect.enabled" to (System.getenv("RELOAD_DIALECT_ENABLED") ?: "true"))
         )
     )
 
