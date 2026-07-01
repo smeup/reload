@@ -356,7 +356,8 @@ class SQLDBFile(
             logEvent(LoggingKey.execute_inquiry, "Statement prepared, executing query for statement", this)
         }
         measureTimeMillis {
-            resultSet = dialect.withQueryExecution(connection) { stm.executeQuery() }
+            dialect.beforeQuery(connection)
+            resultSet = stm.executeQuery()
         }.apply {
             logEvent(LoggingKey.execute_inquiry, "Query succesfully executed", this)
         }
@@ -398,6 +399,7 @@ class SQLDBFile(
     private fun closeResultSet() {
         resultSet.closeIfOpen()
         resultSet = null
+        dialect.afterResultSetClose(connection)
     }
 
     override fun eof() = eof
@@ -426,7 +428,7 @@ class SQLDBFile(
     }
 
     override fun close() {
-        resultSet.closeIfOpen()
+        closeResultSet()
         preparedStatements.values.forEach { it.close() }
     }
 }

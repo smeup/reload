@@ -24,10 +24,17 @@ interface SQLDialect {
     fun fetchSize(): Int? = null
 
     /**
-     * Wraps a SELECT execution, allowing dialects to adjust connection state
-     * (e.g. autoCommit) around the query and restore it afterwards.
+     * Called before a query is executed (ResultSet about to be opened).
+     * Allows dialects to adjust connection state (e.g. autoCommit) needed
+     * for the duration of reading from the resulting cursor.
      */
-    fun <T> withQueryExecution(connection: Connection, block: () -> T): T = block()
+    fun beforeQuery(connection: Connection) {}
+
+    /**
+     * Called after the ResultSet for a query is closed.
+     * Allows dialects to restore any connection state changed in [beforeQuery].
+     */
+    fun afterResultSetClose(connection: Connection) {}
 
     companion object {
         fun forUrl(url: String): SQLDialect = when {
@@ -73,13 +80,20 @@ class PostgreSQLDialect : SQLDialect {
 
     override fun fetchSize(): Int? = 100
 
-    override fun <T> withQueryExecution(connection: Connection, block: () -> T): T {
-        val savedAutoCommit = connection.autoCommit
+    private var savedAutoCommit: Boolean? = null
+
+    override fun beforeQuery(connection: Connection) {
+        if (savedAutoCommit == null) {
+            savedAutoCommit = connection.autoCommit
+        }
         connection.autoCommit = false
-        return try {
-            block()
-        } finally {
-            connection.autoCommit = savedAutoCommit
+    }
+
+    override fun afterResultSetClose(connection: Connection) {
+        savedAutoCommit?.let { saved ->
+            if (!connection.autoCommit) connection.commit()
+            connection.autoCommit = saved
+            savedAutoCommit = null
         }
     }
 
