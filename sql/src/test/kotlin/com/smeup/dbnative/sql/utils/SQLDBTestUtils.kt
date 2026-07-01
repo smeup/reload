@@ -142,6 +142,9 @@ enum class TestSQLDBType(
             driver = "org.postgresql.Driver",
             properties = mapOf("reload.dialect.enabled" to (System.getenv("RELOAD_DIALECT_ENABLED") ?: "true"))
         ),
+        createDatabase = { dbaConnection ->
+            dbaConnection.prepareStatement("CREATE SCHEMA IF NOT EXISTS public").use { it.execute() }
+        },
         destroyDatabase = { dbaConnection ->
             dbaConnection.prepareStatement("DROP SCHEMA IF EXISTS public CASCADE").use { it.execute() }
             dbaConnection.prepareStatement("CREATE SCHEMA public").use { it.execute() }
