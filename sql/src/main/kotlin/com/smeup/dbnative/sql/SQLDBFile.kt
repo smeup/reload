@@ -340,7 +340,7 @@ class SQLDBFile(
 
     private fun executeQuery(sql: String, values: List<String>) {
         eof = false
-        resultSet.closeIfOpen()
+        closeResultSet()
         logEvent(LoggingKey.execute_inquiry, "Preparing statement for query: $sql with bingings: $values")
         val stm: PreparedStatement
         measureTimeMillis {

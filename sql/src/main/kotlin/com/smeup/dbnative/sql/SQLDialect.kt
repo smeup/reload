@@ -76,13 +76,26 @@ class DefaultSQLDialect : SQLDialect {
     }
 }
 
-class PostgreSQLDialect : SQLDialect {
+class PostgreSQLDialect(
+    // Safety net: a query's ResultSet may legitimately stay open (and its transaction with
+    // it) across many separate native read calls, since callers aren't required to close it
+    // promptly. Bounding how long the resulting transaction can sit idle prevents an abandoned
+    // ResultSet from holding locks that block other connections (e.g. DDL) indefinitely.
+    private val idleInTransactionTimeoutMs: Long = 30_000
+) : SQLDialect {
 
     override fun fetchSize(): Int? = 100
 
     private var savedAutoCommit: Boolean? = null
+    private var idleTimeoutApplied = false
 
     override fun beforeQuery(connection: Connection) {
+        if (!idleTimeoutApplied) {
+            connection.createStatement().use {
+                it.execute("SET idle_in_transaction_session_timeout = $idleInTransactionTimeoutMs")
+            }
+            idleTimeoutApplied = true
+        }
         if (savedAutoCommit == null) {
             savedAutoCommit = connection.autoCommit
         }
@@ -91,8 +104,13 @@ class PostgreSQLDialect : SQLDialect {
 
     override fun afterResultSetClose(connection: Connection) {
         savedAutoCommit?.let { saved ->
-            if (!connection.autoCommit) connection.commit()
-            connection.autoCommit = saved
+            try {
+                if (!connection.autoCommit) connection.commit()
+                connection.autoCommit = saved
+            } catch (t: Throwable) {
+                // Connection may already be dead, e.g. terminated server-side by
+                // idle_in_transaction_session_timeout after being abandoned by the caller.
+            }
             savedAutoCommit = null
         }
     }
