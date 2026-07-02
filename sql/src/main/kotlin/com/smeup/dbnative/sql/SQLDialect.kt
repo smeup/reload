@@ -89,6 +89,15 @@ class PostgreSQLDialect(
     private var savedAutoCommit: Boolean? = null
     private var idleTimeoutApplied = false
 
+    // This dialect instance is shared by every SQLDBFile a SQLDBMManager opens (one dialect per
+    // manager, see SQLDBMManager.openFile), so beforeQuery/afterResultSetClose can interleave
+    // across multiple concurrently-open handles on the same connection, even single-threaded
+    // (e.g. driving one file while fully reading another to EOF for each record). Only commit
+    // and restore autoCommit once the last of those overlapping resultsets closes, otherwise an
+    // early-finishing handle would commit the shared transaction out from under a sibling handle
+    // that is still mid-read, closing its server-side cursor.
+    private var openResultSetCount = 0
+
     override fun beforeQuery(connection: Connection) {
         if (!idleTimeoutApplied) {
             connection.createStatement().use {
@@ -96,13 +105,17 @@ class PostgreSQLDialect(
             }
             idleTimeoutApplied = true
         }
-        if (savedAutoCommit == null) {
+        if (openResultSetCount == 0) {
             savedAutoCommit = connection.autoCommit
+            connection.autoCommit = false
         }
-        connection.autoCommit = false
+        openResultSetCount++
     }
 
     override fun afterResultSetClose(connection: Connection) {
+        if (openResultSetCount == 0) return
+        openResultSetCount--
+        if (openResultSetCount > 0) return
         savedAutoCommit?.let { saved ->
             try {
                 if (!connection.autoCommit) connection.commit()

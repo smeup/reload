@@ -41,6 +41,7 @@ class SQLDBFile(
     private var preparedStatements: MutableMap<String, PreparedStatement> = mutableMapOf()
     private var resultSet: ResultSet? = null
     private var actualRecord: Record? = null
+    private var dialectQueryOpen: Boolean = false
 
     private var lastNativeMethod: NativeMethod? = null
 
@@ -357,6 +358,7 @@ class SQLDBFile(
         }
         measureTimeMillis {
             dialect.beforeQuery(connection)
+            dialectQueryOpen = true
             resultSet = stm.executeQuery()
         }.apply {
             logEvent(LoggingKey.execute_inquiry, "Query succesfully executed", this)
@@ -399,7 +401,10 @@ class SQLDBFile(
     private fun closeResultSet() {
         resultSet.closeIfOpen()
         resultSet = null
-        dialect.afterResultSetClose(connection)
+        if (dialectQueryOpen) {
+            dialectQueryOpen = false
+            dialect.afterResultSetClose(connection)
+        }
     }
 
     override fun eof() = eof

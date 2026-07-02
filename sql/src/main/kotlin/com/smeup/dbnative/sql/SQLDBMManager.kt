@@ -38,7 +38,7 @@ open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBMa
         if (enabled) SQLDialect.forUrl(connectionConfig.url) else DefaultSQLDialect()
     }
 
-    private var openedFile = mutableMapOf<String, SQLDBFile>()
+    private val openedFiles = mutableListOf<SQLDBFile>()
 
     open val connection: Connection by lazy {
         logger?.logEvent(LoggingKey.connection, "Opening SQL connection on url ${connectionConfig.url}")
@@ -69,8 +69,8 @@ open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBMa
     }
 
     override fun close() {
-        openedFile.values.forEach { it.close() }
-        openedFile.clear()
+        openedFiles.forEach { it.close() }
+        openedFiles.clear()
         val lifetime = if (connectionOpenedAt > 0L) System.currentTimeMillis() - connectionOpenedAt else null
         logger?.logEvent(LoggingKey.connection, "Closing SQL connection on url ${connectionConfig.url}", lifetime)
         connection.close()
@@ -78,13 +78,14 @@ open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBMa
 
     override fun openFile(name: String): SQLDBFile {
         require(this.existFile(name))
-        openedFile.remove(name)?.close()
         return SQLDBFile(name = name, fileMetadata = metadataOf(name), connection = connection, logger, dialect)
-            .also { openedFile[name] = it }
+            .also { openedFiles.add(it) }
     }
 
     override fun closeFile(name: String) {
-        openedFile.remove(name)?.close()
+        val toClose = openedFiles.filter { it.name == name }
+        openedFiles.removeAll(toClose)
+        toClose.forEach { it.close() }
     }
 
     fun execute(sqlStatements: List<String>) {
