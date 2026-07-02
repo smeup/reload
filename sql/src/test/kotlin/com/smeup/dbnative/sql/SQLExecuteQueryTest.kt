@@ -40,6 +40,7 @@ class SQLExecuteQueryTest {
         @AfterClass
         @JvmStatic
         fun tearDown() {
+            dbManager.close()
             destroyDatabase()
         }
     }

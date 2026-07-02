@@ -39,6 +39,7 @@ class SQLUpdateTest {
         @AfterClass
         @JvmStatic
         fun tearDown() {
+            dbManager.close()
             destroyDatabase()
         }
     }

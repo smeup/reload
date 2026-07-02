@@ -45,6 +45,7 @@ class SQLMunicipalityPerfTest {
         @AfterClass
         @JvmStatic
         fun tearDown() {
+            dbManager.close()
             destroyDatabase()
         }
     }
