@@ -34,7 +34,8 @@ import kotlin.system.measureTimeMillis
 class SQLDBFile(
     override var name: String, override var fileMetadata: FileMetadata,
     var connection: Connection,
-    override var logger: Logger? = null
+    override var logger: Logger? = null,
+    private val dialect: SQLDialect = DefaultSQLDialect()
 ) : DBFile {
 
     private var preparedStatements: MutableMap<String, PreparedStatement> = mutableMapOf()
@@ -54,7 +55,7 @@ class SQLDBFile(
     //    if (indexes.isEmpty()) connection.orderingFields(fileMetadata.name) else indexes
     //}
 
-    private var adapter: Native2SQL = Native2SQL(this.fileMetadata)
+    private var adapter: Native2SQL = Native2SQL(this.fileMetadata, dialect)
     private var eof: Boolean = false
 
     private fun logEvent(loggingKey: LoggingKey, message: String, elapsedTime: Long? = null) =
@@ -254,6 +255,7 @@ class SQLDBFile(
         }
         lastNativeMethod = null
         telemetrySpan.endSpan()
+        if (!connection.autoCommit) connection.commit()
         return Result(record)
     }
 
@@ -305,6 +307,7 @@ class SQLDBFile(
         }
         lastNativeMethod = null
         telemetrySpan.endSpan()
+        if (!connection.autoCommit) connection.commit()
         return Result(record)
     }
 
@@ -327,6 +330,7 @@ class SQLDBFile(
         }
         lastNativeMethod = null
         telemetrySpan.endSpan()
+        if (!connection.autoCommit) connection.commit()
         return Result(record)
     }
 
@@ -336,7 +340,7 @@ class SQLDBFile(
 
     private fun executeQuery(sql: String, values: List<String>) {
         eof = false
-        resultSet.closeIfOpen()
+        closeResultSet()
         logEvent(LoggingKey.execute_inquiry, "Preparing statement for query: $sql with bingings: $values")
         val stm: PreparedStatement
         measureTimeMillis {
@@ -345,7 +349,7 @@ class SQLDBFile(
                     sql,
                     ResultSet.TYPE_FORWARD_ONLY,
                     ResultSet.CONCUR_UPDATABLE
-                )
+                ).also { ps -> dialect.fetchSize()?.let { ps.fetchSize = it } }
             }
             stm.bind(values)
         }.apply {
@@ -422,7 +426,7 @@ class SQLDBFile(
     }
 
     override fun close() {
-        resultSet.closeIfOpen()
+        closeResultSet()
         preparedStatements.values.forEach { it.close() }
     }
 }

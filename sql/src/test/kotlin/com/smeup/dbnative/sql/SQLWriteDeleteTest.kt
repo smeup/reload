@@ -41,6 +41,7 @@ class SQLWriteDeleteTest {
         @AfterClass
         @JvmStatic
         fun tearDown() {
+            dbManager.close()
             destroyDatabase()
         }
     }

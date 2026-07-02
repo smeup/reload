@@ -35,7 +35,7 @@ class ReadInstruction(var method: ReadMethod, var keys: List<String>) {
     fun admitEmptyKeys() = method == ReadMethod.READ || method == ReadMethod.READP
 }
 
-class Native2SQL(val fileMetadata: FileMetadata) {
+class Native2SQL(val fileMetadata: FileMetadata, private val dialect: SQLDialect = DefaultSQLDialect()) {
     private var lastReadInstruction: ReadInstruction? = null
     private var lastPositioningInstruction: PositioningInstruction? = null
 
@@ -232,6 +232,17 @@ class Native2SQL(val fileMetadata: FileMetadata) {
         ) { "\"$it\" ${sortOrder.symbol}" }
     }
 
+    private fun buildDialectPositioningSQL(columns: String, tableName: String, forward: Boolean): Pair<String, List<String>> {
+        val inst = lastPositioningInstruction!!
+        val conditions = dialect.buildPositioningConditions(
+            fileMetadata.fileKeys, inst.keys, inst.method, forward, ::buildReplacements
+        )
+        val sql = conditions.joinToString(" UNION ") { (where, _) ->
+            "SELECT $columns FROM $tableName WHERE $where"
+        } + " ${getSQLOrderByClause()}"
+        return Pair(sql, conditions.flatMap { it.second })
+    }
+
     fun getReadSqlStatement(): Pair<String, List<String>> {
         checkPositioning()
         return Pair(
@@ -260,7 +271,7 @@ class Native2SQL(val fileMetadata: FileMetadata) {
 
             ReadMethod.READ -> {
                 checkRead()
-                return getReadCoherentSql(true)
+                return getReadCoherentSql()
             }
 
             ReadMethod.READP -> {
@@ -277,44 +288,15 @@ class Native2SQL(val fileMetadata: FileMetadata) {
         }
     }
 
-    /*
-    // Senza posizionamento
-    SELECT * FROM EMPLOF
-
-    // Con posizionamento
-    SELECT *
-    FROM EMPL0F
-    WHERE WORKDEPT = 'C01'
-    UNION ALL
-    SELECT *
-    FROM EMPL0F
-    WHERE WORKDEPT >= 'C01'
-     */
-    private fun getReadCoherentSql(fullUnion: Boolean = false): Pair<String, List<String>> {
+    private fun getReadCoherentSql(): Pair<String, List<String>> {
         val columns = fileMetadata.fields.joinToString(", ") { "\"${it.name}\"" }
         val tableName = "\"${fileMetadata.tableName}\""
-        val queries = mutableListOf<String>()
-        val replacements = mutableListOf<String>()
-
-        lastPositioningInstruction?.let {
-            val conditions = it.keys.mapIndexed { index, key ->
-                val operator = if (index == it.keys.size - 1 && it.method == PositioningMethod.SETGT) ">" else ">="
-                "\"${fileMetadata.fileKeys[index]}\" $operator ?"
-            }.joinToString(" AND ")
-
-            queries.add("SELECT $columns FROM $tableName WHERE $conditions")
-            replacements.addAll(buildReplacements(it.keys))
-        } ?: run {
-            return Pair("SELECT $columns FROM $tableName", replacements)
-        }
-
-        return Pair(queries.joinToString(" ") + " " + getSQLOrderByClause(), replacements)
+        lastPositioningInstruction ?: return Pair("SELECT $columns FROM $tableName", emptyList())
+        return buildDialectPositioningSQL(columns, tableName, lastReadInstruction!!.method.forward)
     }
 
     private fun getCoherentSql(fullUnion: Boolean = false): Pair<String, List<String>> {
-        val queries = mutableListOf<String>()
         val replacements = mutableListOf<String>()
-        val comparison = getComparison()
 
         if (lastPositioningInstruction == null) {
             var columns = ""
@@ -337,32 +319,10 @@ class Native2SQL(val fileMetadata: FileMetadata) {
                 ), replacements
             )
         } else {
-            if (lastPositioningInstruction!!.keys.size == 1) {
-                queries.add(
-                    getSQL(
-                        fileMetadata.fields,
-                        fileMetadata.fileKeys.subList(0, 1),
-                        comparison.first,
-                        fileMetadata.tableName
-                    )
-                )
-                replacements.addAll(buildReplacements(lastPositioningInstruction!!.keys))
-            } else {
-                val limit = if (fullUnion) 1 else 2
-                for (i in lastPositioningInstruction!!.keys.size downTo limit) {
-                    queries.add(
-                        getSQL(
-                            fileMetadata.fields,
-                            fileMetadata.fileKeys.subList(0, i),
-                            if (i == lastPositioningInstruction!!.keys.size) comparison.first else comparison.second,
-                            fileMetadata.tableName
-                        )
-                    )
-                    replacements.addAll(buildReplacements(lastPositioningInstruction!!.keys.subList(0, i)))
-                }
-            }
+            val columns = fileMetadata.fields.joinToString(", ") { "\"${it.name}\"" }
+            val tableName = "\"${fileMetadata.tableName}\""
+            return buildDialectPositioningSQL(columns, tableName, lastReadInstruction!!.method.forward)
         }
-        return Pair(queries.joinToString(" UNION ") + " " + getSQLOrderByClause(), replacements)
     }
 }
 

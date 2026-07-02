@@ -33,7 +33,12 @@ open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBMa
     private var sqlLog: Boolean = false
     private var connectionOpenedAt: Long = 0L
 
-    //private var openedFile = mutableMapOf<String, SQLDBFile>()
+    open val dialect: SQLDialect by lazy {
+        val enabled = connectionConfig.properties["reload.dialect.enabled"] != "false"
+        if (enabled) SQLDialect.forUrl(connectionConfig.url) else DefaultSQLDialect()
+    }
+
+    protected val openedFiles = mutableListOf<SQLDBFile>()
 
     open val connection: Connection by lazy {
         logger?.logEvent(LoggingKey.connection, "Opening SQL connection on url ${connectionConfig.url}")
@@ -57,15 +62,21 @@ open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBMa
             connectionOpenedAt = System.currentTimeMillis()
             logger?.logEvent(LoggingKey.connection, "SQL connection successfully opened", this)
         }
+        dialect.onConnectionOpened(conn)
         conn
     }
 
     override fun validateConfig() {
     }
 
-    override fun close() {
-        //openedFile.values.forEach { it.close()}
-        //openedFile.clear()
+    override fun close() = finishConnection(commit = true)
+
+    override fun abort() = finishConnection(commit = false)
+
+    private fun finishConnection(commit: Boolean) {
+        openedFiles.forEach { it.close() }
+        openedFiles.clear()
+        dialect.onConnectionClosing(connection, commit)
         val lifetime = if (connectionOpenedAt > 0L) System.currentTimeMillis() - connectionOpenedAt else null
         logger?.logEvent(LoggingKey.connection, "Closing SQL connection on url ${connectionConfig.url}", lifetime)
         connection.close()
@@ -73,11 +84,14 @@ open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBMa
 
     override fun openFile(name: String): SQLDBFile {
         require(this.existFile(name))
-        return SQLDBFile(name = name, fileMetadata = metadataOf(name), connection = connection, logger)
+        return SQLDBFile(name = name, fileMetadata = metadataOf(name), connection = connection, logger, dialect)
+            .also { openedFiles.add(it) }
     }
 
     override fun closeFile(name: String) {
-        //openedFile.remove(name)?.close()
+        val toClose = openedFiles.filter { it.name == name }
+        openedFiles.removeAll(toClose)
+        toClose.forEach { it.close() }
     }
 
     fun execute(sqlStatements: List<String>) {

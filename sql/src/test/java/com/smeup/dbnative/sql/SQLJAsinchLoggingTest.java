@@ -4,7 +4,6 @@ import com.smeup.dbnative.file.Record;
 import com.smeup.dbnative.log.Logger;
 import com.smeup.dbnative.log.LoggingEvent;
 import com.smeup.dbnative.log.LoggingLevel;
-import com.smeup.dbnative.sql.utils.TestSQLDBType;
 import kotlin.Unit;
 import kotlin.jvm.functions.Function1;
 import org.jetbrains.annotations.NotNull;
@@ -45,7 +44,7 @@ public class SQLJAsinchLoggingTest {
 
     @Test
     public void findRecordsIfSetllFromLastRecord() {
-        SQLDBMManager dbManager = new SQLDBMManager(TestSQLDBType.HSQLDB.getConnectionConfig());
+        SQLDBMManager dbManager = dbManagerForTest();
         AsynchronousLogger logger = getLogger();
         dbManager.setLogger(logger);
         try{
