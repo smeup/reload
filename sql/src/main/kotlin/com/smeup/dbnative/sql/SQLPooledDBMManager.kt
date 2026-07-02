@@ -18,12 +18,20 @@ class SQLPooledDBMManager(
         measureTimeMillis { conn = pool.getConnection() }.apply {
             logger?.logEvent(LoggingKey.connection, "Borrowed pooled connection from url ${connectionConfig.url}", this)
         }
+        dialect.onConnectionOpened(conn)
         conn
     }
     override val connection: Connection by connectionLazy
 
-    override fun close() {
+    override fun close() = finishConnection(commit = true)
+
+    override fun abort() = finishConnection(commit = false)
+
+    private fun finishConnection(commit: Boolean) {
         if (connectionLazy.isInitialized()) {
+            openedFiles.forEach { it.close() }
+            openedFiles.clear()
+            dialect.onConnectionClosing(connection, commit)
             logger?.logEvent(LoggingKey.connection, "Returning pooled connection to url ${connectionConfig.url}")
             connection.close()
         }

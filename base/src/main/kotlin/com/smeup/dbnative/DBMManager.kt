@@ -43,4 +43,10 @@ interface DBMManager<Q, RS> : AutoCloseable {
      * */
     fun validateConfig()
     fun <T> executeQuery(query: Q, block: (RS) -> T): T
+
+    /**
+     * Closes this manager after an aborted unit of work. Implementations backed by a
+     * transaction should roll back rather than commit. Defaults to [close].
+     */
+    fun abort() { close() }
 }

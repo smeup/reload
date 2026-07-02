@@ -24,17 +24,19 @@ interface SQLDialect {
     fun fetchSize(): Int? = null
 
     /**
-     * Called before a query is executed (ResultSet about to be opened).
-     * Allows dialects to adjust connection state (e.g. autoCommit) needed
-     * for the duration of reading from the resulting cursor.
+     * Called once, right after a new physical [Connection] is obtained (opened or borrowed
+     * from a pool), before any query runs. Allows dialects to apply connection-scoped setup
+     * for the whole lifetime of this connection (e.g. session timeouts, autoCommit mode).
      */
-    fun beforeQuery(connection: Connection) {}
+    fun onConnectionOpened(connection: Connection) {}
 
     /**
-     * Called after the ResultSet for a query is closed.
-     * Allows dialects to restore any connection state changed in [beforeQuery].
+     * Called once, right before a [Connection] is closed or returned to a pool.
+     * Must tolerate the connection already being dead/unusable.
+     *
+     * @param commit `true` to commit pending work, `false` to roll it back.
      */
-    fun afterResultSetClose(connection: Connection) {}
+    fun onConnectionClosing(connection: Connection, commit: Boolean) {}
 
     companion object {
         fun forUrl(url: String): SQLDialect = when {
@@ -87,38 +89,21 @@ class PostgreSQLDialect(
     override fun fetchSize(): Int? = 100
 
     private var savedAutoCommit: Boolean? = null
-    private var idleTimeoutApplied = false
 
-    // This dialect instance is shared by every SQLDBFile a SQLDBMManager opens (one dialect per
-    // manager, see SQLDBMManager.openFile), so beforeQuery/afterResultSetClose can interleave
-    // across multiple concurrently-open handles on the same connection, even single-threaded
-    // (e.g. driving one file while fully reading another to EOF for each record). Only commit
-    // and restore autoCommit once the last of those overlapping resultsets closes, otherwise an
-    // early-finishing handle would commit the shared transaction out from under a sibling handle
-    // that is still mid-read, closing its server-side cursor.
-    private var openResultSetCount = 0
-
-    override fun beforeQuery(connection: Connection) {
-        if (!idleTimeoutApplied) {
-            connection.createStatement().use {
-                it.execute("SET idle_in_transaction_session_timeout = $idleInTransactionTimeoutMs")
-            }
-            idleTimeoutApplied = true
+    override fun onConnectionOpened(connection: Connection) {
+        connection.createStatement().use {
+            it.execute("SET idle_in_transaction_session_timeout = $idleInTransactionTimeoutMs")
         }
-        if (openResultSetCount == 0) {
-            savedAutoCommit = connection.autoCommit
-            connection.autoCommit = false
-        }
-        openResultSetCount++
+        savedAutoCommit = connection.autoCommit
+        connection.autoCommit = false
     }
 
-    override fun afterResultSetClose(connection: Connection) {
-        if (openResultSetCount == 0) return
-        openResultSetCount--
-        if (openResultSetCount > 0) return
+    override fun onConnectionClosing(connection: Connection, commit: Boolean) {
         savedAutoCommit?.let { saved ->
             try {
-                if (!connection.autoCommit) connection.commit()
+                if (!connection.autoCommit) {
+                    if (commit) connection.commit() else connection.rollback()
+                }
                 connection.autoCommit = saved
             } catch (t: Throwable) {
                 // Connection may already be dead, e.g. terminated server-side by

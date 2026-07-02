@@ -38,7 +38,7 @@ open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBMa
         if (enabled) SQLDialect.forUrl(connectionConfig.url) else DefaultSQLDialect()
     }
 
-    private val openedFiles = mutableListOf<SQLDBFile>()
+    protected val openedFiles = mutableListOf<SQLDBFile>()
 
     open val connection: Connection by lazy {
         logger?.logEvent(LoggingKey.connection, "Opening SQL connection on url ${connectionConfig.url}")
@@ -62,15 +62,21 @@ open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBMa
             connectionOpenedAt = System.currentTimeMillis()
             logger?.logEvent(LoggingKey.connection, "SQL connection successfully opened", this)
         }
+        dialect.onConnectionOpened(conn)
         conn
     }
 
     override fun validateConfig() {
     }
 
-    override fun close() {
+    override fun close() = finishConnection(commit = true)
+
+    override fun abort() = finishConnection(commit = false)
+
+    private fun finishConnection(commit: Boolean) {
         openedFiles.forEach { it.close() }
         openedFiles.clear()
+        dialect.onConnectionClosing(connection, commit)
         val lifetime = if (connectionOpenedAt > 0L) System.currentTimeMillis() - connectionOpenedAt else null
         logger?.logEvent(LoggingKey.connection, "Closing SQL connection on url ${connectionConfig.url}", lifetime)
         connection.close()
