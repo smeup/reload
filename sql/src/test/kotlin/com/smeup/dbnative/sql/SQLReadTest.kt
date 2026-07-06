@@ -43,6 +43,7 @@ class SQLReadTest {
         @AfterClass
         @JvmStatic
         fun tearDown() {
+            dbManager.close()
             destroyDatabase()
             destroyView()
             destroyIndex()
@@ -158,6 +159,41 @@ class SQLReadTest {
         assertTrue(dbFile.setgt(buildMunicipalityKey("IT", "CAL", "CS")))
         val result = dbFile.read()
         assertEquals("ALBI", getMunicipalityName(result.record))
+        dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
+    }
+
+    @Test
+    fun interleavedReadsOnTwoFilesOnSameManager() {
+        // Two SQLDBFiles opened on the same SQLDBMManager share one connection/dialect;
+        // interleaving reads on both before either reaches EOF exercised the reference-counted
+        // autoCommit toggle that used to live in PostgreSQLDialect. Both cursors must still read
+        // to completion correctly with the same totals as the equivalent isolated tests above.
+        val employeeFile = dbManager.openFile(EMPLOYEE_VIEW_NAME)
+        val municipalityFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
+        municipalityFile.setll(buildCountryKey("IT", "LOM", "BS"))
+
+        var employeeReadResult = employeeFile.read()
+        var municipalityReadResult = municipalityFile.read()
+        employeeReadResult = employeeFile.read()
+        municipalityReadResult = municipalityFile.read()
+
+        var employeeReaded = 2
+        while (!employeeFile.eof()) {
+            employeeReadResult = employeeFile.read()
+            employeeReaded++
+        }
+        assertEquals(43, employeeReaded)
+        assertTrue(employeeReadResult.indicatorEQ)
+
+        var municipalityReaded = 2
+        while (!municipalityFile.eof()) {
+            municipalityReadResult = municipalityFile.read()
+            municipalityReaded++
+        }
+        assertEquals(1002, municipalityReaded)
+        assertTrue(municipalityReadResult.indicatorEQ)
+
+        dbManager.closeFile(EMPLOYEE_VIEW_NAME)
         dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
 }

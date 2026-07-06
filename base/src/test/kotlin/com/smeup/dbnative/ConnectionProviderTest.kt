@@ -93,7 +93,26 @@ class ConnectionProviderTest {
             ConnectionProvider.currentManager("FILEB")
         }
         assertTrue(spies.isNotEmpty())
-        assertTrue(spies.all { it.closed })
+        assertTrue(spies.all { it.closed && !it.aborted })
+    }
+
+    @Test
+    fun withScope_abortsManagersOnException() {
+        val spies = mutableListOf<SpyDBMManager>()
+        val collectingFactory: Map<String, (ConnectionConfig) -> DBMManager<*, *>> = CONFIG_MAP.mapValues { { connConfig: ConnectionConfig ->
+            SpyDBMManager(connConfig).also { spies.add(it) }
+        } }
+        ConnectionProvider.configure(CONFIG_MAP, collectingFactory)
+
+        assertFailsWith<RuntimeException> {
+            ConnectionProvider.withScope(TEST_APP) {
+                ConnectionProvider.currentManager("FILEA")
+                throw RuntimeException("boom")
+            }
+        }
+
+        assertTrue(spies.isNotEmpty())
+        assertTrue(spies.all { it.aborted && !it.closed })
     }
 
     @Test
@@ -222,6 +241,7 @@ class ConnectionProviderTest {
  */
 class SpyDBMManager(override val connectionConfig: ConnectionConfig) : DBMManager<Nothing, Nothing> {
     var closed = false
+    var aborted = false
 
     override fun existFile(name: String) = false
     override fun registerMetadata(metadata: FileMetadata, overwrite: Boolean) {}
@@ -232,4 +252,5 @@ class SpyDBMManager(override val connectionConfig: ConnectionConfig) : DBMManage
     override fun validateConfig() {}
     override fun <T> executeQuery(query: Nothing, block: (Nothing) -> T): T = throw UnsupportedOperationException()
     override fun close() { closed = true }
+    override fun abort() { aborted = true }
 }

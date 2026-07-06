@@ -90,13 +90,18 @@ object ConnectionProvider {
         val logger = loggerFor(app)
         logger?.logEvent(LoggingKey.provider, "Scope opened for app '$app'")
         threadLocal.set(app to mutableMapOf())
+        var completedNormally = false
         try {
             block.execute()
+            completedNormally = true
         } finally {
             val (_, managers) = threadLocal.get()
             threadLocal.remove()
-            logger?.logEvent(LoggingKey.provider, "Scope closed for app '$app', closing ${managers.size} manager(s)")
-            managers.values.forEach { it.close() }
+            logger?.logEvent(
+                LoggingKey.provider,
+                "Scope closed for app '$app', ${if (completedNormally) "closing" else "aborting"} ${managers.size} manager(s)"
+            )
+            managers.values.forEach { if (completedNormally) it.close() else it.abort() }
         }
     }
 

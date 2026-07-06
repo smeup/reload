@@ -40,6 +40,7 @@ class SQLExecuteQueryTest {
         @AfterClass
         @JvmStatic
         fun tearDown() {
+            dbManager.close()
             destroyDatabase()
         }
     }
@@ -47,7 +48,7 @@ class SQLExecuteQueryTest {
     @Test
     fun `executeQuery returns rows matching placeholder filter`() {
         val count = dbManager.executeQuery(
-            SQLQuery("SELECT * FROM $MUNICIPALITY_TABLE_NAME WHERE NAZ = ?", listOf("IT"))
+            SQLQuery("SELECT * FROM \"$MUNICIPALITY_TABLE_NAME\" WHERE \"NAZ\" = ?", listOf("IT"))
         ) { rs ->
             var n = 0
             while (rs.next()) {
@@ -62,7 +63,7 @@ class SQLExecuteQueryTest {
     @Test
     fun `executeQuery with no matching rows yields empty ResultSet`() {
         val hasRows = dbManager.executeQuery(
-            SQLQuery("SELECT * FROM $MUNICIPALITY_TABLE_NAME WHERE NAZ = ?", listOf("XX"))
+            SQLQuery("SELECT * FROM \"$MUNICIPALITY_TABLE_NAME\" WHERE \"NAZ\" = ?", listOf("XX"))
         ) { rs -> rs.next() }
         assertFalse(hasRows)
     }
@@ -70,7 +71,7 @@ class SQLExecuteQueryTest {
     @Test
     fun `executeQuery without parameters returns all rows`() {
         val hasRows = dbManager.executeQuery(
-            SQLQuery("SELECT * FROM $MUNICIPALITY_TABLE_NAME")
+            SQLQuery("SELECT * FROM \"$MUNICIPALITY_TABLE_NAME\"")
         ) { rs -> rs.next() }
         assertTrue(hasRows)
     }
@@ -78,7 +79,7 @@ class SQLExecuteQueryTest {
     @Test
     fun `resources are closed after block — second call on same query succeeds`() {
         repeat(2) {
-            dbManager.executeQuery(SQLQuery("SELECT * FROM $MUNICIPALITY_TABLE_NAME")) { rs ->
+            dbManager.executeQuery(SQLQuery("SELECT * FROM \"$MUNICIPALITY_TABLE_NAME\"")) { rs ->
                 assertTrue(rs.next())
             }
         }

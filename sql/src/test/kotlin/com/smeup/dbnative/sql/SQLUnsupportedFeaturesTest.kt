@@ -42,6 +42,7 @@ class SQLUnsupportedFeaturesTest {
         @AfterClass
         @JvmStatic
         fun tearDown() {
+            dbManager.close()
             destroyDatabase()
         }
     }
