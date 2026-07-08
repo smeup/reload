@@ -57,6 +57,7 @@ class SQLDBFile(
 
     private var adapter: Native2SQL = Native2SQL(this.fileMetadata, dialect)
     private var eof: Boolean = false
+    private var rowsInCurrentPage: Int = 0
 
     private fun logEvent(loggingKey: LoggingKey, message: String, elapsedTime: Long? = null) =
         logger?.logEvent(loggingKey, message, elapsedTime, lastNativeMethod, fileMetadata.name)
@@ -340,6 +341,7 @@ class SQLDBFile(
 
     private fun executeQuery(sql: String, values: List<String>) {
         eof = false
+        rowsInCurrentPage = 0
         closeResultSet()
         logEvent(LoggingKey.execute_inquiry, "Preparing statement for query: $sql with bingings: $values")
         val stm: PreparedStatement
@@ -370,17 +372,28 @@ class SQLDBFile(
         while (!found && !eof) {
             count++
             if (result.record.isEmpty()) {
-                eof = true
-                result.indicatorEQ = true
-                closeResultSet()
-                logEvent(LoggingKey.read_data, "No more record to read")
+                val pageSize = adapter.pageSize()
+                val canResumeNextPage = adapter.hasPositioning() && actualRecord != null &&
+                        pageSize != null && rowsInCurrentPage == pageSize
+                if (canResumeNextPage) {
+                    logEvent(LoggingKey.read_data, "Page of $pageSize rows exhausted, fetching next page")
+                    executeQuery(adapter.getResumeSqlStatement(actualRecord!!))
+                    result = Result(resultSet.toValues())
+                } else {
+                    eof = true
+                    result.indicatorEQ = true
+                    closeResultSet()
+                    logEvent(LoggingKey.read_data, "No more record to read")
+                }
             }
             else if (adapter.lastReadMatchRecord(result.record)) {
                 logEvent(LoggingKey.read_data, "Record read: ${result.record}")
                 actualRecord = result.record.duplicate()
+                rowsInCurrentPage++
                 eof = false
                 found = true
             } else {
+                rowsInCurrentPage++
                 logEvent(LoggingKey.read_data, "Readed records: ${count}")
                 if (exitOnUnmatch) {
                     eof = true

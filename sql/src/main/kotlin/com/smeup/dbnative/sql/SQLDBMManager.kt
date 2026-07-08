@@ -35,7 +35,10 @@ open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBMa
 
     open val dialect: SQLDialect by lazy {
         val enabled = connectionConfig.properties["reload.dialect.enabled"] != "false"
-        if (enabled) SQLDialect.forUrl(connectionConfig.url) else DefaultSQLDialect()
+        // Passed through as-is (absent/non-numeric -> null); each SQLDialect implementation
+        // decides what null (and a zero-or-negative value) means for itself.
+        val pageSize = connectionConfig.properties["reload.dialect.pageSize"]?.toIntOrNull()
+        if (enabled) SQLDialect.forUrl(connectionConfig.url, pageSize) else DefaultSQLDialect(pageSize)
     }
 
     protected val openedFiles = mutableListOf<SQLDBFile>()

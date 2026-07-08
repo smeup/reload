@@ -237,10 +237,38 @@ class Native2SQL(val fileMetadata: FileMetadata, private val dialect: SQLDialect
         val conditions = dialect.buildPositioningConditions(
             fileMetadata.fileKeys, inst.keys, inst.method, forward, ::buildReplacements
         )
-        val sql = conditions.joinToString(" UNION ") { (where, _) ->
+        var sql = conditions.joinToString(" UNION ") { (where, _) ->
             "SELECT $columns FROM $tableName WHERE $where"
         } + " ${getSQLOrderByClause()}"
+        dialect.pageSize()?.let { sql += " FETCH FIRST $it ROWS ONLY" }
         return Pair(sql, conditions.flatMap { it.second })
+    }
+
+    /**
+     * True while a positioning-based query (bounded by [SQLDialect.pageSize] and thus subject to
+     * transparent page resume) is the active read path, as opposed to CHAIN or an un-positioned
+     * full-table READ, neither of which go through [buildDialectPositioningSQL].
+     */
+    fun hasPositioning(): Boolean = lastPositioningInstruction != null
+
+    fun pageSize(): Int? = dialect.pageSize()
+
+    /**
+     * Builds the SQL to continue a positioning-based scan once its current page (capped by
+     * [SQLDialect.pageSize]) is exhausted, seeking strictly past [lastRecord] in the current read
+     * direction. Replaces [lastPositioningInstruction] but deliberately leaves [lastReadInstruction]
+     * untouched (unlike [setPositioning]) so the caller-visible read cycle (e.g. the original
+     * readEqual key filter) is unaffected by this internal repage.
+     */
+    fun getResumeSqlStatement(lastRecord: Record): Pair<String, List<String>> {
+        checkPositioning()
+        val forward = lastReadInstruction!!.method.forward
+        val resumeMethod = if (forward) PositioningMethod.SETGT else PositioningMethod.SETLL
+        val resumeKeys = fileMetadata.fileKeys.map { lastRecord[it].orEmpty() }
+        lastPositioningInstruction = PositioningInstruction(resumeMethod, resumeKeys)
+        val columns = fileMetadata.fields.joinToString(", ") { "\"${it.name}\"" }
+        val tableName = "\"${fileMetadata.tableName}\""
+        return buildDialectPositioningSQL(columns, tableName, forward)
     }
 
     fun getReadSqlStatement(): Pair<String, List<String>> {
