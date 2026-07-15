@@ -1,52 +1,10 @@
 package com.smeup.dbnative.sql
 
-import org.junit.After
 import org.junit.Test
-import java.sql.Connection
-import java.sql.DriverManager
-import java.sql.Statement
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
-
-/**
- * Fake [Connection] backed by a real HSQLDB connection (for members we don't care about),
- * with [createStatement]/`autoCommit`/[commit]/[rollback] intercepted and recorded so
- * [PostgreSQLDialect]'s connection-lifecycle hooks can be tested without a real PostgreSQL
- * instance. `execute` on statements created here is recorded but never actually run against
- * HSQLDB, since [PostgreSQLDialect] issues PostgreSQL-only syntax.
- */
-private class TrackingConnection(private val real: Connection) : Connection by real {
-    val executedSql = mutableListOf<String>()
-    var commitCount = 0
-    var rollbackCount = 0
-    var throwOnCommit = false
-    var throwOnRollback = false
-    private var autoCommitState = real.autoCommit
-
-    override fun createStatement(): Statement {
-        val realStatement = real.createStatement()
-        return object : Statement by realStatement {
-            override fun execute(sql: String): Boolean {
-                executedSql.add(sql)
-                return true
-            }
-        }
-    }
-
-    override fun getAutoCommit(): Boolean = autoCommitState
-    override fun setAutoCommit(autoCommit: Boolean) { autoCommitState = autoCommit }
-
-    override fun commit() {
-        commitCount++
-        if (throwOnCommit) throw RuntimeException("connection is dead")
-    }
-
-    override fun rollback() {
-        rollbackCount++
-        if (throwOnRollback) throw RuntimeException("connection is dead")
-    }
-}
 
 class PostgreSQLDialectTest {
 
@@ -55,61 +13,20 @@ class PostgreSQLDialectTest {
     private val posKeys = listOf("A", "B")
     private val identity: (List<String>) -> List<String> = { it }
 
-    private fun newTrackingConnection() =
-        TrackingConnection(DriverManager.getConnection("jdbc:hsqldb:mem:PG_DIALECT_TEST", "sa", "root"))
-
-    @After
-    fun tearDown() {
-        DriverManager.getConnection("jdbc:hsqldb:mem:PG_DIALECT_TEST;shutdown=true", "sa", "root").runCatching { close() }
+    @Test
+    fun `pageSize defaults to 100 when unset`() {
+        assertEquals(100, PostgreSQLDialect().pageSize())
     }
 
     @Test
-    fun `onConnectionOpened sets idle timeout and disables autoCommit`() {
-        val connection = newTrackingConnection()
-        connection.autoCommit = true
-
-        dialect.onConnectionOpened(connection)
-
-        assertEquals(1, connection.executedSql.size)
-        assertTrue(connection.executedSql[0].contains("idle_in_transaction_session_timeout"))
-        assertFalse(connection.autoCommit)
+    fun `pageSize uses the configured value`() {
+        assertEquals(50, PostgreSQLDialect(pageSize = 50).pageSize())
     }
 
     @Test
-    fun `onConnectionClosing commits and restores autoCommit when commit is true`() {
-        val connection = newTrackingConnection()
-        connection.autoCommit = true
-        dialect.onConnectionOpened(connection)
-
-        dialect.onConnectionClosing(connection, commit = true)
-
-        assertEquals(1, connection.commitCount)
-        assertEquals(0, connection.rollbackCount)
-        assertTrue(connection.autoCommit)
-    }
-
-    @Test
-    fun `onConnectionClosing rolls back and restores autoCommit when commit is false`() {
-        val connection = newTrackingConnection()
-        connection.autoCommit = true
-        dialect.onConnectionOpened(connection)
-
-        dialect.onConnectionClosing(connection, commit = false)
-
-        assertEquals(0, connection.commitCount)
-        assertEquals(1, connection.rollbackCount)
-        assertTrue(connection.autoCommit)
-    }
-
-    @Test
-    fun `onConnectionClosing swallows exception from a dead connection`() {
-        val connection = newTrackingConnection()
-        connection.autoCommit = true
-        dialect.onConnectionOpened(connection)
-        connection.throwOnCommit = true
-
-        dialect.onConnectionClosing(connection, commit = true)
-        // no exception propagated
+    fun `pageSize is disabled when configured as zero or negative`() {
+        assertNull(PostgreSQLDialect(pageSize = 0).pageSize())
+        assertNull(PostgreSQLDialect(pageSize = -1).pageSize())
     }
 
     @Test

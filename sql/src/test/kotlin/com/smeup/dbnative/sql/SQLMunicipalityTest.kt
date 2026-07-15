@@ -416,6 +416,25 @@ class SQLMunicipalityTest {
         dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
 
+    // Lombardy has 1244 municipalities, well over the default 100-row page cap, so this
+    // exercises the transparent page-resume path in SQLDBFile.readNextFromResultSet several
+    // times over within a single setll+readEqual loop.
+    @Test
+    fun t16_findAllOfLombardyAcrossPageBoundaryWithSetllAndReadE2() {
+        val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
+        val key2 = buildMunicipalityKey("IT", "LOM")
+        assertTrue(dbFile.setll(key2))
+        val istatCodes = mutableListOf<String>()
+        while (!dbFile.eof()) {
+            val result = dbFile.readEqual(key2)
+            if (result.record.isNotEmpty()) {
+                istatCodes.add(result.record["ISTAT"]!!)
+            }
+        }
+        assertEquals(1244, istatCodes.size)
+        assertEquals(istatCodes.size, istatCodes.toSet().size)
+        dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
+    }
 
 }
 

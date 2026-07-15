@@ -24,6 +24,16 @@ interface SQLDialect {
     fun fetchSize(): Int? = null
 
     /**
+     * Max rows a single positioning-based SELECT returns (via `FETCH FIRST n ROWS ONLY`),
+     * or null for no cap. Standard SQL, supported by PostgreSQL, DB2/AS400, and HSQLDB: without
+     * it, the query is planned as an unbounded range scan, since the only signal the optimizer
+     * has that not all matching rows will be fetched is a generic assumption (e.g. PostgreSQL's
+     * cursor_tuple_fraction, ~10% of the match by default). Native2SQL transparently re-queries
+     * for the next page once a page is fully consumed, so this is invisible to DBFile callers.
+     */
+    fun pageSize(): Int? = 100
+
+    /**
      * Called once, right after a new physical [Connection] is obtained (opened or borrowed
      * from a pool), before any query runs. Allows dialects to apply connection-scoped setup
      * for the whole lifetime of this connection (e.g. session timeouts, autoCommit mode).
@@ -39,11 +49,23 @@ interface SQLDialect {
     fun onConnectionClosing(connection: Connection, commit: Boolean) {}
 
     companion object {
-        fun forUrl(url: String): SQLDialect = when {
-            url.startsWith("jdbc:postgresql", ignoreCase = true) -> PostgreSQLDialect()
-            else -> DefaultSQLDialect()
+        fun forUrl(url: String, pageSize: Int? = null): SQLDialect = when {
+            url.startsWith("jdbc:postgresql", ignoreCase = true) -> PostgreSQLDialect(pageSize = pageSize)
+            url.startsWith("jdbc:as400", ignoreCase = true) -> DB2400Dialect(pageSize = pageSize)
+            else -> DefaultSQLDialect(pageSize = pageSize)
         }
     }
+}
+
+/**
+ * Resolves the raw `reload.dialect.pageSize` value (as passed through by [SQLDialect.forUrl])
+ * against a dialect's own default: `null` means the property wasn't set, so [default] applies;
+ * zero or negative is an explicit opt-out, meaning no cap regardless of [default].
+ */
+private fun resolvePageSize(pageSize: Int?, default: Int?): Int? = when {
+    pageSize == null -> default
+    pageSize <= 0 -> null
+    else -> pageSize
 }
 
 private fun comparisonFor(method: PositioningMethod, forward: Boolean): Pair<Comparison, Comparison> =
@@ -54,7 +76,36 @@ private fun comparisonFor(method: PositioningMethod, forward: Boolean): Pair<Com
         else                                          -> Pair(Comparison.LE, Comparison.LT)
     }
 
-class DefaultSQLDialect : SQLDialect {
+/**
+ * Per-key-level UNION strategy: one fragment per key-prefix length, combined by Native2SQL
+ * with UNION. Portable to any engine, since it doesn't rely on row-value constructor support.
+ */
+private fun unionPositioningConditions(
+    fileKeys: List<String>,
+    positioningKeys: List<String>,
+    method: PositioningMethod,
+    forward: Boolean,
+    buildReplacements: (List<String>) -> List<String>
+): List<Pair<String, List<String>>> {
+    val (firstCmp, otherCmp) = comparisonFor(method, forward)
+    return (positioningKeys.size downTo 1).map { i ->
+        val where = (0 until i).joinToString(" AND ") { idx ->
+            val cmp = when {
+                idx < i - 1               -> Comparison.EQ.symbol
+                i == positioningKeys.size -> firstCmp.symbol
+                else                      -> otherCmp.symbol
+            }
+            "\"${fileKeys[idx]}\" $cmp ?"
+        }
+        Pair(where, buildReplacements(positioningKeys.subList(0, i)))
+    }
+}
+
+class DefaultSQLDialect(pageSize: Int? = null) : SQLDialect {
+
+    private val pageSize: Int? = resolvePageSize(pageSize, default = 100)
+
+    override fun pageSize(): Int? = pageSize
 
     override fun buildPositioningConditions(
         fileKeys: List<String>,
@@ -62,56 +113,40 @@ class DefaultSQLDialect : SQLDialect {
         method: PositioningMethod,
         forward: Boolean,
         buildReplacements: (List<String>) -> List<String>
-    ): List<Pair<String, List<String>>> {
-        val (firstCmp, otherCmp) = comparisonFor(method, forward)
-        return (positioningKeys.size downTo 1).map { i ->
-            val where = (0 until i).joinToString(" AND ") { idx ->
-                val cmp = when {
-                    idx < i - 1               -> Comparison.EQ.symbol
-                    i == positioningKeys.size -> firstCmp.symbol
-                    else                      -> otherCmp.symbol
-                }
-                "\"${fileKeys[idx]}\" $cmp ?"
-            }
-            Pair(where, buildReplacements(positioningKeys.subList(0, i)))
-        }
-    }
+    ): List<Pair<String, List<String>>> =
+        unionPositioningConditions(fileKeys, positioningKeys, method, forward, buildReplacements)
 }
 
-class PostgreSQLDialect(
-    // Safety net: a query's ResultSet may legitimately stay open (and its transaction with
-    // it) across many separate native read calls, since callers aren't required to close it
-    // promptly. Bounding how long the resulting transaction can sit idle prevents an abandoned
-    // ResultSet from holding locks that block other connections (e.g. DDL) indefinitely.
-    private val idleInTransactionTimeoutMs: Long = 30_000
-) : SQLDialect {
+/**
+ * DB2 for i (AS400), reached via the IBM Toolbox JDBC driver (`jdbc:as400://...`,
+ * com.ibm.as400.access.AS400JDBCDriver). Uses the same portable per-key-level UNION strategy
+ * as [DefaultSQLDialect] rather than PostgreSQL's row-value tuple comparison, since row-value
+ * constructor support for inequality comparisons isn't confirmed across DB2-for-i versions.
+ */
+class DB2400Dialect(pageSize: Int? = null) : SQLDialect {
 
-    override fun fetchSize(): Int? = 100
+    // Unlike the other dialects, absent config leaves this uncapped by default: row-value/FETCH
+    // FIRST behavior across DB2-for-i versions isn't validated yet, so opt-in via
+    // reload.dialect.pageSize until that's confirmed on real AS400 hardware.
+    private val pageSize: Int? = resolvePageSize(pageSize, default = null)
 
-    private var savedAutoCommit: Boolean? = null
+    override fun pageSize(): Int? = pageSize
 
-    override fun onConnectionOpened(connection: Connection) {
-        connection.createStatement().use {
-            it.execute("SET idle_in_transaction_session_timeout = $idleInTransactionTimeoutMs")
-        }
-        savedAutoCommit = connection.autoCommit
-        connection.autoCommit = false
-    }
+    override fun buildPositioningConditions(
+        fileKeys: List<String>,
+        positioningKeys: List<String>,
+        method: PositioningMethod,
+        forward: Boolean,
+        buildReplacements: (List<String>) -> List<String>
+    ): List<Pair<String, List<String>>> =
+        unionPositioningConditions(fileKeys, positioningKeys, method, forward, buildReplacements)
+}
 
-    override fun onConnectionClosing(connection: Connection, commit: Boolean) {
-        savedAutoCommit?.let { saved ->
-            try {
-                if (!connection.autoCommit) {
-                    if (commit) connection.commit() else connection.rollback()
-                }
-                connection.autoCommit = saved
-            } catch (t: Throwable) {
-                // Connection may already be dead, e.g. terminated server-side by
-                // idle_in_transaction_session_timeout after being abandoned by the caller.
-            }
-            savedAutoCommit = null
-        }
-    }
+class PostgreSQLDialect(pageSize: Int? = null) : SQLDialect {
+
+    private val pageSize: Int? = resolvePageSize(pageSize, default = 100)
+
+    override fun pageSize(): Int? = pageSize
 
     override fun buildPositioningConditions(
         fileKeys: List<String>,
