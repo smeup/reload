@@ -11,6 +11,7 @@ enum class LoggingKey(val level: LoggingLevel){
     native_access_method(LoggingLevel.TRACE),
     read_data(LoggingLevel.TRACE),
     execute_inquiry(LoggingLevel.DEBUG),
+    execute_update(LoggingLevel.DEBUG),
     search_data(LoggingLevel.DEBUG),
     connection(LoggingLevel.DEBUG),
     performance_metric(LoggingLevel.DEBUG),

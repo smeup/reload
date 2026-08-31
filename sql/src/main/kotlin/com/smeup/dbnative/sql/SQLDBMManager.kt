@@ -140,6 +140,37 @@ open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBMa
     }
 
     /**
+     * Executes a parameterized DML statement (INSERT / UPDATE / DELETE) and returns
+     * the number of affected rows. The underlying [PreparedStatement] is always closed.
+     */
+    fun executeUpdate(query: SQLQuery): Int {
+        val telemetrySpan = TelemetrySpan("EXECUTE UPDATE Execution")
+        logger?.logEvent(
+            LoggingKey.execute_update,
+            "Preparing statement for update: ${query.query} with bindings: ${query.parameters}"
+        )
+
+        val stmt: PreparedStatement
+        measureTimeMillis {
+            stmt = connection.prepareStatement(query.query)
+            stmt.bind(query.parameters.map { it ?: "" })
+        }.apply {
+            logger?.logEvent(LoggingKey.execute_update, "Statement prepared, executing update", this)
+        }
+
+        return stmt.use {
+            val affectedRows: Int
+            measureTimeMillis {
+                affectedRows = stmt.executeUpdate()
+            }.apply {
+                logger?.logEvent(LoggingKey.execute_update, "Update successfully executed", this)
+            }
+            telemetrySpan.endSpan()
+            affectedRows
+        }
+    }
+
+    /**
      * WARNING: The caller is responsible for closing the returned [ResultSet] and the underlying
      * [PreparedStatement]. Failing to do so will cause resource leaks.
      * Prefer [executeQuery] with a lambda block instead — it handles cleanup automatically:
