@@ -161,7 +161,7 @@ fun Connection.orderingFields(tableName: String): List<String> {
             if (it.next()) {
                 // TODO handle DESC and ASC keywords
                 val fields = it.getString(field).uppercase().substringAfter("ORDER BY").split(",")
-                result.addAll(fields.map { fl: String -> fl.substring(fl.lastIndexOf('.') + 1).trim('`', ' ')  })
+                result.addAll(fields.map { fl: String -> fl.substring(fl.lastIndexOf('.') + 1).trim('`', '"', ' ')  })
             }
         }
     }
