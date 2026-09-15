@@ -108,9 +108,10 @@ class Native2SQL(
         if (rrnMode) {
             require(rrnOrderingColumns.isNotEmpty()) {
                 "Cannot perform a Relative Record Number access on unkeyed file '${fileMetadata.name}' " +
-                    "(table \"${fileMetadata.tableName}\"): no primary key, unique index, or ordering " +
-                    "view found to derive a deterministic row order for RRN. Define one of these on the " +
-                    "table, or declare explicit keys in the file's metadata."
+                    "(table \"${fileMetadata.tableName}\"): no primary key or unique index found on the " +
+                    "table, and the file's metadata declares no fields to fall back on for a " +
+                    "deterministic row order. Declare at least one field in the file's metadata, or " +
+                    "explicit keys, to fix this."
             }
             require(keys.size <= 1) {
                 "Relative Record Number access takes at most one positioning/read value (the RRN), got $keys"

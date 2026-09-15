@@ -34,8 +34,8 @@ import kotlin.test.assertTrue
  * Covers Relative Record Number (RRN) access on unkeyed files (Native2SQLAdapter's `rrnMode`,
  * see checkKeys()/tableExpr()): CHAIN by RRN against a file whose metadata declares no keys is
  * resolved via `ROW_NUMBER() OVER (ORDER BY ...)`, using the physical table's primary key first
- * and falling back to an ordering view's declared ORDER BY, per [Connection.primaryKeys] /
- * [Connection.orderingFields] in JDBCUtils.kt.
+ * and falling back to every field declared in the file's own metadata, per
+ * [SQLDBFile]'s `rrnOrderingColumns`.
  */
 class SQLRRNChainTest {
 
@@ -53,7 +53,6 @@ class SQLRRNChainTest {
             dbManager = dbManagerForTest()
             createAndPopulateMunicipalityTable(dbManager)
             createAndPopulateEmployeeTable(dbManager)
-            createAndPopulateEmployeeView(dbManager)
         }
 
         @AfterClass
@@ -77,38 +76,46 @@ class SQLRRNChainTest {
     }
 
     @Test
-    fun chainByRRNUsingViewOrderingFallback() {
-        // EMPLOYEE_VIEW_RRN: same view as EMPLOYEE_VIEW, but declared unkeyed - the view has no
-        // primary key, so connection.primaryKeys() returns empty and RRN falls back to
-        // connection.orderingFields(), which parses the view's declared ORDER BY (WORKDEPT, EMPNO).
-        dbManager.registerMetadata(FileMetadata("EMPLOYEE_VIEW_RRN", EMPLOYEE_VIEW_NAME, employeeFields, emptyList()), true)
-        val dbFile = dbManager.openFile("EMPLOYEE_VIEW_RRN")
-        val result = dbFile.chain(listOf("2"))
-        // Second row ordered by (WORKDEPT, EMPNO): WORKDEPT="A00" rows ordered by EMPNO are
-        // 000010, 000110, 000120, 200010, 200120 - RRN 2 is EMPNO 000110 (LUCCHESSI), distinct
-        // from the PK-only ordering test above (which lands on EMPNO 000020 at RRN 2).
-        assertEquals("000110", result.record["EMPNO"]?.trim())
-        assertEquals("LUCCHESSI", result.record["LASTNAME"]?.trim())
-        dbManager.closeFile("EMPLOYEE_VIEW_RRN")
+    fun chainByRRNUsingMetadataFieldsFallback() {
+        // NOPKTABLE has no primary key at all: RRN falls back to ordering by every field declared
+        // in the file's own metadata (CODE, DESCR), in that order - rows are inserted in a
+        // deliberately different order to prove the fallback drives the order, not insertion order.
+        createFile(
+            TypedMetadata(
+                "NOPKTABLE",
+                "NOPKTABLE",
+                listOf("CODE" fieldByType CharacterType(5), "DESCR" fieldByType CharacterType(20)),
+                emptyList(),
+            ),
+            dbManager,
+        )
+        dbManager.execute(
+            listOf(
+                "INSERT INTO \"NOPKTABLE\" (CODE, DESCR) VALUES ('C', 'third')",
+                "INSERT INTO \"NOPKTABLE\" (CODE, DESCR) VALUES ('A', 'first')",
+                "INSERT INTO \"NOPKTABLE\" (CODE, DESCR) VALUES ('B', 'second')",
+            ),
+        )
+        val dbFile = dbManager.openFile("NOPKTABLE")
+        val result = dbFile.chain(listOf("1"))
+        assertEquals("A", result.record["CODE"]?.trim())
+        assertEquals("first", result.record["DESCR"]?.trim())
+        dbManager.closeFile("NOPKTABLE")
     }
 
     @Test
     fun chainByRRNWithNoResolvableOrderingThrows() {
-        // A fresh table with no primary key and not a view: neither primaryKeys() nor
-        // orderingFields() can resolve a deterministic order, so RRN access must fail clearly
-        // instead of silently returning a nondeterministically-ordered row.
-        val typedFields = listOf(
-            "EMPNO" fieldByType CharacterType(6),
-            "FIRSTNME" fieldByType CharacterType(12)
-        )
-        createFile(TypedMetadata("NOORDERTBL", "NOORDERTBL", typedFields, emptyList()), dbManager)
-        val dbFile = dbManager.openFile("NOORDERTBL")
+        // No primary key resolvable and no fields declared in metadata to fall back on: RRN
+        // access must fail clearly instead of building a query with no deterministic order.
+        // checkKeys() throws before any SQL touches the table, so it doesn't even need to exist.
+        dbManager.registerMetadata(FileMetadata("EMPTYMETA", "EMPTYMETA_NONEXISTENT", emptyList(), emptyList()), true)
+        val dbFile = dbManager.openFile("EMPTYMETA")
         val ex = assertFailsWith<IllegalArgumentException> { dbFile.chain(listOf("1")) }
         assertTrue(
             ex.message!!.contains("no primary key", ignoreCase = true),
-            "Expected message to mention the missing primary key/ordering, was: ${ex.message}"
+            "Expected message to mention the missing primary key/fields, was: ${ex.message}",
         )
-        dbManager.closeFile("NOORDERTBL")
+        dbManager.closeFile("EMPTYMETA")
     }
 
     @Test
