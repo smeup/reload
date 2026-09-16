@@ -46,6 +46,22 @@ class JT400DBFile(override var name: String,
         this.eofReached = false
     }
 
+    /**
+     * The JT400 backend only implements keyed access (it's built entirely around JTOpen's
+     * `KeyedFile` API). Relative Record Number access against an unkeyed (arrival-sequence) file
+     * — signaled by empty `fileMetadata.fileKeys` — has no implementation here; fail fast with a
+     * clear error instead of the unrelated `IndexOutOfBoundsException`/silent misbehavior that
+     * `keys2Array` would otherwise produce.
+     */
+    private fun requireKeyed(operation: String) {
+        if (fileMetadata.fileKeys.isEmpty()) {
+            throw UnsupportedOperationException(
+                "$operation by Relative Record Number is not supported by ${this::class.simpleName} " +
+                    "for unkeyed file '${fileMetadata.name}': the JT400 backend only implements keyed access."
+            )
+        }
+    }
+
     override fun eof(): Boolean {
         /*
         try {
@@ -88,6 +104,7 @@ class JT400DBFile(override var name: String,
     }
 
     override fun setll(keys: List<String>): Boolean {
+        requireKeyed("SETLL")
         this.previousAction = CursorAction.SETLL
         resetStatus()
         try {
@@ -115,6 +132,7 @@ class JT400DBFile(override var name: String,
     }
 
     override fun setgt(keys: List<String>): Boolean {
+        requireKeyed("SETGT")
         this.previousAction = CursorAction.SETGT
         resetStatus()
         try {
@@ -140,6 +158,7 @@ class JT400DBFile(override var name: String,
     }
 
     override fun chain(keys: List<String>): Result {
+        requireKeyed("CHAIN")
         this.previousAction = CursorAction.NONE
         resetStatus()
         //TODO("Attenzione alla gestione del lock")
@@ -222,6 +241,7 @@ class JT400DBFile(override var name: String,
     }
 
     override fun readEqual(keys: List<String>): Result {
+        requireKeyed("READE")
         resetStatus()
         //https://code400.com/forum/forum/iseries-programming-languages/java/8386-noobie-question
         return try {
@@ -272,6 +292,7 @@ class JT400DBFile(override var name: String,
     }
 
     override fun readPreviousEqual(keys: List<String>): Result {
+        requireKeyed("READPE")
         resetStatus()
         return try {
             if (this.previousAction==CursorAction.SETLL) {

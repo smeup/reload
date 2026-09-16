@@ -44,18 +44,23 @@ class SQLDBFile(
 
     private var lastNativeMethod: NativeMethod? = null
 
-    //Search from: metadata, primary key, unique index, view ordering fields
-    //private val thisFileKeys: List<String> by lazy {
-    //    // TODO: think about a right way (local file maybe?) to retrieve keylist
-    //    var indexes = this.fileMetadata.fileKeys
-    //    if(indexes.isEmpty()){
-    //        indexes = connection.primaryKeys(fileMetadata.name)
-    //    }
-    //    }
-    //    if (indexes.isEmpty()) connection.orderingFields(fileMetadata.name) else indexes
-    //}
+    // For an unkeyed (arrival-sequence) file, resolve the columns that define a deterministic
+    // row order so Native2SQL can derive a Relative Record Number via ROW_NUMBER(): prefer the
+    // table's primary key (or its first unique index, both via primaryKeys()), falling back to
+    // every field declared in the file's own metadata, in their declared order. The metadata
+    // fallback is deliberately vendor-neutral - unlike parsing a view's ORDER BY out of a
+    // dialect-specific system catalog, it only relies on information reload already has. Empty
+    // for keyed files, which never need it. Resolved eagerly (not lazily) since `connection` is
+    // already open here.
+    private val rrnOrderingColumns: List<String> =
+        if (fileMetadata.fileKeys.isEmpty()) {
+            connection.primaryKeys(fileMetadata.tableName)
+                .ifEmpty { fileMetadata.fields.map { it.name } }
+        } else {
+            emptyList()
+        }
 
-    private var adapter: Native2SQL = Native2SQL(this.fileMetadata, dialect)
+    private var adapter: Native2SQL = Native2SQL(this.fileMetadata, dialect, rrnOrderingColumns)
     private var eof: Boolean = false
     private var rowsInCurrentPage: Int = 0
 

@@ -35,9 +35,27 @@ class ReadInstruction(var method: ReadMethod, var keys: List<String>) {
     fun admitEmptyKeys() = method == ReadMethod.READ || method == ReadMethod.READP
 }
 
-class Native2SQL(val fileMetadata: FileMetadata, private val dialect: SQLDialect = DefaultSQLDialect()) {
+/** Synthetic column name standing in for a row's Relative Record Number when [Native2SQL] is in
+ *  RRN mode (i.e. `fileMetadata.fileKeys` is empty). Never a real column in the physical table. */
+private const val RRN_COLUMN = "RRN__"
+
+class Native2SQL(
+    val fileMetadata: FileMetadata,
+    private val dialect: SQLDialect = DefaultSQLDialect(),
+    /** Columns to order by when deriving a Relative Record Number for an unkeyed file (via
+     *  `ROW_NUMBER() OVER (ORDER BY ...)`); ignored when `fileMetadata.fileKeys` is non-empty. */
+    private val rrnOrderingColumns: List<String> = emptyList()
+) {
     private var lastReadInstruction: ReadInstruction? = null
     private var lastPositioningInstruction: PositioningInstruction? = null
+
+    /** True when this file is unkeyed (arrival-sequence): CHAIN/SETLL/SETGT/READE/READPE
+     *  operate by Relative Record Number instead of by key. */
+    private val rrnMode: Boolean = fileMetadata.fileKeys.isEmpty()
+
+    /** The column name(s) every key-column-driven code path below should use: the real file
+     *  keys, or (RRN mode) the single synthetic RRN column. */
+    private val effectiveKeys: List<String> = if (rrnMode) listOf(RRN_COLUMN) else fileMetadata.fileKeys
 
     /**
      * Build values replacements for store procedures settings empty numerics values as 0
@@ -45,7 +63,7 @@ class Native2SQL(val fileMetadata: FileMetadata, private val dialect: SQLDialect
     private fun buildReplacements(values: List<String>): MutableList<String> {
         return values.mapIndexed { index, s ->
             s.ifEmpty {
-                if (isNumeric(fileMetadata.fileKeys[index])) {
+                if (isNumeric(effectiveKeys[index])) {
                     "0"
                 } else {
                     ""
@@ -55,9 +73,30 @@ class Native2SQL(val fileMetadata: FileMetadata, private val dialect: SQLDialect
     }
 
     private fun isNumeric(fieldName: String): Boolean {
+        if (fieldName == RRN_COLUMN) return true
         val field = fileMetadata.fields.find { it.name == fieldName }
         return field?.numeric ?: false
     }
+
+    /** FROM-clause target: the real table, or (RRN mode) a [SQLDialect.buildRowNumberedSubquery]
+     *  numbering every row by [rrnOrderingColumns], aliased back to the table name so every
+     *  existing caller that expects a plain quoted table-name expression keeps working unmodified. */
+    private fun tableExpr(): String =
+        if (rrnMode) {
+            val realColumns = fileMetadata.fields.joinToString(", ") { "\"${it.name}\"" }
+            val subquery = dialect.buildRowNumberedSubquery(
+                realColumns, "\"${fileMetadata.tableName}\"", rrnOrderingColumns, RRN_COLUMN
+            )
+            "$subquery \"${fileMetadata.tableName}\""
+        } else {
+            "\"${fileMetadata.tableName}\""
+        }
+
+    /** Outer SELECT column list: the RPG-visible fields, plus (RRN mode) the synthetic RRN
+     *  column so callers (page-resume, key-match) can read the current row's RRN back out. */
+    private fun outerColumns(): String =
+        (fileMetadata.fields.map { "\"${it.name}\"" } + if (rrnMode) listOf("\"$RRN_COLUMN\"") else emptyList())
+            .joinToString(", ")
 
     private fun checkPositioning() {
         requireNotNull(lastPositioningInstruction) {
@@ -66,11 +105,21 @@ class Native2SQL(val fileMetadata: FileMetadata, private val dialect: SQLDialect
     }
 
     private fun checkKeys(keys: List<String>) {
-        require(fileMetadata.fileKeys.size > 0) {
-            "No keys specified in metadata"
-        }
-        require(keys.size <= fileMetadata.fileKeys.size) {
-            "Number of metadata keys $fileMetadata.fileKeys less than number of positioning/read keys $keys"
+        if (rrnMode) {
+            require(rrnOrderingColumns.isNotEmpty()) {
+                "Cannot perform a Relative Record Number access on unkeyed file '${fileMetadata.name}' " +
+                    "(table \"${fileMetadata.tableName}\"): no primary key or unique index found on the " +
+                    "table, and the file's metadata declares no fields to fall back on for a " +
+                    "deterministic row order. Declare at least one field in the file's metadata, or " +
+                    "explicit keys, to fix this."
+            }
+            require(keys.size <= 1) {
+                "Relative Record Number access takes at most one positioning/read value (the RRN), got $keys"
+            }
+        } else {
+            require(keys.size <= fileMetadata.fileKeys.size) {
+                "Number of metadata keys $fileMetadata.fileKeys less than number of positioning/read keys $keys"
+            }
         }
     }
 
@@ -176,7 +225,7 @@ class Native2SQL(val fileMetadata: FileMetadata, private val dialect: SQLDialect
         }
 
         lastReadInstruction!!.keys.mapIndexed { index, value ->
-            val keyname = fileMetadata.fileKeys.get(index)
+            val keyname = effectiveKeys.get(index)
             if (record[keyname]?.trim() != value.trim()) {
                 return false
             }
@@ -226,7 +275,7 @@ class Native2SQL(val fileMetadata: FileMetadata, private val dialect: SQLDialect
 
     private fun getSQLOrderByClause(): String {
         val sortOrder = getSortOrder()
-        return fileMetadata.fileKeys.joinToString(
+        return effectiveKeys.joinToString(
             prefix = "ORDER BY ",
             separator = ", "
         ) { "\"$it\" ${sortOrder.symbol}" }
@@ -235,7 +284,7 @@ class Native2SQL(val fileMetadata: FileMetadata, private val dialect: SQLDialect
     private fun buildDialectPositioningSQL(columns: String, tableName: String, forward: Boolean): Pair<String, List<String>> {
         val inst = lastPositioningInstruction!!
         val conditions = dialect.buildPositioningConditions(
-            fileMetadata.fileKeys, inst.keys, inst.method, forward, ::buildReplacements
+            effectiveKeys, inst.keys, inst.method, forward, ::buildReplacements
         )
         var sql = conditions.joinToString(" UNION ") { (where, _) ->
             "SELECT $columns FROM $tableName WHERE $where"
@@ -264,21 +313,19 @@ class Native2SQL(val fileMetadata: FileMetadata, private val dialect: SQLDialect
         checkPositioning()
         val forward = lastReadInstruction!!.method.forward
         val resumeMethod = if (forward) PositioningMethod.SETGT else PositioningMethod.SETLL
-        val resumeKeys = fileMetadata.fileKeys.map { lastRecord[it].orEmpty() }
+        val resumeKeys = effectiveKeys.map { lastRecord[it].orEmpty() }
         lastPositioningInstruction = PositioningInstruction(resumeMethod, resumeKeys)
-        val columns = fileMetadata.fields.joinToString(", ") { "\"${it.name}\"" }
-        val tableName = "\"${fileMetadata.tableName}\""
-        return buildDialectPositioningSQL(columns, tableName, forward)
+        return buildDialectPositioningSQL(outerColumns(), tableExpr(), forward)
     }
 
     fun getReadSqlStatement(): Pair<String, List<String>> {
         checkPositioning()
         return Pair(
             getSQL(
-                fileMetadata.fields,
-                fileMetadata.fileKeys.subList(0, lastPositioningInstruction!!.keys.size),
+                outerColumns(),
+                effectiveKeys.subList(0, lastPositioningInstruction!!.keys.size),
                 Comparison.EQ,
-                fileMetadata.tableName
+                tableExpr()
             ), lastPositioningInstruction!!.keys
         )
     }
@@ -289,10 +336,10 @@ class Native2SQL(val fileMetadata: FileMetadata, private val dialect: SQLDialect
                 checkReadKeys()
                 return Pair(
                     getSQL(
-                        fileMetadata.fields,
-                        fileMetadata.fileKeys.subList(0, lastReadInstruction!!.keys.size),
+                        outerColumns(),
+                        effectiveKeys.subList(0, lastReadInstruction!!.keys.size),
                         Comparison.EQ,
-                        fileMetadata.tableName
+                        tableExpr()
                     ), lastReadInstruction!!.keys
                 )
             }
@@ -317,8 +364,8 @@ class Native2SQL(val fileMetadata: FileMetadata, private val dialect: SQLDialect
     }
 
     private fun getReadCoherentSql(): Pair<String, List<String>> {
-        val columns = fileMetadata.fields.joinToString(", ") { "\"${it.name}\"" }
-        val tableName = "\"${fileMetadata.tableName}\""
+        val columns = outerColumns()
+        val tableName = tableExpr()
         lastPositioningInstruction ?: return Pair("SELECT $columns FROM $tableName", emptyList())
         return buildDialectPositioningSQL(columns, tableName, lastReadInstruction!!.method.forward)
     }
@@ -327,14 +374,9 @@ class Native2SQL(val fileMetadata: FileMetadata, private val dialect: SQLDialect
         val replacements = mutableListOf<String>()
 
         if (lastPositioningInstruction == null) {
-            var columns = ""
-            fileMetadata.fields.forEachIndexed { index, k ->
-                run {
-                    columns += "\"" + k.name + "\", "
-                }
-            }
+            val columns = outerColumns()
             var value = ""
-            fileMetadata.fileKeys.forEachIndexed { index, k ->
+            effectiveKeys.forEachIndexed { index, k ->
                 run {
                     value += "\"" + k + "\" " + Comparison.EQ.symbol + " ? AND "
                 }
@@ -342,27 +384,21 @@ class Native2SQL(val fileMetadata: FileMetadata, private val dialect: SQLDialect
             replacements.addAll(buildReplacements(lastReadInstruction!!.keys))
 
             return Pair(
-                "SELECT " + columns.removeSuffix(", ") + "FROM \"${fileMetadata.tableName}\" WHERE " + value.removeSuffix(
-                    " AND "
-                ), replacements
+                "SELECT $columns FROM ${tableExpr()} WHERE " + value.removeSuffix(" AND "), replacements
             )
         } else {
-            val columns = fileMetadata.fields.joinToString(", ") { "\"${it.name}\"" }
-            val tableName = "\"${fileMetadata.tableName}\""
-            return buildDialectPositioningSQL(columns, tableName, lastReadInstruction!!.method.forward)
+            return buildDialectPositioningSQL(outerColumns(), tableExpr(), lastReadInstruction!!.method.forward)
         }
     }
 }
 
-private fun getSQL(fields: List<Field>, keys: List<String>, comparison: Comparison, tableName: String): String {
-
-    val columns = fields.joinToString(", ") { "\"${it.name}\"" }
+private fun getSQL(columns: String, keys: List<String>, comparison: Comparison, fromClause: String): String {
 
     val conditions = keys.mapIndexed { index, key ->
         "\"$key\" ${if (index < keys.size - 1) Comparison.EQ.symbol else comparison.symbol} ?"
     }.joinToString(" AND ")
 
-    return "SELECT $columns FROM \"$tableName\" WHERE $conditions"
+    return "SELECT $columns FROM $fromClause WHERE $conditions"
 }
 
 

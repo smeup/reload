@@ -34,6 +34,29 @@ interface SQLDialect {
     fun pageSize(): Int? = 100
 
     /**
+     * A derived-table expression that numbers every row of [fromTable] by [orderByColumns]
+     * (ascending) as a synthetic column aliased [rrnColumn], used to derive Relative Record
+     * Number access on an unkeyed file via `ROW_NUMBER()`. [columns] are the real column names to
+     * project through unchanged (never `*`, to avoid ambiguity/duplicate-column errors on some
+     * engines when combined with a computed column). Returns a parenthesized subquery with no
+     * outer alias - the caller adds one.
+     *
+     * Default implementation pre-sorts in a nested derived table and numbers rows with an
+     * order-less `ROW_NUMBER() OVER ()` on top of it, rather than the more direct
+     * `ROW_NUMBER() OVER (ORDER BY ...)`: not every engine's window-function grammar accepts an
+     * ORDER BY inside OVER() (verified: HSQLDB, used by this project's own test suite, rejects it
+     * outright with a syntax error), while a simple, unshuffled wrapping SELECT reliably preserves
+     * its child's materialized row order in every engine this project targets. Override this for
+     * an engine confirmed to support the native ORDER BY-in-OVER() form (see [PostgreSQLDialect],
+     * [DB2400Dialect]) for a more directly-expressed, equally correct query.
+     */
+    fun buildRowNumberedSubquery(columns: String, fromTable: String, orderByColumns: List<String>, rrnColumn: String): String {
+        val orderBy = orderByColumns.joinToString(", ") { "\"$it\"" }
+        return "(SELECT $columns, ROW_NUMBER() OVER () AS \"$rrnColumn\" " +
+            "FROM (SELECT $columns FROM $fromTable ORDER BY $orderBy) \"${rrnColumn}_SORT\")"
+    }
+
+    /**
      * Called once, right after a new physical [Connection] is obtained (opened or borrowed
      * from a pool), before any query runs. Allows dialects to apply connection-scoped setup
      * for the whole lifetime of this connection (e.g. session timeouts, autoCommit mode).
@@ -140,6 +163,13 @@ class DB2400Dialect(pageSize: Int? = null) : SQLDialect {
         buildReplacements: (List<String>) -> List<String>
     ): List<Pair<String, List<String>>> =
         unionPositioningConditions(fileKeys, positioningKeys, method, forward, buildReplacements)
+
+    // DB2 for i supports ORDER BY directly inside OVER(): use the native, more directly-expressed
+    // form rather than the portable pre-sort workaround the default implementation falls back to.
+    override fun buildRowNumberedSubquery(columns: String, fromTable: String, orderByColumns: List<String>, rrnColumn: String): String {
+        val orderBy = orderByColumns.joinToString(", ") { "\"$it\"" }
+        return "(SELECT $columns, ROW_NUMBER() OVER (ORDER BY $orderBy) AS \"$rrnColumn\" FROM $fromTable)"
+    }
 }
 
 class PostgreSQLDialect(pageSize: Int? = null) : SQLDialect {
@@ -172,5 +202,12 @@ class PostgreSQLDialect(pageSize: Int? = null) : SQLDialect {
             "$lhs ${cmp.symbol} $rhs" to replacements
         }
         return listOf(Pair(where, params))
+    }
+
+    // PostgreSQL supports ORDER BY directly inside OVER(): use the native, more directly-expressed
+    // form rather than the portable pre-sort workaround the default implementation falls back to.
+    override fun buildRowNumberedSubquery(columns: String, fromTable: String, orderByColumns: List<String>, rrnColumn: String): String {
+        val orderBy = orderByColumns.joinToString(", ") { "\"$it\"" }
+        return "(SELECT $columns, ROW_NUMBER() OVER (ORDER BY $orderBy) AS \"$rrnColumn\" FROM $fromTable)"
     }
 }
