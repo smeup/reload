@@ -50,8 +50,10 @@ class SQLDBFile(
     // every field declared in the file's own metadata, in their declared order. The metadata
     // fallback is deliberately vendor-neutral - unlike parsing a view's ORDER BY out of a
     // dialect-specific system catalog, it only relies on information reload already has. Empty
-    // for keyed files, which never need it. Resolved eagerly (not lazily) since `connection` is
-    // already open here.
+    // for keyed files: Native2SQL never wraps a keyed file's FROM in the ROW_NUMBER() derived
+    // table (see Native2SQLAdapter.tableExpr's doc - doing so on Default/HSQLDB breaks
+    // update()/delete()'s JDBC-updatable-ResultSet requirement), so keyed files never need this.
+    // Resolved eagerly (not lazily) since `connection` is already open here.
     private val rrnOrderingColumns: List<String> =
         if (fileMetadata.fileKeys.isEmpty()) {
             connection.primaryKeys(fileMetadata.tableName)
@@ -299,6 +301,11 @@ class SQLDBFile(
             // record post update will be "record"
             var atLeastOneFieldChanged = false
             actualRecord?.forEach {
+                // actualRecord carries RRN_COLUMN (kept for getResumeSqlStatement/lastReadMatchRecord
+                // on the *next* read - see readNextFromResultSet) even for a keyed file, on dialects
+                // that project a direct RRN expression. It isn't a real column: the caller's record
+                // never has it, and the ResultSet has no updatable "RRN__" to write to either.
+                if (it.key == RRN_COLUMN) return@forEach
                 val fieldValue = record.getValue(it.key)
                 if (fieldValue != it.value) {
                     atLeastOneFieldChanged = true
@@ -393,7 +400,11 @@ class SQLDBFile(
             }
             else if (adapter.lastReadMatchRecord(result.record)) {
                 logEvent(LoggingKey.read_data, "Record read: ${result.record}")
+                // actualRecord (used by getResumeSqlStatement/lastReadMatchRecord on the *next*
+                // call) must keep RRN_COLUMN - only the Result handed back to the RPG side has it
+                // stripped, so it never leaks into the RPG-visible field set.
                 actualRecord = result.record.duplicate()
+                result.rrn = result.record.remove(RRN_COLUMN)?.trim()?.toLongOrNull()
                 rowsInCurrentPage++
                 eof = false
                 found = true

@@ -28,6 +28,8 @@ import org.junit.BeforeClass
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -42,6 +44,12 @@ class SQLRRNChainTest {
     companion object {
 
         private lateinit var dbManager: SQLDBMManager
+
+        // Several assertions below are dialect-dependent: PostgreSQL's __RNN is now an
+        // unconditional contract (every reload-backed table has it, including keyed ones - see
+        // SQLDBTestUtils.createFile's isPostgres branch), so a keyed file's output RRN and an
+        // unkeyed file's row ordering behave differently there than on Default/HSQLDB.
+        private fun isPostgres() = dbManager.connectionConfig.url.startsWith("jdbc:postgresql", ignoreCase = true)
 
         private val employeeFields = listOf(
             Field("EMPNO"), Field("FIRSTNME"), Field("MIDINIT"), Field("LASTNAME"), Field("WORKDEPT")
@@ -72,14 +80,36 @@ class SQLRRNChainTest {
         val result = dbFile.chain(listOf("2"))
         assertEquals("000020", result.record["EMPNO"]?.trim())
         assertEquals("THOMPSON", result.record["LASTNAME"]?.trim())
+        // Output-RRN direction: the row's RRN comes back on Result.rrn, matching the RRN it was
+        // chained by, and is not leaked into the RPG-visible record fields.
+        assertEquals(2L, result.rrn)
+        assertTrue("EMPNO" in result.record.keys)
+        assertFalse("RRN__" in result.record.keys)
         dbManager.closeFile("EMPLOYEE_RRN")
     }
 
     @Test
+    fun readEqualAfterSetllPopulatesRrn() {
+        // SETLL+READE (a positioning-based read, going through buildDialectPositioningSQL/
+        // getSQLOrderByClause - a different code path than CHAIN's getSQL) must populate
+        // Result.rrn exactly like CHAIN does: outerColumns()/tableExpr() are shared by both.
+        dbManager.registerMetadata(FileMetadata("EMPLOYEE_RRN2", EMPLOYEE_TABLE_NAME, employeeFields, emptyList()), true)
+        val dbFile = dbManager.openFile("EMPLOYEE_RRN2")
+        dbFile.setll(listOf("2"))
+        val result = dbFile.readEqual(listOf("2"))
+        assertEquals("000020", result.record["EMPNO"]?.trim())
+        assertEquals(2L, result.rrn)
+        dbManager.closeFile("EMPLOYEE_RRN2")
+    }
+
+    @Test
     fun chainByRRNUsingMetadataFieldsFallback() {
-        // NOPKTABLE has no primary key at all: RRN falls back to ordering by every field declared
-        // in the file's own metadata (CODE, DESCR), in that order - rows are inserted in a
-        // deliberately different order to prove the fallback drives the order, not insertion order.
+        // NOPKTABLE has no primary key at all: on Default/HSQLDB, RRN falls back to ordering by
+        // every field declared in the file's own metadata (CODE, DESCR) - rows are inserted in a
+        // deliberately different order to prove the fallback drives the order, not insertion
+        // order. On PostgreSQL there's no fallback to prove: __RNN is an unconditional contract
+        // (createFile always adds it), so RRN=1 is simply whichever row got identity value 1 -
+        // the first inserted row ("C"), regardless of CODE ordering.
         createFile(
             TypedMetadata(
                 "NOPKTABLE",
@@ -91,15 +121,20 @@ class SQLRRNChainTest {
         )
         dbManager.execute(
             listOf(
-                "INSERT INTO \"NOPKTABLE\" (CODE, DESCR) VALUES ('C', 'third')",
-                "INSERT INTO \"NOPKTABLE\" (CODE, DESCR) VALUES ('A', 'first')",
-                "INSERT INTO \"NOPKTABLE\" (CODE, DESCR) VALUES ('B', 'second')",
+                "INSERT INTO \"NOPKTABLE\" (\"CODE\", \"DESCR\") VALUES ('C', 'third')",
+                "INSERT INTO \"NOPKTABLE\" (\"CODE\", \"DESCR\") VALUES ('A', 'first')",
+                "INSERT INTO \"NOPKTABLE\" (\"CODE\", \"DESCR\") VALUES ('B', 'second')",
             ),
         )
         val dbFile = dbManager.openFile("NOPKTABLE")
         val result = dbFile.chain(listOf("1"))
-        assertEquals("A", result.record["CODE"]?.trim())
-        assertEquals("first", result.record["DESCR"]?.trim())
+        if (isPostgres()) {
+            assertEquals("C", result.record["CODE"]?.trim())
+            assertEquals("third", result.record["DESCR"]?.trim())
+        } else {
+            assertEquals("A", result.record["CODE"]?.trim())
+            assertEquals("first", result.record["DESCR"]?.trim())
+        }
         dbManager.closeFile("NOPKTABLE")
     }
 
@@ -116,6 +151,26 @@ class SQLRRNChainTest {
             "Expected message to mention the missing primary key/fields, was: ${ex.message}",
         )
         dbManager.closeFile("EMPTYMETA")
+    }
+
+    @Test
+    fun keyedFileReadHasOutputRrnOnlyWhenTheDialectSupportsIt() {
+        // On DefaultSQLDialect (HSQLDB), a keyed file's output RRN is deliberately left null:
+        // projecting one would require wrapping the query's FROM in the ROW_NUMBER() derived
+        // table (HSQLDB rejects ORDER BY inside OVER()), which breaks SQLDBFile.update()/delete()'s
+        // JDBC-updatable-ResultSet requirement. PostgreSQL/DB2 don't have this limitation - they
+        // project a direct RRN expression (SQLDialect.rrnSelectExpression) with no FROM change,
+        // so a keyed PostgreSQL table (which createFile always gives a real __RNN column) does
+        // get a real, non-null RRN back.
+        val dbFile = dbManager.openFile(MUNICIPALITY_TABLE_NAME)
+        val result = dbFile.chain(buildMunicipalityKey("IT", "LOM", "BS", "ERBUSCO"))
+        assertEquals("ERBUSCO", result.record["CITTA"]?.trim())
+        if (isPostgres()) {
+            assertTrue(result.rrn != null && result.rrn!! > 0, "Expected a real RRN on PostgreSQL, was: ${result.rrn}")
+        } else {
+            assertNull(result.rrn)
+        }
+        dbManager.closeFile(MUNICIPALITY_TABLE_NAME)
     }
 
     @Test
