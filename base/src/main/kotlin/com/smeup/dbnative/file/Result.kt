@@ -17,4 +17,13 @@
 
 package com.smeup.dbnative.file
 
-data class Result(var record: Record = Record(), var indicatorHI: Boolean = false, var indicatorLO: Boolean = false, var indicatorEQ: Boolean = false, var errorMsg: String = "")
+data class Result(
+    var record: Record = Record(),
+    var indicatorHI: Boolean = false,
+    var indicatorLO: Boolean = false,
+    var indicatorEQ: Boolean = false,
+    var errorMsg: String = "",
+    /** Relative Record Number of the row this [Result] was read from, when the backend can supply
+     *  one; null when the backend has no RRN concept for this row (e.g. JT400/NoSQL backends). */
+    var rrn: Long? = null,
+)

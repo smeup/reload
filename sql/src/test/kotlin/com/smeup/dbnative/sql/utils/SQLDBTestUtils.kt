@@ -422,6 +422,7 @@ fun buildNationKey(vararg values: String): List<String> {
 
 fun createFile(tMetadata: TypedMetadata, dbManager: SQLDBMManager) {
     val metadata: FileMetadata = tMetadata.fileMetadata()
+    val isPostgres = dbManager.connectionConfig.url.startsWith("jdbc:postgresql", ignoreCase = true)
     dbManager.connection.createStatement().use {
         val dropSql = "DROP TABLE IF EXISTS \"${tMetadata.tableName}\" CASCADE"
         println(dropSql)
@@ -430,19 +431,35 @@ fun createFile(tMetadata: TypedMetadata, dbManager: SQLDBMManager) {
         } catch (e: Exception) {
             println(e)
         }
-        println(tMetadata.toSQL())
-        it.execute(tMetadata.toSQL())
+        val createSql = tMetadata.toSQL(isPostgres)
+        println(createSql)
+        it.execute(createSql)
     }
     dbManager.registerMetadata(metadata, true)
 }
 
-fun TypedMetadata.toSQL(): String = "CREATE TABLE \"${this.tableName}\" (${this.fields.toSQL(this)})"
+/**
+ * On PostgreSQL, every table PostgreSQLDialect touches is expected to declare a `__RNN` identity
+ * column (see PostgreSQLDialect.rrnSelectExpression's kdoc) - an unconditional external contract,
+ * not something reload defends against at query time (querying a table without it fails with
+ * "column ... does not exist"). [isPostgres] makes reload's own test tables honor that contract
+ * for real, instead of the RRN-output-projection tests tripping over missing-column errors the
+ * moment they run against a live PostgreSQL rather than the (RRN-unaware) HSQLDB default. `__RNN`
+ * takes over as the table's actual PRIMARY KEY (a table can only have one); the file's own
+ * declared keys, if any, become a UNIQUE constraint instead - reload only needs them declared to
+ * resolve query-by-key access, not to be the literal DB-level primary key.
+ */
+fun TypedMetadata.toSQL(isPostgres: Boolean = false): String {
+    val rrnColumn = if (isPostgres) "\"__RNN\" BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, " else ""
+    val keyConstraint = if (isPostgres) "UNIQUE" else "PRIMARY KEY"
+    return "CREATE TABLE \"${this.tableName}\" ($rrnColumn${this.fields.toSQL(this, keyConstraint)})"
+}
 
 
-fun Collection<TypedField>.toSQL(tMetadata: TypedMetadata): String {
+fun Collection<TypedField>.toSQL(tMetadata: TypedMetadata, keyConstraint: String = "PRIMARY KEY"): String {
     val primaryKeys = tMetadata.fileKeys.joinToString { "\"$it\"" }
 
-    return joinToString { "\"${it.field.name}\" ${it.type2sql()}" } + (if (primaryKeys.isEmpty()) "" else ", PRIMARY KEY($primaryKeys)")
+    return joinToString { "\"${it.field.name}\" ${it.type2sql()}" } + (if (primaryKeys.isEmpty()) "" else ", $keyConstraint($primaryKeys)")
 }
 
 fun TypedField.type2sql(): String =

@@ -57,6 +57,28 @@ interface SQLDialect {
     }
 
     /**
+     * SQL expression that yields this row's RRN as an ordinary projected column, for engines where
+     * RRN is available as a per-row value without restructuring the query (DB2 for i's native
+     * `RRN()` function; PostgreSQL's convention `__RNN` identity column). [tableAlias] is the alias
+     * (or, absent one, the quoted table name itself) the query already uses for the base table.
+     * Returns null when this dialect has no such direct expression and must instead synthesize an
+     * RRN via [buildRowNumberedSubquery] (the [DefaultSQLDialect] case).
+     */
+    fun rrnSelectExpression(tableAlias: String): String? = null
+
+    /**
+     * The SQL placeholder text to bind an RRN value against, wherever [rrnSelectExpression] is
+     * compared to a bound parameter (query-by-RRN positioning/equality). Default: a plain `?`.
+     * Override when the direct expression is a real typed column and the driver needs an explicit
+     * cast to resolve the comparison - PostgreSQL's JDBC driver binds every reload parameter as
+     * VARCHAR (reload's whole binding pipeline is string-based, see [SQLDBFile]'s `bind()`), and
+     * PostgreSQL refuses to compare a `bigint` column against an un-cast VARCHAR parameter
+     * ("operator does not exist: bigint = character varying" - confirmed against a real table's
+     * `__RNN` column).
+     */
+    fun rrnParameterPlaceholder(): String = "?"
+
+    /**
      * Called once, right after a new physical [Connection] is obtained (opened or borrowed
      * from a pool), before any query runs. Allows dialects to apply connection-scoped setup
      * for the whole lifetime of this connection (e.g. session timeouts, autoCommit mode).
@@ -91,7 +113,12 @@ private fun resolvePageSize(pageSize: Int?, default: Int?): Int? = when {
     else -> pageSize
 }
 
-private fun comparisonFor(method: PositioningMethod, forward: Boolean): Pair<Comparison, Comparison> =
+/** Internal (not private) so [Native2SQL] can reuse it to build a `WHERE` fragment for RRN-mode
+ *  positioning directly off [SQLDialect.rrnSelectExpression] (DB2, PostgreSQL), bypassing
+ *  [SQLDialect.buildPositioningConditions]'s general multi-key machinery - RRN-mode positioning
+ *  is always single-key, so the per-key-level UNION strategy that exists for real key tuples is
+ *  unneeded there. */
+internal fun comparisonFor(method: PositioningMethod, forward: Boolean): Pair<Comparison, Comparison> =
     when {
         forward  && method == PositioningMethod.SETLL -> Pair(Comparison.GE, Comparison.GT)
         forward  && method == PositioningMethod.SETGT -> Pair(Comparison.GT, Comparison.GT)
@@ -164,12 +191,15 @@ class DB2400Dialect(pageSize: Int? = null) : SQLDialect {
     ): List<Pair<String, List<String>>> =
         unionPositioningConditions(fileKeys, positioningKeys, method, forward, buildReplacements)
 
-    // DB2 for i supports ORDER BY directly inside OVER(): use the native, more directly-expressed
-    // form rather than the portable pre-sort workaround the default implementation falls back to.
-    override fun buildRowNumberedSubquery(columns: String, fromTable: String, orderByColumns: List<String>, rrnColumn: String): String {
-        val orderBy = orderByColumns.joinToString(", ") { "\"$it\"" }
-        return "(SELECT $columns, ROW_NUMBER() OVER (ORDER BY $orderBy) AS \"$rrnColumn\" FROM $fromTable)"
-    }
+    // No buildRowNumberedSubquery override: rrnSelectExpression below gives Native2SQL a direct
+    // RRN expression, so it never needs to fall back to the ROW_NUMBER()-wrapped-FROM technique
+    // (that fallback, and its "native ORDER BY inside OVER()" override, is DefaultSQLDialect-only
+    // territory now - see Native2SQLAdapter.tableExpr/directRrnExpr).
+
+    // DB2 for i's native RRN() scalar function: the real physical relative record number,
+    // maintained by the engine - exactly what IBM i RPG's %RRN()/INFDS already means. No
+    // computation, no ordering-consistency problem, unlike the ROW_NUMBER() fallback.
+    override fun rrnSelectExpression(tableAlias: String): String = "RRN($tableAlias)"
 }
 
 class PostgreSQLDialect(pageSize: Int? = null) : SQLDialect {
@@ -204,10 +234,23 @@ class PostgreSQLDialect(pageSize: Int? = null) : SQLDialect {
         return listOf(Pair(where, params))
     }
 
-    // PostgreSQL supports ORDER BY directly inside OVER(): use the native, more directly-expressed
-    // form rather than the portable pre-sort workaround the default implementation falls back to.
-    override fun buildRowNumberedSubquery(columns: String, fromTable: String, orderByColumns: List<String>, rrnColumn: String): String {
-        val orderBy = orderByColumns.joinToString(", ") { "\"$it\"" }
-        return "(SELECT $columns, ROW_NUMBER() OVER (ORDER BY $orderBy) AS \"$rrnColumn\" FROM $fromTable)"
-    }
+    // No buildRowNumberedSubquery override: rrnSelectExpression below gives Native2SQL a direct
+    // RRN expression, so it never needs to fall back to the ROW_NUMBER()-wrapped-FROM technique
+    // (that fallback, and its "native ORDER BY inside OVER()" override, is DefaultSQLDialect-only
+    // territory now - see Native2SQLAdapter.tableExpr/directRrnExpr).
+
+    // Convention column: the external table-creation process is expected to declare `__RNN` as
+    // `GENERATED ALWAYS AS IDENTITY PRIMARY KEY` on every migrated table - a real, stable,
+    // monotonic identity value assigned once at insert time, as close to a persistent physical
+    // position as a relational table can offer. Reload does not compute it, only projects it.
+    // This is an unconditional contract, not defensively checked per-table: every table reload's
+    // PostgreSQLDialect touches is expected to have been migrated to declare it (see
+    // rrn-output-support-reload.md's open risk #2) - SQLDBTestUtils.createFile's Postgres branch
+    // declares it accordingly (TypedMetadata.toSQL's isPostgres parameter).
+    override fun rrnSelectExpression(tableAlias: String): String = "$tableAlias.\"__RNN\""
+
+    // __RNN is a real bigint column, and reload's whole binding pipeline sends every parameter as
+    // a string (see rrnParameterPlaceholder's kdoc) - without this cast PostgreSQL rejects the
+    // comparison outright ("operator does not exist: bigint = character varying").
+    override fun rrnParameterPlaceholder(): String = "CAST(? AS BIGINT)"
 }
