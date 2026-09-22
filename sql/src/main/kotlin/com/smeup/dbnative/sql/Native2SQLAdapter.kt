@@ -408,7 +408,17 @@ class Native2SQL(
     private fun getReadCoherentSql(): Pair<String, List<String>> {
         val columns = outerColumns()
         val tableName = quotedTableName()
-        lastPositioningInstruction ?: return Pair("SELECT $columns FROM $tableName", emptyList())
+        if (lastPositioningInstruction == null) {
+            // A plain, unpositioned READ is always the forward/ascending direction (READP, the
+            // only backward case, requires positioning first - see checkPositioning()). For an
+            // unkeyed (RRN mode) file, order by RRN ascending so arrival-sequence reads stay in
+            // insertion order like they did before __RNN replaced the ROW_NUMBER()-numbered
+            // derived table (which every query, positioned or not, used to read through). Left
+            // out when the column is missing (directRrnExpr() is rrnMode-only, hasRrnColumn-blind)
+            // or for a keyed file, whose plain-READ order was never guaranteed either way.
+            val orderBy = directRrnExpr()?.takeIf { hasRrnColumn }?.let { " ORDER BY $it ASC" }.orEmpty()
+            return Pair("SELECT $columns FROM $tableName$orderBy", emptyList())
+        }
         return buildDialectPositioningSQL(columns, tableName, lastReadInstruction!!.method.forward)
     }
 

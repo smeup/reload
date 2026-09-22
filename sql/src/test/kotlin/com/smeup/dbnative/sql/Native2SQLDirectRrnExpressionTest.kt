@@ -216,6 +216,38 @@ class Native2SQLDirectRrnExpressionTest {
     }
 
     @Test
+    fun unkeyedPlainReadOrdersByRrnWhenColumnPresent() {
+        // A plain unkeyed READ (arrival sequence, no prior SETLL/SETGT) must still come back in
+        // insertion order, same guarantee the old ROW_NUMBER()-numbered derived table gave every
+        // RRN-mode query (positioned or not) - see getReadCoherentSql. Without an explicit ORDER
+        // BY here, the row order of a bare "SELECT ... FROM table" is left entirely to the
+        // engine's scan strategy, which PostgreSQL in particular doesn't keep stable across
+        // vacuums/updates/parallel scans.
+        val adapter = adapterFor(PostgreSQLDialect())
+        adapter.setRead(ReadMethod.READ)
+        val (sql, params) = adapter.getSQLStatement()
+
+        assertEquals(emptyList(), params)
+        assertEquals(
+            "SELECT \"CODE\", \"DESCR\", \"UNKEYED_TABLE\".\"__RNN\" AS \"RRN__\" FROM \"UNKEYED_TABLE\" ORDER BY \"UNKEYED_TABLE\".\"__RNN\" ASC",
+            sql
+        )
+    }
+
+    @Test
+    fun keyedPlainReadStaysUnorderedRegardlessOfRrnColumn() {
+        // A keyed file's plain READ never had an ordering guarantee, before or after this
+        // feature - only RRN mode (unkeyed) gets the ORDER BY, since only RRN mode has a
+        // well-defined "arrival sequence" to preserve.
+        val adapter = keyedAdapterFor(PostgreSQLDialect())
+        adapter.setRead(ReadMethod.READ)
+        val (sql, params) = adapter.getSQLStatement()
+
+        assertEquals(emptyList(), params)
+        assertFalse(sql.contains("ORDER BY"), "was: $sql")
+    }
+
+    @Test
     fun unkeyedChainByRrnFailsFastWithClearMessageWhenColumnMissing() {
         // Genuinely addressing an unkeyed file BY RRN with no __RNN column has no addressing
         // mechanism (the old ROW_NUMBER() fallback is gone) - this must still fail, but fast and

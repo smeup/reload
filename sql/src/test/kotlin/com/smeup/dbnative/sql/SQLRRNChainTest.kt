@@ -125,6 +125,38 @@ class SQLRRNChainTest {
     }
 
     @Test
+    fun plainReadFollowsInsertionOrder() {
+        // Same guarantee as chainByRRNFollowsInsertionOrder, but for a plain arrival-sequence
+        // READ loop with no prior SETLL/SETGT - the defining use case for an unkeyed file. Rows
+        // are inserted in a deliberately non-alphabetical order to prove the read order tracks
+        // insertion (RRN) order, not any incidental physical/CODE ordering.
+        createFile(
+            TypedMetadata(
+                "NOPKTABLE2",
+                "NOPKTABLE2",
+                listOf("CODE" fieldByType CharacterType(5), "DESCR" fieldByType CharacterType(20)),
+                emptyList(),
+            ),
+            dbManager,
+        )
+        dbManager.execute(
+            listOf(
+                "INSERT INTO \"NOPKTABLE2\" (\"CODE\", \"DESCR\") VALUES ('C', 'third')",
+                "INSERT INTO \"NOPKTABLE2\" (\"CODE\", \"DESCR\") VALUES ('A', 'first')",
+                "INSERT INTO \"NOPKTABLE2\" (\"CODE\", \"DESCR\") VALUES ('B', 'second')",
+            ),
+        )
+        val dbFile = dbManager.openFile("NOPKTABLE2")
+        val readOrder = mutableListOf<String>()
+        while (!dbFile.eof()) {
+            val result = dbFile.read()
+            if (!dbFile.eof()) readOrder.add(result.record["CODE"]!!.trim())
+        }
+        assertEquals(listOf("C", "A", "B"), readOrder)
+        dbManager.closeFile("NOPKTABLE2")
+    }
+
+    @Test
     fun keyedFileReadHasOutputRrn() {
         // A keyed file is still positioned by its real keys, but the RRN expression is projected
         // as an output column too (no FROM restructuring, so the ResultSet stays updatable), so
