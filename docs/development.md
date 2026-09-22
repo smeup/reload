@@ -48,3 +48,29 @@ To compile the entire project and run the tests, you must first activate the sof
 
        mvn package    
 
+
+## Relative Record Number (RRN) convention
+
+RPG's Relative Record Number (`%RRN`, the INFDS RRN subfield, CHAIN/SETLL by RRN on unkeyed files) is
+resolved by the SQL dialect (`SQLDialect.rrnSelectExpression`), and it is projected as `Result.rrn` on
+every read, keyed or not:
+
+| Database | RRN expression | Requirement |
+|---|---|---|
+| DB2 for i (`jdbc:as400`) | `RRN(<table>)` | none, it is native |
+| everything else (PostgreSQL, HSQLDB, H2, MySQL, ...) | `<table>."__RNN"` | the table declares a `__RNN` column |
+
+`__RNN` is an **unconditional contract**: reload does not compute it or check for it, so querying a table
+that lacks it fails with "column ... does not exist". It must be an auto-generated `BIGINT` primary key,
+assigned once at insert time (a stable, monotonic value: RRN follows insertion order). The file's own
+declared keys become a `UNIQUE` constraint instead of the primary key.
+
+```sql
+-- PostgreSQL, HSQLDB, H2
+CREATE TABLE "T" ("__RNN" BIGINT GENERATED ALWAYS AS IDENTITY (START WITH 1) PRIMARY KEY, ..., UNIQUE("KEY"));
+-- MySQL
+CREATE TABLE "T" ("__RNN" BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, ..., UNIQUE("KEY"));
+```
+
+`START WITH 1` matters on HSQLDB, whose identity starts at 0 (PostgreSQL and H2 start at 1). Reload's own
+test tables get the column from `SQLDBTestUtils.createFile` / `toSQL(url)`.

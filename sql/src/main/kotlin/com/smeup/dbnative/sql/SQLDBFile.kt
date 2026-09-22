@@ -44,25 +44,7 @@ class SQLDBFile(
 
     private var lastNativeMethod: NativeMethod? = null
 
-    // For an unkeyed (arrival-sequence) file, resolve the columns that define a deterministic
-    // row order so Native2SQL can derive a Relative Record Number via ROW_NUMBER(): prefer the
-    // table's primary key (or its first unique index, both via primaryKeys()), falling back to
-    // every field declared in the file's own metadata, in their declared order. The metadata
-    // fallback is deliberately vendor-neutral - unlike parsing a view's ORDER BY out of a
-    // dialect-specific system catalog, it only relies on information reload already has. Empty
-    // for keyed files: Native2SQL never wraps a keyed file's FROM in the ROW_NUMBER() derived
-    // table (see Native2SQLAdapter.tableExpr's doc - doing so on Default/HSQLDB breaks
-    // update()/delete()'s JDBC-updatable-ResultSet requirement), so keyed files never need this.
-    // Resolved eagerly (not lazily) since `connection` is already open here.
-    private val rrnOrderingColumns: List<String> =
-        if (fileMetadata.fileKeys.isEmpty()) {
-            connection.primaryKeys(fileMetadata.tableName)
-                .ifEmpty { fileMetadata.fields.map { it.name } }
-        } else {
-            emptyList()
-        }
-
-    private var adapter: Native2SQL = Native2SQL(this.fileMetadata, dialect, rrnOrderingColumns)
+    private var adapter: Native2SQL = Native2SQL(this.fileMetadata, dialect)
     private var eof: Boolean = false
     private var rowsInCurrentPage: Int = 0
 

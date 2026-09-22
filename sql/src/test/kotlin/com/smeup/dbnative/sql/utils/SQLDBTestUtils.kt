@@ -422,7 +422,6 @@ fun buildNationKey(vararg values: String): List<String> {
 
 fun createFile(tMetadata: TypedMetadata, dbManager: SQLDBMManager) {
     val metadata: FileMetadata = tMetadata.fileMetadata()
-    val isPostgres = dbManager.connectionConfig.url.startsWith("jdbc:postgresql", ignoreCase = true)
     dbManager.connection.createStatement().use {
         val dropSql = "DROP TABLE IF EXISTS \"${tMetadata.tableName}\" CASCADE"
         println(dropSql)
@@ -431,7 +430,7 @@ fun createFile(tMetadata: TypedMetadata, dbManager: SQLDBMManager) {
         } catch (e: Exception) {
             println(e)
         }
-        val createSql = tMetadata.toSQL(isPostgres)
+        val createSql = tMetadata.toSQL(dbManager.connectionConfig.url)
         println(createSql)
         it.execute(createSql)
     }
@@ -439,19 +438,25 @@ fun createFile(tMetadata: TypedMetadata, dbManager: SQLDBMManager) {
 }
 
 /**
- * On PostgreSQL, every table PostgreSQLDialect touches is expected to declare a `__RNN` identity
- * column (see PostgreSQLDialect.rrnSelectExpression's kdoc) - an unconditional external contract,
- * not something reload defends against at query time (querying a table without it fails with
- * "column ... does not exist"). [isPostgres] makes reload's own test tables honor that contract
- * for real, instead of the RRN-output-projection tests tripping over missing-column errors the
- * moment they run against a live PostgreSQL rather than the (RRN-unaware) HSQLDB default. `__RNN`
- * takes over as the table's actual PRIMARY KEY (a table can only have one); the file's own
- * declared keys, if any, become a UNIQUE constraint instead - reload only needs them declared to
- * resolve query-by-key access, not to be the literal DB-level primary key.
+ * On every database except DB2 for i, every table reload touches is expected to declare a `__RNN`
+ * identity column (see SQLDialect.rrnSelectExpression's kdoc) - an unconditional external
+ * contract, not something reload defends against at query time (querying a table without it fails
+ * with "column ... does not exist"). This makes reload's own test tables honor that contract for
+ * real, on whichever database [url] points to. `__RNN` takes over as the table's actual PRIMARY KEY
+ * (a table can only have one); the file's own declared keys, if any, become a UNIQUE constraint
+ * instead - reload only needs them declared to resolve query-by-key access, not to be the literal
+ * DB-level primary key. DB2 for i needs no column (native `RRN()`), so it keeps the plain table.
  */
-fun TypedMetadata.toSQL(isPostgres: Boolean = false): String {
-    val rrnColumn = if (isPostgres) "\"__RNN\" BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, " else ""
-    val keyConstraint = if (isPostgres) "UNIQUE" else "PRIMARY KEY"
+fun TypedMetadata.toSQL(url: String = ""): String {
+    val hasRrnColumn = !url.startsWith("jdbc:as400", ignoreCase = true)
+    val rrnColumn = when {
+        !hasRrnColumn -> ""
+        url.startsWith("jdbc:mysql", ignoreCase = true) -> "\"__RNN\" BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, "
+        // START WITH 1 is explicit because HSQLDB's identity starts at 0 (PostgreSQL and H2 at 1),
+        // and RRN 1 must be the first row, as on IBM i.
+        else -> "\"__RNN\" BIGINT GENERATED ALWAYS AS IDENTITY (START WITH 1) PRIMARY KEY, "
+    }
+    val keyConstraint = if (hasRrnColumn) "UNIQUE" else "PRIMARY KEY"
     return "CREATE TABLE \"${this.tableName}\" ($rrnColumn${this.fields.toSQL(this, keyConstraint)})"
 }
 

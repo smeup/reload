@@ -195,7 +195,10 @@ fun ResultSet?.currentRecordToValues(): Record {
     val metadata = this.metaData
     for (i in 1..metadata.columnCount) {
         val value = this.getString(i)
-        result.add(RecordField(metadata.getColumnName(i), value))
+        // Label, not name: for a projected column with an alias (the RRN expression AS "RRN__"),
+        // some drivers (HSQLDB) report the underlying column's name from getColumnName() and only
+        // the alias from getColumnLabel(). For an un-aliased column the two are identical.
+        result.add(RecordField(metadata.getColumnLabel(i), value))
     }
     return result
 }

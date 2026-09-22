@@ -26,15 +26,17 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * Pure SQL-text coverage for the DB2400Dialect/PostgreSQLDialect "direct expression" follow-on
- * (Native2SQLAdapter.directRrnExpr): since neither dialect can be exercised against a live
- * database in this environment (no AS400 partition, no Docker for PostgreSQL here), this asserts
- * directly on the SQL [Native2SQL] builds - no DB connection is involved in any of these methods.
+ * Pure SQL-text coverage for the "direct RRN expression" every dialect uses
+ * (Native2SQLAdapter.directRrnExpr): DB2400Dialect's native `RRN()`, and the `__RNN` identity
+ * column for PostgreSQLDialect and DefaultSQLDialect. Since DB2 and PostgreSQL can't be exercised
+ * against a live database in this environment (no AS400 partition, no Docker for PostgreSQL
+ * here), this asserts directly on the SQL [Native2SQL] builds - no DB connection is involved in
+ * any of these methods.
  *
- * Covers both RRN directions on an unkeyed (RRN mode) file for both dialects: query-by-RRN
- * (CHAIN, SETLL/SETGT+READE paging) now filters/orders by the dialect's raw rrnSelectExpression
- * instead of wrapping FROM in a ROW_NUMBER() derived table, and the output RRN column is that same
- * expression aliased into the SELECT list - no "ROW_NUMBER()" anywhere in the generated SQL.
+ * Covers both RRN directions: query-by-RRN on an unkeyed (RRN mode) file (CHAIN, SETLL/SETGT+READE
+ * paging) filters/orders by the dialect's raw rrnSelectExpression, and the output RRN column is
+ * that same expression aliased into the SELECT list, for keyed files too - no "ROW_NUMBER()"
+ * anywhere in the generated SQL.
  */
 class Native2SQLDirectRrnExpressionTest {
 
@@ -44,8 +46,7 @@ class Native2SQLDirectRrnExpressionTest {
     private val keyedFields = listOf(Field("CODE"), Field("DESCR"))
     private val keyedMetadata = FileMetadata("KEYED", "KEYED_TABLE", keyedFields, listOf("CODE"))
 
-    private fun adapterFor(dialect: SQLDialect) =
-        Native2SQL(unkeyedMetadata, dialect, rrnOrderingColumns = listOf("CODE"))
+    private fun adapterFor(dialect: SQLDialect) = Native2SQL(unkeyedMetadata, dialect)
 
     private fun keyedAdapterFor(dialect: SQLDialect) = Native2SQL(keyedMetadata, dialect)
 
@@ -117,8 +118,8 @@ class Native2SQLDirectRrnExpressionTest {
     fun db2400KeyedReadEqualAfterSetllStillProjectsOutputRrn() {
         // The output-RRN direction (this plan's actual deliverable) must not depend on rrnMode:
         // a KEYED file, positioned by SETLL on its real key (not RRN) then READE, still gets the
-        // RRN() expression in the SELECT list - hasOutputRrn()/outerColumns() aren't rrnMode-gated,
-        // only the query-BY-RRN direction (directRrnExpr/checkKeys) is.
+        // RRN() expression in the SELECT list - outerColumns() isn't rrnMode-gated, only the
+        // query-BY-RRN direction (directRrnExpr/checkKeys) is.
         val adapter = keyedAdapterFor(DB2400Dialect())
         adapter.setPositioning(PositioningMethod.SETLL, listOf("C"))
         adapter.setRead(ReadMethod.READE, listOf("C"))
@@ -143,15 +144,45 @@ class Native2SQLDirectRrnExpressionTest {
     }
 
     @Test
-    fun defaultDialectStillFallsBackToRowNumberWrappedFrom() {
-        // Regression guard: DefaultSQLDialect has no rrnSelectExpression, so it must keep using
-        // the ROW_NUMBER()-wrapped FROM clause exactly as before this follow-on.
+    fun defaultDialectChainByRrnUsesRnnIdentityColumnDirectly() {
+        // DefaultSQLDialect (HSQLDB, H2, MySQL, ...) follows the same __RNN convention as
+        // PostgreSQL - no ROW_NUMBER() fallback anymore. The placeholder stays a plain ?: only
+        // PostgreSQL needs a cast to compare its bigint column against a VARCHAR-bound parameter.
         val adapter = adapterFor(DefaultSQLDialect())
         adapter.setRead(ReadMethod.CHAIN, listOf("5"))
         val (sql, params) = adapter.getSQLStatement()
 
         assertEquals(listOf("5"), params)
-        assertTrue(sql.contains("ROW_NUMBER() OVER ()"), "was: $sql")
-        assertTrue(sql.contains("\"RRN__\" = ?"), "was: $sql")
+        assertTrue(sql.contains("\"UNKEYED_TABLE\".\"__RNN\" = ?"), "was: $sql")
+        assertTrue(sql.startsWith("SELECT \"CODE\", \"DESCR\", \"UNKEYED_TABLE\".\"__RNN\" AS \"RRN__\" FROM \"UNKEYED_TABLE\" WHERE"), "was: $sql")
+        assertFalse(sql.contains("ROW_NUMBER"), "was: $sql")
+    }
+
+    @Test
+    fun defaultDialectPositioningPagesByRnnIdentityColumn() {
+        val adapter = adapterFor(DefaultSQLDialect())
+        adapter.setPositioning(PositioningMethod.SETGT, listOf("5"))
+        adapter.setRead(ReadMethod.READE, listOf("5"))
+        val (sql, params) = adapter.getSQLStatement()
+
+        assertEquals(listOf("5"), params)
+        assertTrue(sql.contains("\"UNKEYED_TABLE\".\"__RNN\" > ?"), "was: $sql")
+        assertTrue(sql.contains("ORDER BY \"UNKEYED_TABLE\".\"__RNN\" ASC"), "was: $sql")
+        assertFalse(sql.contains("ROW_NUMBER"), "was: $sql")
+    }
+
+    @Test
+    fun defaultDialectKeyedChainProjectsOutputRrn() {
+        // The point of the unified convention: a keyed file on the Default dialect now gets a real
+        // output RRN too (previously always null), with FROM left untouched so the ResultSet stays
+        // updatable.
+        val adapter = keyedAdapterFor(DefaultSQLDialect())
+        adapter.setRead(ReadMethod.CHAIN, listOf("C"))
+        val (sql, params) = adapter.getSQLStatement()
+
+        assertEquals(listOf("C"), params)
+        assertTrue(sql.startsWith("SELECT \"CODE\", \"DESCR\", \"KEYED_TABLE\".\"__RNN\" AS \"RRN__\" FROM \"KEYED_TABLE\" WHERE"), "was: $sql")
+        assertTrue(sql.contains("\"CODE\" = ?"), "was: $sql")
+        assertFalse(sql.contains("ROW_NUMBER"), "was: $sql")
     }
 }

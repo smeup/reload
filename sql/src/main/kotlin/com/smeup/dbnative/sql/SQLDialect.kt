@@ -34,37 +34,23 @@ interface SQLDialect {
     fun pageSize(): Int? = 100
 
     /**
-     * A derived-table expression that numbers every row of [fromTable] by [orderByColumns]
-     * (ascending) as a synthetic column aliased [rrnColumn], used to derive Relative Record
-     * Number access on an unkeyed file via `ROW_NUMBER()`. [columns] are the real column names to
-     * project through unchanged (never `*`, to avoid ambiguity/duplicate-column errors on some
-     * engines when combined with a computed column). Returns a parenthesized subquery with no
-     * outer alias - the caller adds one.
+     * SQL expression that yields this row's RRN as an ordinary projected column, without
+     * restructuring the query. [tableAlias] is the alias (or, absent one, the quoted table name
+     * itself) the query already uses for the base table.
      *
-     * Default implementation pre-sorts in a nested derived table and numbers rows with an
-     * order-less `ROW_NUMBER() OVER ()` on top of it, rather than the more direct
-     * `ROW_NUMBER() OVER (ORDER BY ...)`: not every engine's window-function grammar accepts an
-     * ORDER BY inside OVER() (verified: HSQLDB, used by this project's own test suite, rejects it
-     * outright with a syntax error), while a simple, unshuffled wrapping SELECT reliably preserves
-     * its child's materialized row order in every engine this project targets. Override this for
-     * an engine confirmed to support the native ORDER BY-in-OVER() form (see [PostgreSQLDialect],
-     * [DB2400Dialect]) for a more directly-expressed, equally correct query.
+     * Default (every engine except DB2 for i): the convention `__RNN` column. The external
+     * table-creation process is expected to declare it on every table reload touches as an
+     * auto-generated `BIGINT` primary key (`GENERATED ALWAYS AS IDENTITY (START WITH 1) PRIMARY KEY`
+     * on PostgreSQL/HSQLDB/H2 - the explicit `START WITH 1` matters on HSQLDB, whose identity
+     * starts at 0 - and `AUTO_INCREMENT PRIMARY KEY` on MySQL) - a real, stable, monotonic
+     * value assigned once at insert time, as close to a persistent physical position as a
+     * relational table can offer. Reload does not compute it, only projects it. This is an
+     * unconditional contract, not defensively checked per-table: querying a table without it
+     * fails with "column ... does not exist".
+     *
+     * [DB2400Dialect] overrides it with DB2 for i's native `RRN()` function, which needs no column.
      */
-    fun buildRowNumberedSubquery(columns: String, fromTable: String, orderByColumns: List<String>, rrnColumn: String): String {
-        val orderBy = orderByColumns.joinToString(", ") { "\"$it\"" }
-        return "(SELECT $columns, ROW_NUMBER() OVER () AS \"$rrnColumn\" " +
-            "FROM (SELECT $columns FROM $fromTable ORDER BY $orderBy) \"${rrnColumn}_SORT\")"
-    }
-
-    /**
-     * SQL expression that yields this row's RRN as an ordinary projected column, for engines where
-     * RRN is available as a per-row value without restructuring the query (DB2 for i's native
-     * `RRN()` function; PostgreSQL's convention `__RNN` identity column). [tableAlias] is the alias
-     * (or, absent one, the quoted table name itself) the query already uses for the base table.
-     * Returns null when this dialect has no such direct expression and must instead synthesize an
-     * RRN via [buildRowNumberedSubquery] (the [DefaultSQLDialect] case).
-     */
-    fun rrnSelectExpression(tableAlias: String): String? = null
+    fun rrnSelectExpression(tableAlias: String): String = "$tableAlias.\"__RNN\""
 
     /**
      * The SQL placeholder text to bind an RRN value against, wherever [rrnSelectExpression] is
@@ -191,14 +177,10 @@ class DB2400Dialect(pageSize: Int? = null) : SQLDialect {
     ): List<Pair<String, List<String>>> =
         unionPositioningConditions(fileKeys, positioningKeys, method, forward, buildReplacements)
 
-    // No buildRowNumberedSubquery override: rrnSelectExpression below gives Native2SQL a direct
-    // RRN expression, so it never needs to fall back to the ROW_NUMBER()-wrapped-FROM technique
-    // (that fallback, and its "native ORDER BY inside OVER()" override, is DefaultSQLDialect-only
-    // territory now - see Native2SQLAdapter.tableExpr/directRrnExpr).
-
     // DB2 for i's native RRN() scalar function: the real physical relative record number,
-    // maintained by the engine - exactly what IBM i RPG's %RRN()/INFDS already means. No
-    // computation, no ordering-consistency problem, unlike the ROW_NUMBER() fallback.
+    // maintained by the engine - exactly what IBM i RPG's %RRN()/INFDS already means. Unlike every
+    // other dialect's convention `__RNN` column (see SQLDialect.rrnSelectExpression), it needs no
+    // column declared on the table.
     override fun rrnSelectExpression(tableAlias: String): String = "RRN($tableAlias)"
 }
 
@@ -234,20 +216,7 @@ class PostgreSQLDialect(pageSize: Int? = null) : SQLDialect {
         return listOf(Pair(where, params))
     }
 
-    // No buildRowNumberedSubquery override: rrnSelectExpression below gives Native2SQL a direct
-    // RRN expression, so it never needs to fall back to the ROW_NUMBER()-wrapped-FROM technique
-    // (that fallback, and its "native ORDER BY inside OVER()" override, is DefaultSQLDialect-only
-    // territory now - see Native2SQLAdapter.tableExpr/directRrnExpr).
-
-    // Convention column: the external table-creation process is expected to declare `__RNN` as
-    // `GENERATED ALWAYS AS IDENTITY PRIMARY KEY` on every migrated table - a real, stable,
-    // monotonic identity value assigned once at insert time, as close to a persistent physical
-    // position as a relational table can offer. Reload does not compute it, only projects it.
-    // This is an unconditional contract, not defensively checked per-table: every table reload's
-    // PostgreSQLDialect touches is expected to have been migrated to declare it (see
-    // rrn-output-support-reload.md's open risk #2) - SQLDBTestUtils.createFile's Postgres branch
-    // declares it accordingly (TypedMetadata.toSQL's isPostgres parameter).
-    override fun rrnSelectExpression(tableAlias: String): String = "$tableAlias.\"__RNN\""
+    // rrnSelectExpression: inherits the convention `__RNN` column from SQLDialect.
 
     // __RNN is a real bigint column, and reload's whole binding pipeline sends every parameter as
     // a string (see rrnParameterPlaceholder's kdoc) - without this cast PostgreSQL rejects the
