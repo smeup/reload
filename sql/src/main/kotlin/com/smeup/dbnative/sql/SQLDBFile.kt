@@ -47,10 +47,12 @@ class SQLDBFile(
     /** Whether this file's table actually has the `__RNN` convention column, probed once here via
      *  live JDBC metadata (not the RPG-side [fileMetadata]) - see [SQLDialect.requiresRrnColumn].
      *  Defaults to "missing" on any probe failure: the safe direction, since it only means the
-     *  opportunistic RRN projection is skipped, never that a query fails. */
+     *  opportunistic RRN projection is skipped, never that a query fails. The failure itself is
+     *  still logged so a broken probe doesn't masquerade as "no __RNN column". */
     private val hasRrnColumn: Boolean = try {
         !dialect.requiresRrnColumn() || connection.hasColumn(fileMetadata.tableName, "__RNN")
     } catch (e: Exception) {
+        logEvent(LoggingKey.connection, "Failed to probe __RNN column on ${fileMetadata.tableName}, assuming absent: ${e.message}")
         false
     }
 
