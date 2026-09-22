@@ -48,3 +48,38 @@ To compile the entire project and run the tests, you must first activate the sof
 
        mvn package    
 
+
+## Relative Record Number (RRN) convention
+
+RPG's Relative Record Number (`%RRN`, the INFDS RRN subfield, CHAIN/SETLL by RRN on unkeyed files) is
+resolved by the SQL dialect (`SQLDialect.rrnSelectExpression`), and it is projected as `Result.rrn` on
+every read, keyed or not:
+
+| Database | RRN expression | Requirement |
+|---|---|---|
+| DB2 for i (`jdbc:as400`) | `RRN(<table>)` | none, it is native |
+| everything else (PostgreSQL, HSQLDB, H2, MySQL, ...) | `<table>."__RNN"` | the table declares a `__RNN` column |
+
+`__RNN` must be an auto-generated `BIGINT` primary key, assigned once at insert time (a stable, monotonic
+value: RRN follows insertion order). The file's own declared keys become a `UNIQUE` constraint instead of
+the primary key.
+
+Reload does not compute `__RNN`, but it does probe for it once, at file open (`SQLDBFile`, via
+`SQLDialect.requiresRrnColumn`/`Connection.hasColumn` - skipped entirely for DB2 for i, which needs no
+column). If it's missing:
+- The opportunistic output projection is simply skipped, on every read, keyed or not - `Result.rrn`
+  stays `null`, same as on a backend with no RRN concept at all (JT400, NoSQL). No query fails because
+  of it.
+- An unkeyed file is addressed by RRN *itself* (CHAIN/SETLL/SETGT/READE/READPE by RRN) - there's no
+  addressing mechanism without the column, so that specific operation still fails, but fast and with a
+  clear message, before any SQL runs, rather than a raw driver "column ... does not exist".
+
+```sql
+-- PostgreSQL, HSQLDB, H2
+CREATE TABLE "T" ("__RNN" BIGINT GENERATED ALWAYS AS IDENTITY (START WITH 1) PRIMARY KEY, ..., UNIQUE("KEY"));
+-- MySQL
+CREATE TABLE "T" ("__RNN" BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, ..., UNIQUE("KEY"));
+```
+
+`START WITH 1` matters on HSQLDB, whose identity starts at 0 (PostgreSQL and H2 start at 1). Reload's own
+test tables get the column from `SQLDBTestUtils.createFile` / `toSQL(url)`.

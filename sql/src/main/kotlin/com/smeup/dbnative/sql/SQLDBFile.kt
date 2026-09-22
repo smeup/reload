@@ -44,23 +44,19 @@ class SQLDBFile(
 
     private var lastNativeMethod: NativeMethod? = null
 
-    // For an unkeyed (arrival-sequence) file, resolve the columns that define a deterministic
-    // row order so Native2SQL can derive a Relative Record Number via ROW_NUMBER(): prefer the
-    // table's primary key (or its first unique index, both via primaryKeys()), falling back to
-    // every field declared in the file's own metadata, in their declared order. The metadata
-    // fallback is deliberately vendor-neutral - unlike parsing a view's ORDER BY out of a
-    // dialect-specific system catalog, it only relies on information reload already has. Empty
-    // for keyed files, which never need it. Resolved eagerly (not lazily) since `connection` is
-    // already open here.
-    private val rrnOrderingColumns: List<String> =
-        if (fileMetadata.fileKeys.isEmpty()) {
-            connection.primaryKeys(fileMetadata.tableName)
-                .ifEmpty { fileMetadata.fields.map { it.name } }
-        } else {
-            emptyList()
-        }
+    /** Whether this file's table actually has the `__RNN` convention column, probed once here via
+     *  live JDBC metadata (not the RPG-side [fileMetadata]) - see [SQLDialect.requiresRrnColumn].
+     *  Defaults to "missing" on any probe failure: the safe direction, since it only means the
+     *  opportunistic RRN projection is skipped, never that a query fails. The failure itself is
+     *  still logged so a broken probe doesn't masquerade as "no __RNN column". */
+    private val hasRrnColumn: Boolean = try {
+        !dialect.requiresRrnColumn() || connection.hasColumn(fileMetadata.tableName, "__RNN")
+    } catch (e: Exception) {
+        logEvent(LoggingKey.connection, "Failed to probe __RNN column on ${fileMetadata.tableName}, assuming absent: ${e.message}")
+        false
+    }
 
-    private var adapter: Native2SQL = Native2SQL(this.fileMetadata, dialect, rrnOrderingColumns)
+    private var adapter: Native2SQL = Native2SQL(this.fileMetadata, dialect, hasRrnColumn)
     private var eof: Boolean = false
     private var rowsInCurrentPage: Int = 0
 
@@ -299,6 +295,11 @@ class SQLDBFile(
             // record post update will be "record"
             var atLeastOneFieldChanged = false
             actualRecord?.forEach {
+                // actualRecord carries RRN_COLUMN (kept for getResumeSqlStatement/lastReadMatchRecord
+                // on the *next* read - see readNextFromResultSet) even for a keyed file, on dialects
+                // that project a direct RRN expression. It isn't a real column: the caller's record
+                // never has it, and the ResultSet has no updatable "RRN__" to write to either.
+                if (it.key == RRN_COLUMN) return@forEach
                 val fieldValue = record.getValue(it.key)
                 if (fieldValue != it.value) {
                     atLeastOneFieldChanged = true
@@ -393,7 +394,11 @@ class SQLDBFile(
             }
             else if (adapter.lastReadMatchRecord(result.record)) {
                 logEvent(LoggingKey.read_data, "Record read: ${result.record}")
+                // actualRecord (used by getResumeSqlStatement/lastReadMatchRecord on the *next*
+                // call) must keep RRN_COLUMN - only the Result handed back to the RPG side has it
+                // stripped, so it never leaks into the RPG-visible field set.
                 actualRecord = result.record.duplicate()
+                result.rrn = result.record.remove(RRN_COLUMN)?.trim()?.toLongOrNull()
                 rowsInCurrentPage++
                 eof = false
                 found = true

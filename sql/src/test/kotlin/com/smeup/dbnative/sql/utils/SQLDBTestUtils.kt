@@ -430,19 +430,41 @@ fun createFile(tMetadata: TypedMetadata, dbManager: SQLDBMManager) {
         } catch (e: Exception) {
             println(e)
         }
-        println(tMetadata.toSQL())
-        it.execute(tMetadata.toSQL())
+        val createSql = tMetadata.toSQL(dbManager.connectionConfig.url)
+        println(createSql)
+        it.execute(createSql)
     }
     dbManager.registerMetadata(metadata, true)
 }
 
-fun TypedMetadata.toSQL(): String = "CREATE TABLE \"${this.tableName}\" (${this.fields.toSQL(this)})"
+/**
+ * On every database except DB2 for i, every table reload touches is expected to declare a `__RNN`
+ * identity column (see SQLDialect.rrnSelectExpression's kdoc) - an unconditional external
+ * contract, not something reload defends against at query time (querying a table without it fails
+ * with "column ... does not exist"). This makes reload's own test tables honor that contract for
+ * real, on whichever database [url] points to. `__RNN` takes over as the table's actual PRIMARY KEY
+ * (a table can only have one); the file's own declared keys, if any, become a UNIQUE constraint
+ * instead - reload only needs them declared to resolve query-by-key access, not to be the literal
+ * DB-level primary key. DB2 for i needs no column (native `RRN()`), so it keeps the plain table.
+ */
+fun TypedMetadata.toSQL(url: String = ""): String {
+    val hasRrnColumn = !url.startsWith("jdbc:as400", ignoreCase = true)
+    val rrnColumn = when {
+        !hasRrnColumn -> ""
+        url.startsWith("jdbc:mysql", ignoreCase = true) -> "\"__RNN\" BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, "
+        // START WITH 1 is explicit because HSQLDB's identity starts at 0 (PostgreSQL and H2 at 1),
+        // and RRN 1 must be the first row, as on IBM i.
+        else -> "\"__RNN\" BIGINT GENERATED ALWAYS AS IDENTITY (START WITH 1) PRIMARY KEY, "
+    }
+    val keyConstraint = if (hasRrnColumn) "UNIQUE" else "PRIMARY KEY"
+    return "CREATE TABLE \"${this.tableName}\" ($rrnColumn${this.fields.toSQL(this, keyConstraint)})"
+}
 
 
-fun Collection<TypedField>.toSQL(tMetadata: TypedMetadata): String {
+fun Collection<TypedField>.toSQL(tMetadata: TypedMetadata, keyConstraint: String = "PRIMARY KEY"): String {
     val primaryKeys = tMetadata.fileKeys.joinToString { "\"$it\"" }
 
-    return joinToString { "\"${it.field.name}\" ${it.type2sql()}" } + (if (primaryKeys.isEmpty()) "" else ", PRIMARY KEY($primaryKeys)")
+    return joinToString { "\"${it.field.name}\" ${it.type2sql()}" } + (if (primaryKeys.isEmpty()) "" else ", $keyConstraint($primaryKeys)")
 }
 
 fun TypedField.type2sql(): String =
