@@ -107,6 +107,12 @@ fun PreparedStatement.bind(values: List<Any>) {
     }
 }
 
+/** Whether [tableName] has a column named [columnName], per live JDBC metadata (not the RPG-side
+ *  [com.smeup.dbnative.model.FileMetadata]). Used to probe for the `__RNN` convention column once
+ *  at file open - see [SQLDialect.requiresRrnColumn]. */
+fun Connection.hasColumn(tableName: String, columnName: String): Boolean =
+    this.metaData.getColumns(null, null, tableName, columnName).use { it.next() }
+
 fun Connection.recordFormatName(tableName: String): String? =
     this.metaData.getTables(null, null, tableName, null).use {
         if (it.next()) {

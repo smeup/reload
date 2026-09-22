@@ -22,6 +22,7 @@ import com.smeup.dbnative.model.Field
 import com.smeup.dbnative.model.FileMetadata
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -184,5 +185,53 @@ class Native2SQLDirectRrnExpressionTest {
         assertTrue(sql.startsWith("SELECT \"CODE\", \"DESCR\", \"KEYED_TABLE\".\"__RNN\" AS \"RRN__\" FROM \"KEYED_TABLE\" WHERE"), "was: $sql")
         assertTrue(sql.contains("\"CODE\" = ?"), "was: $sql")
         assertFalse(sql.contains("ROW_NUMBER"), "was: $sql")
+    }
+
+    // --- Fallback when the table has no __RNN column (hasRrnColumn = false) ---
+
+    @Test
+    fun keyedQueryOmitsRrnProjectionWhenColumnMissing() {
+        // A keyed file never addresses by RRN, so a missing __RNN only affects the opportunistic
+        // output projection: it's simply left out, and the query still runs fine.
+        val adapter = Native2SQL(keyedMetadata, DefaultSQLDialect(), hasRrnColumn = false)
+        adapter.setRead(ReadMethod.CHAIN, listOf("C"))
+        val (sql, params) = adapter.getSQLStatement()
+
+        assertEquals(listOf("C"), params)
+        assertEquals("SELECT \"CODE\", \"DESCR\" FROM \"KEYED_TABLE\" WHERE \"CODE\" = ?", sql)
+        assertFalse(sql.contains("__RNN"), "was: $sql")
+        assertFalse(sql.contains("RRN__"), "was: $sql")
+    }
+
+    @Test
+    fun unkeyedPlainReadDoesNotFailWhenColumnMissing() {
+        // A plain unkeyed READ (no positioning, no RRN value supplied) never touches the RRN
+        // column at all - it must keep working even though the table has no __RNN.
+        val adapter = Native2SQL(unkeyedMetadata, DefaultSQLDialect(), hasRrnColumn = false)
+        adapter.setRead(ReadMethod.READ)
+        val (sql, params) = adapter.getSQLStatement()
+
+        assertEquals(emptyList(), params)
+        assertEquals("SELECT \"CODE\", \"DESCR\" FROM \"UNKEYED_TABLE\"", sql)
+    }
+
+    @Test
+    fun unkeyedChainByRrnFailsFastWithClearMessageWhenColumnMissing() {
+        // Genuinely addressing an unkeyed file BY RRN with no __RNN column has no addressing
+        // mechanism (the old ROW_NUMBER() fallback is gone) - this must still fail, but fast and
+        // clearly, before any SQL is built, rather than a raw driver "column ... does not exist".
+        val adapter = Native2SQL(unkeyedMetadata, DefaultSQLDialect(), hasRrnColumn = false)
+        val ex = assertFailsWith<IllegalArgumentException> {
+            adapter.setRead(ReadMethod.CHAIN, listOf("5"))
+        }
+        assertTrue(ex.message!!.contains("__RNN"), "was: ${ex.message}")
+    }
+
+    @Test
+    fun unkeyedSetllByRrnFailsFastWithClearMessageWhenColumnMissing() {
+        val adapter = Native2SQL(unkeyedMetadata, DefaultSQLDialect(), hasRrnColumn = false)
+        assertFailsWith<IllegalArgumentException> {
+            adapter.setPositioning(PositioningMethod.SETLL, listOf("5"))
+        }
     }
 }

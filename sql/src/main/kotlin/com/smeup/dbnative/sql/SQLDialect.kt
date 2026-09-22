@@ -65,6 +65,15 @@ interface SQLDialect {
     fun rrnParameterPlaceholder(): String = "?"
 
     /**
+     * Whether [rrnSelectExpression] depends on a real `__RNN` column existing on the table.
+     * True for every dialect except [DB2400Dialect], whose `RRN()` is a native engine function
+     * needing no column - so [SQLDBFile] only probes for the column (once, at file open) when
+     * this is true, and skips the RRN projection/positioning entirely when the probe finds it
+     * missing, instead of letting every query fail with "column ... does not exist".
+     */
+    fun requiresRrnColumn(): Boolean = true
+
+    /**
      * Called once, right after a new physical [Connection] is obtained (opened or borrowed
      * from a pool), before any query runs. Allows dialects to apply connection-scoped setup
      * for the whole lifetime of this connection (e.g. session timeouts, autoCommit mode).
@@ -182,6 +191,8 @@ class DB2400Dialect(pageSize: Int? = null) : SQLDialect {
     // other dialect's convention `__RNN` column (see SQLDialect.rrnSelectExpression), it needs no
     // column declared on the table.
     override fun rrnSelectExpression(tableAlias: String): String = "RRN($tableAlias)"
+
+    override fun requiresRrnColumn(): Boolean = false
 }
 
 class PostgreSQLDialect(pageSize: Int? = null) : SQLDialect {

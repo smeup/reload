@@ -60,10 +60,19 @@ every read, keyed or not:
 | DB2 for i (`jdbc:as400`) | `RRN(<table>)` | none, it is native |
 | everything else (PostgreSQL, HSQLDB, H2, MySQL, ...) | `<table>."__RNN"` | the table declares a `__RNN` column |
 
-`__RNN` is an **unconditional contract**: reload does not compute it or check for it, so querying a table
-that lacks it fails with "column ... does not exist". It must be an auto-generated `BIGINT` primary key,
-assigned once at insert time (a stable, monotonic value: RRN follows insertion order). The file's own
-declared keys become a `UNIQUE` constraint instead of the primary key.
+`__RNN` must be an auto-generated `BIGINT` primary key, assigned once at insert time (a stable, monotonic
+value: RRN follows insertion order). The file's own declared keys become a `UNIQUE` constraint instead of
+the primary key.
+
+Reload does not compute `__RNN`, but it does probe for it once, at file open (`SQLDBFile`, via
+`SQLDialect.requiresRrnColumn`/`Connection.hasColumn` - skipped entirely for DB2 for i, which needs no
+column). If it's missing:
+- The opportunistic output projection is simply skipped, on every read, keyed or not - `Result.rrn`
+  stays `null`, same as on a backend with no RRN concept at all (JT400, NoSQL). No query fails because
+  of it.
+- An unkeyed file is addressed by RRN *itself* (CHAIN/SETLL/SETGT/READE/READPE by RRN) - there's no
+  addressing mechanism without the column, so that specific operation still fails, but fast and with a
+  clear message, before any SQL runs, rather than a raw driver "column ... does not exist".
 
 ```sql
 -- PostgreSQL, HSQLDB, H2

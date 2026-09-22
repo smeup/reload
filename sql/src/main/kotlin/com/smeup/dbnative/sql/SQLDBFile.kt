@@ -44,7 +44,17 @@ class SQLDBFile(
 
     private var lastNativeMethod: NativeMethod? = null
 
-    private var adapter: Native2SQL = Native2SQL(this.fileMetadata, dialect)
+    /** Whether this file's table actually has the `__RNN` convention column, probed once here via
+     *  live JDBC metadata (not the RPG-side [fileMetadata]) - see [SQLDialect.requiresRrnColumn].
+     *  Defaults to "missing" on any probe failure: the safe direction, since it only means the
+     *  opportunistic RRN projection is skipped, never that a query fails. */
+    private val hasRrnColumn: Boolean = try {
+        !dialect.requiresRrnColumn() || connection.hasColumn(fileMetadata.tableName, "__RNN")
+    } catch (e: Exception) {
+        false
+    }
+
+    private var adapter: Native2SQL = Native2SQL(this.fileMetadata, dialect, hasRrnColumn)
     private var eof: Boolean = false
     private var rowsInCurrentPage: Int = 0
 

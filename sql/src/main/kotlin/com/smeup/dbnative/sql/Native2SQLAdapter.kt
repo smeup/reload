@@ -46,7 +46,13 @@ internal const val RRN_COLUMN = "RRN__"
 
 class Native2SQL(
     val fileMetadata: FileMetadata,
-    private val dialect: SQLDialect = DefaultSQLDialect()
+    private val dialect: SQLDialect = DefaultSQLDialect(),
+    /** Whether the table actually has the `__RNN` convention column (probed once by [SQLDBFile]
+     *  at file open - see [SQLDialect.requiresRrnColumn]). When false, [outerColumns] omits the
+     *  RRN projection entirely (so [com.smeup.dbnative.file.Result.rrn] just stays null) and
+     *  [checkKeys] fails fast, rather than than letting a query fail with "column ... does not
+     *  exist", if the caller actually tries to address a row by RRN. */
+    private val hasRrnColumn: Boolean = true
 ) {
     private var lastReadInstruction: ReadInstruction? = null
     private var lastPositioningInstruction: PositioningInstruction? = null
@@ -108,6 +114,7 @@ class Native2SQL(
      *  alike. */
     private fun outerColumns(): String {
         val fieldColumns = fileMetadata.fields.map { "\"${it.name}\"" }
+        if (!hasRrnColumn) return fieldColumns.joinToString(", ")
         val rrnColumn = "${dialect.rrnSelectExpression(quotedTableName())} AS \"$RRN_COLUMN\""
         return (fieldColumns + rrnColumn).joinToString(", ")
     }
@@ -120,6 +127,13 @@ class Native2SQL(
 
     private fun checkKeys(keys: List<String>) {
         if (rrnMode) {
+            // Only when a caller actually supplies an RRN value to address a row by (CHAIN/SETLL/
+            // SETGT/READE/READPE) - a plain unkeyed READ/READP passes an empty list here and never
+            // touches the RRN column at all (see getReadCoherentSql), so it must stay unaffected.
+            require(keys.isEmpty() || hasRrnColumn) {
+                "Cannot perform a Relative Record Number access on unkeyed file '${fileMetadata.name}': " +
+                    "no \"__RNN\" identity column found on table \"${fileMetadata.tableName}\""
+            }
             require(keys.size <= 1) {
                 "Relative Record Number access takes at most one positioning/read value (the RRN), got $keys"
             }
