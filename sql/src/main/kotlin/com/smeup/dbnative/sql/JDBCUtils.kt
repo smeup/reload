@@ -107,6 +107,12 @@ fun PreparedStatement.bind(values: List<Any>) {
     }
 }
 
+/** Whether [tableName] has a column named [columnName], per live JDBC metadata (not the RPG-side
+ *  [com.smeup.dbnative.model.FileMetadata]). Used to probe for the `__RNN` convention column once
+ *  at file open - see [SQLDialect.requiresRrnColumn]. */
+fun Connection.hasColumn(tableName: String, columnName: String): Boolean =
+    this.metaData.getColumns(null, null, tableName, columnName).use { it.next() }
+
 fun Connection.recordFormatName(tableName: String): String? =
     this.metaData.getTables(null, null, tableName, null).use {
         if (it.next()) {
@@ -195,7 +201,10 @@ fun ResultSet?.currentRecordToValues(): Record {
     val metadata = this.metaData
     for (i in 1..metadata.columnCount) {
         val value = this.getString(i)
-        result.add(RecordField(metadata.getColumnName(i), value))
+        // Label, not name: for a projected column with an alias (the RRN expression AS "RRN__"),
+        // some drivers (HSQLDB) report the underlying column's name from getColumnName() and only
+        // the alias from getColumnLabel(). For an un-aliased column the two are identical.
+        result.add(RecordField(metadata.getColumnLabel(i), value))
     }
     return result
 }

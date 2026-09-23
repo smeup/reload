@@ -35,9 +35,35 @@ class ReadInstruction(var method: ReadMethod, var keys: List<String>) {
     fun admitEmptyKeys() = method == ReadMethod.READ || method == ReadMethod.READP
 }
 
-class Native2SQL(val fileMetadata: FileMetadata) {
+/** Output alias of a row's Relative Record Number: every query projects
+ *  [SQLDialect.rrnSelectExpression] `AS "RRN__"` (see [Native2SQL.outerColumns]), keyed or not,
+ *  so callers can read back the RRN of whatever row was read. In RRN mode (i.e.
+ *  `fileMetadata.fileKeys` is empty) it is also the logical key CHAIN/SETLL/SETGT/READE/READPE
+ *  position by. Only an alias: never a real column in the physical table. Internal (not private)
+ *  so [SQLDBFile] can strip it out of the RPG-visible [com.smeup.dbnative.file.Record] and read it
+ *  into [com.smeup.dbnative.file.Result.rrn] instead. */
+internal const val RRN_COLUMN = "RRN__"
+
+class Native2SQL(
+    val fileMetadata: FileMetadata,
+    private val dialect: SQLDialect = DefaultSQLDialect(),
+    /** Whether the table actually has the `__RNN` convention column (probed once by [SQLDBFile]
+     *  at file open - see [SQLDialect.requiresRrnColumn]). When false, [outerColumns] omits the
+     *  RRN projection entirely (so [com.smeup.dbnative.file.Result.rrn] just stays null) and
+     *  [checkKeys] fails fast, rather than than letting a query fail with "column ... does not
+     *  exist", if the caller actually tries to address a row by RRN. */
+    private val hasRrnColumn: Boolean = true
+) {
     private var lastReadInstruction: ReadInstruction? = null
     private var lastPositioningInstruction: PositioningInstruction? = null
+
+    /** True when this file is unkeyed (arrival-sequence): CHAIN/SETLL/SETGT/READE/READPE
+     *  operate by Relative Record Number instead of by key. */
+    private val rrnMode: Boolean = fileMetadata.fileKeys.isEmpty()
+
+    /** The column name(s) every key-column-driven code path below should use: the real file
+     *  keys, or (RRN mode) the single synthetic RRN column. */
+    private val effectiveKeys: List<String> = if (rrnMode) listOf(RRN_COLUMN) else fileMetadata.fileKeys
 
     /**
      * Build values replacements for store procedures settings empty numerics values as 0
@@ -45,7 +71,7 @@ class Native2SQL(val fileMetadata: FileMetadata) {
     private fun buildReplacements(values: List<String>): MutableList<String> {
         return values.mapIndexed { index, s ->
             s.ifEmpty {
-                if (isNumeric(fileMetadata.fileKeys[index])) {
+                if (isNumeric(effectiveKeys[index])) {
                     "0"
                 } else {
                     ""
@@ -55,8 +81,42 @@ class Native2SQL(val fileMetadata: FileMetadata) {
     }
 
     private fun isNumeric(fieldName: String): Boolean {
+        if (fieldName == RRN_COLUMN) return true
         val field = fileMetadata.fields.find { it.name == fieldName }
         return field?.numeric ?: false
+    }
+
+    private fun quotedTableName(): String = "\"${fileMetadata.tableName}\""
+
+    /** [SQLDialect.rrnSelectExpression] for this file's table - a complete SQL expression, not a
+     *  bare identifier - but only consulted as a *key* in RRN mode: a keyed file's positioning is
+     *  always by its real key columns, never by RRN, so outside RRN mode this is null. (The RRN is
+     *  still projected as an output column for keyed files too, see [outerColumns].) No `FROM`
+     *  restructuring is needed either way, so the query's `ResultSet` stays updatable. */
+    private fun directRrnExpr(): String? = if (rrnMode) dialect.rrnSelectExpression(quotedTableName()) else null
+
+    /** SQL fragment identifying the effective key at [index], for use directly inside a `WHERE`/
+     *  `ORDER BY` clause: [directRrnExpr] (RRN mode) used raw/unquoted since it's already a
+     *  complete SQL expression rather than a bare identifier; otherwise the quoted column
+     *  identifier of the real file key. RRN mode is always single-key (see [checkKeys]), so
+     *  [index] is only ever meaningful for keyed files. */
+    private fun keyExpr(index: Int): String = directRrnExpr() ?: "\"${effectiveKeys[index]}\""
+
+    /** Bound-parameter placeholder to pair with [keyExpr]'s output at the same [index]: a plain
+     *  `?` for a real key column, or [SQLDialect.rrnParameterPlaceholder] when [keyExpr] is
+     *  [directRrnExpr] - see that placeholder's kdoc for why a direct RRN comparison sometimes
+     *  needs one (PostgreSQL's `__RNN` is a real `bigint` column). */
+    private fun placeholderFor(index: Int): String = if (directRrnExpr() != null) dialect.rrnParameterPlaceholder() else "?"
+
+    /** Outer SELECT column list: the RPG-visible fields, plus the row's RRN
+     *  ([SQLDialect.rrnSelectExpression] aliased [RRN_COLUMN]), so callers (page-resume, key-match,
+     *  and ordinary reads) can read the current row's RRN back out - for keyed and unkeyed files
+     *  alike. */
+    private fun outerColumns(): String {
+        val fieldColumns = fileMetadata.fields.map { "\"${it.name}\"" }
+        if (!hasRrnColumn) return fieldColumns.joinToString(", ")
+        val rrnColumn = "${dialect.rrnSelectExpression(quotedTableName())} AS \"$RRN_COLUMN\""
+        return (fieldColumns + rrnColumn).joinToString(", ")
     }
 
     private fun checkPositioning() {
@@ -66,11 +126,21 @@ class Native2SQL(val fileMetadata: FileMetadata) {
     }
 
     private fun checkKeys(keys: List<String>) {
-        require(fileMetadata.fileKeys.size > 0) {
-            "No keys specified in metadata"
-        }
-        require(keys.size <= fileMetadata.fileKeys.size) {
-            "Number of metadata keys $fileMetadata.fileKeys less than number of positioning/read keys $keys"
+        if (rrnMode) {
+            // Only when a caller actually supplies an RRN value to address a row by (CHAIN/SETLL/
+            // SETGT/READE/READPE) - a plain unkeyed READ/READP passes an empty list here and never
+            // touches the RRN column at all (see getReadCoherentSql), so it must stay unaffected.
+            require(keys.isEmpty() || hasRrnColumn) {
+                "Cannot perform a Relative Record Number access on unkeyed file '${fileMetadata.name}': " +
+                    "no \"__RNN\" identity column found on table \"${fileMetadata.tableName}\""
+            }
+            require(keys.size <= 1) {
+                "Relative Record Number access takes at most one positioning/read value (the RRN), got $keys"
+            }
+        } else {
+            require(keys.size <= fileMetadata.fileKeys.size) {
+                "Number of metadata keys $fileMetadata.fileKeys less than number of positioning/read keys $keys"
+            }
         }
     }
 
@@ -176,7 +246,7 @@ class Native2SQL(val fileMetadata: FileMetadata) {
         }
 
         lastReadInstruction!!.keys.mapIndexed { index, value ->
-            val keyname = fileMetadata.fileKeys.get(index)
+            val keyname = effectiveKeys.get(index)
             if (record[keyname]?.trim() != value.trim()) {
                 return false
             }
@@ -226,20 +296,76 @@ class Native2SQL(val fileMetadata: FileMetadata) {
 
     private fun getSQLOrderByClause(): String {
         val sortOrder = getSortOrder()
-        return fileMetadata.fileKeys.joinToString(
+        return effectiveKeys.indices.joinToString(
             prefix = "ORDER BY ",
             separator = ", "
-        ) { "\"$it\" ${sortOrder.symbol}" }
+        ) { "${keyExpr(it)} ${sortOrder.symbol}" }
+    }
+
+    /** For RRN mode with a [directRrnExpr] only (DB2, PostgreSQL): the single-fragment equivalent
+     *  of [SQLDialect.buildPositioningConditions], built directly off the raw expression instead
+     *  of a quoted identifier. RRN-mode positioning is always exactly one key (see [checkKeys]),
+     *  so the general multi-key UNION strategy [SQLDialect.buildPositioningConditions] exists for
+     *  is unneeded here - just one `<expr> <cmp> <placeholder>` fragment. */
+    private fun buildRrnDirectPositioningConditions(
+        expr: String,
+        positioningKey: String,
+        method: PositioningMethod,
+        forward: Boolean
+    ): List<Pair<String, List<String>>> {
+        val (cmp, _) = comparisonFor(method, forward)
+        return listOf(Pair("$expr ${cmp.symbol} ${dialect.rrnParameterPlaceholder()}", buildReplacements(listOf(positioningKey))))
+    }
+
+    private fun buildDialectPositioningSQL(columns: String, tableName: String, forward: Boolean): Pair<String, List<String>> {
+        val inst = lastPositioningInstruction!!
+        val conditions = directRrnExpr()?.let { expr ->
+            buildRrnDirectPositioningConditions(expr, inst.keys[0], inst.method, forward)
+        } ?: dialect.buildPositioningConditions(
+            effectiveKeys, inst.keys, inst.method, forward, ::buildReplacements
+        )
+        var sql = conditions.joinToString(" UNION ") { (where, _) ->
+            "SELECT $columns FROM $tableName WHERE $where"
+        } + " ${getSQLOrderByClause()}"
+        dialect.pageSize()?.let { sql += " FETCH FIRST $it ROWS ONLY" }
+        return Pair(sql, conditions.flatMap { it.second })
+    }
+
+    /**
+     * True while a positioning-based query (bounded by [SQLDialect.pageSize] and thus subject to
+     * transparent page resume) is the active read path, as opposed to CHAIN or an un-positioned
+     * full-table READ, neither of which go through [buildDialectPositioningSQL].
+     */
+    fun hasPositioning(): Boolean = lastPositioningInstruction != null
+
+    fun pageSize(): Int? = dialect.pageSize()
+
+    /**
+     * Builds the SQL to continue a positioning-based scan once its current page (capped by
+     * [SQLDialect.pageSize]) is exhausted, seeking strictly past [lastRecord] in the current read
+     * direction. Replaces [lastPositioningInstruction] but deliberately leaves [lastReadInstruction]
+     * untouched (unlike [setPositioning]) so the caller-visible read cycle (e.g. the original
+     * readEqual key filter) is unaffected by this internal repage.
+     */
+    fun getResumeSqlStatement(lastRecord: Record): Pair<String, List<String>> {
+        checkPositioning()
+        val forward = lastReadInstruction!!.method.forward
+        val resumeMethod = if (forward) PositioningMethod.SETGT else PositioningMethod.SETLL
+        val resumeKeys = effectiveKeys.map { lastRecord[it].orEmpty() }
+        lastPositioningInstruction = PositioningInstruction(resumeMethod, resumeKeys)
+        return buildDialectPositioningSQL(outerColumns(), quotedTableName(), forward)
     }
 
     fun getReadSqlStatement(): Pair<String, List<String>> {
         checkPositioning()
+        val n = lastPositioningInstruction!!.keys.size
         return Pair(
             getSQL(
-                fileMetadata.fields,
-                fileMetadata.fileKeys.subList(0, lastPositioningInstruction!!.keys.size),
+                outerColumns(),
+                (0 until n).map { keyExpr(it) },
+                (0 until n).map { placeholderFor(it) },
                 Comparison.EQ,
-                fileMetadata.tableName
+                quotedTableName()
             ), lastPositioningInstruction!!.keys
         )
     }
@@ -248,19 +374,21 @@ class Native2SQL(val fileMetadata: FileMetadata) {
         when (lastReadInstruction!!.method) {
             ReadMethod.CHAIN -> {
                 checkReadKeys()
+                val n = lastReadInstruction!!.keys.size
                 return Pair(
                     getSQL(
-                        fileMetadata.fields,
-                        fileMetadata.fileKeys.subList(0, lastReadInstruction!!.keys.size),
+                        outerColumns(),
+                        (0 until n).map { keyExpr(it) },
+                        (0 until n).map { placeholderFor(it) },
                         Comparison.EQ,
-                        fileMetadata.tableName
+                        quotedTableName()
                     ), lastReadInstruction!!.keys
                 )
             }
 
             ReadMethod.READ -> {
                 checkRead()
-                return getReadCoherentSql(true)
+                return getReadCoherentSql()
             }
 
             ReadMethod.READP -> {
@@ -277,104 +405,54 @@ class Native2SQL(val fileMetadata: FileMetadata) {
         }
     }
 
-    /*
-    // Senza posizionamento
-    SELECT * FROM EMPLOF
-
-    // Con posizionamento
-    SELECT *
-    FROM EMPL0F
-    WHERE WORKDEPT = 'C01'
-    UNION ALL
-    SELECT *
-    FROM EMPL0F
-    WHERE WORKDEPT >= 'C01'
-     */
-    private fun getReadCoherentSql(fullUnion: Boolean = false): Pair<String, List<String>> {
-        val columns = fileMetadata.fields.joinToString(", ") { "\"${it.name}\"" }
-        val tableName = "\"${fileMetadata.tableName}\""
-        val queries = mutableListOf<String>()
-        val replacements = mutableListOf<String>()
-
-        lastPositioningInstruction?.let {
-            val conditions = it.keys.mapIndexed { index, key ->
-                val operator = if (index == it.keys.size - 1 && it.method == PositioningMethod.SETGT) ">" else ">="
-                "\"${fileMetadata.fileKeys[index]}\" $operator ?"
-            }.joinToString(" AND ")
-
-            queries.add("SELECT $columns FROM $tableName WHERE $conditions")
-            replacements.addAll(buildReplacements(it.keys))
-        } ?: run {
-            return Pair("SELECT $columns FROM $tableName", replacements)
+    private fun getReadCoherentSql(): Pair<String, List<String>> {
+        val columns = outerColumns()
+        val tableName = quotedTableName()
+        if (lastPositioningInstruction == null) {
+            // A plain, unpositioned READ is always the forward/ascending direction (READP, the
+            // only backward case, requires positioning first - see checkPositioning()). For an
+            // unkeyed (RRN mode) file, order by RRN ascending so arrival-sequence reads stay in
+            // insertion order like they did before __RNN replaced the ROW_NUMBER()-numbered
+            // derived table (which every query, positioned or not, used to read through). Left
+            // out when the column is missing (directRrnExpr() is rrnMode-only, hasRrnColumn-blind)
+            // or for a keyed file, whose plain-READ order was never guaranteed either way.
+            val orderBy = directRrnExpr()?.takeIf { hasRrnColumn }?.let { " ORDER BY $it ASC" }.orEmpty()
+            return Pair("SELECT $columns FROM $tableName$orderBy", emptyList())
         }
-
-        return Pair(queries.joinToString(" ") + " " + getSQLOrderByClause(), replacements)
+        return buildDialectPositioningSQL(columns, tableName, lastReadInstruction!!.method.forward)
     }
 
     private fun getCoherentSql(fullUnion: Boolean = false): Pair<String, List<String>> {
-        val queries = mutableListOf<String>()
         val replacements = mutableListOf<String>()
-        val comparison = getComparison()
 
         if (lastPositioningInstruction == null) {
-            var columns = ""
-            fileMetadata.fields.forEachIndexed { index, k ->
-                run {
-                    columns += "\"" + k.name + "\", "
-                }
-            }
+            val columns = outerColumns()
             var value = ""
-            fileMetadata.fileKeys.forEachIndexed { index, k ->
-                run {
-                    value += "\"" + k + "\" " + Comparison.EQ.symbol + " ? AND "
-                }
+            effectiveKeys.indices.forEach { index ->
+                value += keyExpr(index) + " " + Comparison.EQ.symbol + " " + placeholderFor(index) + " AND "
             }
             replacements.addAll(buildReplacements(lastReadInstruction!!.keys))
 
             return Pair(
-                "SELECT " + columns.removeSuffix(", ") + "FROM \"${fileMetadata.tableName}\" WHERE " + value.removeSuffix(
-                    " AND "
-                ), replacements
+                "SELECT $columns FROM ${quotedTableName()} WHERE " + value.removeSuffix(" AND "), replacements
             )
         } else {
-            if (lastPositioningInstruction!!.keys.size == 1) {
-                queries.add(
-                    getSQL(
-                        fileMetadata.fields,
-                        fileMetadata.fileKeys.subList(0, 1),
-                        comparison.first,
-                        fileMetadata.tableName
-                    )
-                )
-                replacements.addAll(buildReplacements(lastPositioningInstruction!!.keys))
-            } else {
-                val limit = if (fullUnion) 1 else 2
-                for (i in lastPositioningInstruction!!.keys.size downTo limit) {
-                    queries.add(
-                        getSQL(
-                            fileMetadata.fields,
-                            fileMetadata.fileKeys.subList(0, i),
-                            if (i == lastPositioningInstruction!!.keys.size) comparison.first else comparison.second,
-                            fileMetadata.tableName
-                        )
-                    )
-                    replacements.addAll(buildReplacements(lastPositioningInstruction!!.keys.subList(0, i)))
-                }
-            }
+            return buildDialectPositioningSQL(outerColumns(), quotedTableName(), lastReadInstruction!!.method.forward)
         }
-        return Pair(queries.joinToString(" UNION ") + " " + getSQLOrderByClause(), replacements)
     }
 }
 
-private fun getSQL(fields: List<Field>, keys: List<String>, comparison: Comparison, tableName: String): String {
+/** [keyExprs] are already-complete SQL fragments (quoted identifiers or a raw dialect expression -
+ *  see [Native2SQL.keyExpr]), not bare column names, so no further quoting happens here.
+ *  [placeholders] pairs a bound-parameter placeholder with each [keyExprs] entry at the same
+ *  index - see [Native2SQL.placeholderFor]. */
+private fun getSQL(columns: String, keyExprs: List<String>, placeholders: List<String>, comparison: Comparison, fromClause: String): String {
 
-    val columns = fields.joinToString(", ") { "\"${it.name}\"" }
-
-    val conditions = keys.mapIndexed { index, key ->
-        "\"$key\" ${if (index < keys.size - 1) Comparison.EQ.symbol else comparison.symbol} ?"
+    val conditions = keyExprs.mapIndexed { index, keyExpr ->
+        "$keyExpr ${if (index < keyExprs.size - 1) Comparison.EQ.symbol else comparison.symbol} ${placeholders[index]}"
     }.joinToString(" AND ")
 
-    return "SELECT $columns FROM \"$tableName\" WHERE $conditions"
+    return "SELECT $columns FROM $fromClause WHERE $conditions"
 }
 
 

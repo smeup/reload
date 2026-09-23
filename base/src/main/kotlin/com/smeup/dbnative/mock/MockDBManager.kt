@@ -6,7 +6,7 @@ import com.smeup.dbnative.DBManagerBaseImpl
 /**
  * Mock implementation of DBManagerBaseImpl
  */
-class MockDBManager(override val connectionConfig: ConnectionConfig) : DBManagerBaseImpl() {
+class MockDBManager(override val connectionConfig: ConnectionConfig) : DBManagerBaseImpl<Nothing, Nothing>() {
 
     override fun validateConfig() {
     }

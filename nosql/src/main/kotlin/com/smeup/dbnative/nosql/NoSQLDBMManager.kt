@@ -32,7 +32,7 @@ import com.smeup.dbnative.file.DBFile
  * Record --> Object in collection
  */
 
-class NoSQLDBMManager (override val connectionConfig: ConnectionConfig) : DBManagerBaseImpl() {
+class NoSQLDBMManager (override val connectionConfig: ConnectionConfig) : DBManagerBaseImpl<Nothing, Nothing>() {
 
     // MongoDB-related fields
     private var host: String = ""

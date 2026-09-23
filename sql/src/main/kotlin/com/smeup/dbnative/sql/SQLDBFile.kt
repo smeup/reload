@@ -34,7 +34,8 @@ import kotlin.system.measureTimeMillis
 class SQLDBFile(
     override var name: String, override var fileMetadata: FileMetadata,
     var connection: Connection,
-    override var logger: Logger? = null
+    override var logger: Logger? = null,
+    private val dialect: SQLDialect = DefaultSQLDialect()
 ) : DBFile {
 
     private var preparedStatements: MutableMap<String, PreparedStatement> = mutableMapOf()
@@ -43,19 +44,21 @@ class SQLDBFile(
 
     private var lastNativeMethod: NativeMethod? = null
 
-    //Search from: metadata, primary key, unique index, view ordering fields
-    //private val thisFileKeys: List<String> by lazy {
-    //    // TODO: think about a right way (local file maybe?) to retrieve keylist
-    //    var indexes = this.fileMetadata.fileKeys
-    //    if(indexes.isEmpty()){
-    //        indexes = connection.primaryKeys(fileMetadata.name)
-    //    }
-    //    }
-    //    if (indexes.isEmpty()) connection.orderingFields(fileMetadata.name) else indexes
-    //}
+    /** Whether this file's table actually has the `__RNN` convention column, probed once here via
+     *  live JDBC metadata (not the RPG-side [fileMetadata]) - see [SQLDialect.requiresRrnColumn].
+     *  Defaults to "missing" on any probe failure: the safe direction, since it only means the
+     *  opportunistic RRN projection is skipped, never that a query fails. The failure itself is
+     *  still logged so a broken probe doesn't masquerade as "no __RNN column". */
+    private val hasRrnColumn: Boolean = try {
+        !dialect.requiresRrnColumn() || connection.hasColumn(fileMetadata.tableName, "__RNN")
+    } catch (e: Exception) {
+        logEvent(LoggingKey.connection, "Failed to probe __RNN column on ${fileMetadata.tableName}, assuming absent: ${e.message}")
+        false
+    }
 
-    private var adapter: Native2SQL = Native2SQL(this.fileMetadata)
+    private var adapter: Native2SQL = Native2SQL(this.fileMetadata, dialect, hasRrnColumn)
     private var eof: Boolean = false
+    private var rowsInCurrentPage: Int = 0
 
     private fun logEvent(loggingKey: LoggingKey, message: String, elapsedTime: Long? = null) =
         logger?.logEvent(loggingKey, message, elapsedTime, lastNativeMethod, fileMetadata.name)
@@ -254,6 +257,7 @@ class SQLDBFile(
         }
         lastNativeMethod = null
         telemetrySpan.endSpan()
+        if (!connection.autoCommit) connection.commit()
         return Result(record)
     }
 
@@ -291,6 +295,11 @@ class SQLDBFile(
             // record post update will be "record"
             var atLeastOneFieldChanged = false
             actualRecord?.forEach {
+                // actualRecord carries RRN_COLUMN (kept for getResumeSqlStatement/lastReadMatchRecord
+                // on the *next* read - see readNextFromResultSet) even for a keyed file, on dialects
+                // that project a direct RRN expression. It isn't a real column: the caller's record
+                // never has it, and the ResultSet has no updatable "RRN__" to write to either.
+                if (it.key == RRN_COLUMN) return@forEach
                 val fieldValue = record.getValue(it.key)
                 if (fieldValue != it.value) {
                     atLeastOneFieldChanged = true
@@ -305,6 +314,7 @@ class SQLDBFile(
         }
         lastNativeMethod = null
         telemetrySpan.endSpan()
+        if (!connection.autoCommit) connection.commit()
         return Result(record)
     }
 
@@ -327,6 +337,7 @@ class SQLDBFile(
         }
         lastNativeMethod = null
         telemetrySpan.endSpan()
+        if (!connection.autoCommit) connection.commit()
         return Result(record)
     }
 
@@ -336,7 +347,8 @@ class SQLDBFile(
 
     private fun executeQuery(sql: String, values: List<String>) {
         eof = false
-        resultSet.closeIfOpen()
+        rowsInCurrentPage = 0
+        closeResultSet()
         logEvent(LoggingKey.execute_inquiry, "Preparing statement for query: $sql with bingings: $values")
         val stm: PreparedStatement
         measureTimeMillis {
@@ -345,7 +357,7 @@ class SQLDBFile(
                     sql,
                     ResultSet.TYPE_FORWARD_ONLY,
                     ResultSet.CONCUR_UPDATABLE
-                )
+                ).also { ps -> dialect.fetchSize()?.let { ps.fetchSize = it } }
             }
             stm.bind(values)
         }.apply {
@@ -366,17 +378,32 @@ class SQLDBFile(
         while (!found && !eof) {
             count++
             if (result.record.isEmpty()) {
-                eof = true
-                result.indicatorEQ = true
-                closeResultSet()
-                logEvent(LoggingKey.read_data, "No more record to read")
+                val pageSize = adapter.pageSize()
+                val canResumeNextPage = adapter.hasPositioning() && actualRecord != null &&
+                        pageSize != null && rowsInCurrentPage == pageSize
+                if (canResumeNextPage) {
+                    logEvent(LoggingKey.read_data, "Page of $pageSize rows exhausted, fetching next page")
+                    executeQuery(adapter.getResumeSqlStatement(actualRecord!!))
+                    result = Result(resultSet.toValues())
+                } else {
+                    eof = true
+                    result.indicatorEQ = true
+                    closeResultSet()
+                    logEvent(LoggingKey.read_data, "No more record to read")
+                }
             }
             else if (adapter.lastReadMatchRecord(result.record)) {
                 logEvent(LoggingKey.read_data, "Record read: ${result.record}")
+                // actualRecord (used by getResumeSqlStatement/lastReadMatchRecord on the *next*
+                // call) must keep RRN_COLUMN - only the Result handed back to the RPG side has it
+                // stripped, so it never leaks into the RPG-visible field set.
                 actualRecord = result.record.duplicate()
+                result.rrn = result.record.remove(RRN_COLUMN)?.trim()?.toLongOrNull()
+                rowsInCurrentPage++
                 eof = false
                 found = true
             } else {
+                rowsInCurrentPage++
                 logEvent(LoggingKey.read_data, "Readed records: ${count}")
                 if (exitOnUnmatch) {
                     eof = true
@@ -422,7 +449,7 @@ class SQLDBFile(
     }
 
     override fun close() {
-        resultSet.closeIfOpen()
+        closeResultSet()
         preparedStatements.values.forEach { it.close() }
     }
 }

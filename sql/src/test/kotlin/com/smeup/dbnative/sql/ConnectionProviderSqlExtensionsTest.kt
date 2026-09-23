@@ -38,7 +38,7 @@ private val POOLED_CONFIG = ConnectionConfig(
     poolConfig = PoolConfig(maximumPoolSize = 2)
 )
 
-private fun sqlFactory(cfg: com.smeup.dbnative.ConnectionConfig): com.smeup.dbnative.DBMManager =
+private fun sqlFactory(cfg: com.smeup.dbnative.ConnectionConfig): com.smeup.dbnative.DBMManager<*, *> =
     SQLDBMManager(cfg)
 
 /**

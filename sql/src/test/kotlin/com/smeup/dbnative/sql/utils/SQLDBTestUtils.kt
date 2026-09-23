@@ -35,6 +35,7 @@ import org.junit.Assert
 import java.io.File
 import java.sql.Connection
 import java.sql.ResultSet
+import kotlin.use
 
 const val EMPLOYEE_TABLE_NAME = "EMPLOYEE"
 const val EMPLOYEE_VIEW_NAME = "EMPLOYEE_VIEW"
@@ -136,10 +137,18 @@ enum class TestSQLDBType(
         ConnectionConfig(
             fileName = "*",
             url = "jdbc:postgresql://localhost:5432/postgres",
-            user = "root",
-            password = "root",
-            driver = "org.postgresql.Driver"
-        )
+            user = System.getenv("PG_USER") ?: "root",
+            password = System.getenv("PG_PASSWORD") ?: "root",
+            driver = "org.postgresql.Driver",
+            properties = mapOf("reload.dialect.enabled" to (System.getenv("RELOAD_DIALECT_ENABLED") ?: "true"))
+        ),
+        createDatabase = { dbaConnection ->
+            dbaConnection.prepareStatement("CREATE SCHEMA IF NOT EXISTS public").use { it.execute() }
+        },
+        destroyDatabase = { dbaConnection ->
+            dbaConnection.prepareStatement("DROP SCHEMA IF EXISTS public CASCADE").use { it.execute() }
+            dbaConnection.prepareStatement("CREATE SCHEMA public").use { it.execute() }
+        }
     )
 
 }
@@ -216,7 +225,7 @@ fun destroyView() {
 fun destroyView(testSQLDBType: TestSQLDBType) {
     if (testSQLDBType.dbaConnectionConfig != null) {
         SQLDBMManager(testSQLDBType.dbaConnectionConfig).connection.use {
-            it.prepareStatement("DROP VIEW IF EXISTS \"$EMPLOYEE_VIEW_NAME\"")
+            it.prepareStatement("DROP VIEW IF EXISTS \"$EMPLOYEE_VIEW_NAME\"").use { stmt -> stmt.execute() }
         }
     }
 }
@@ -228,7 +237,7 @@ fun destroyIndex() {
 fun destroyIndex(testSQLDBType: TestSQLDBType) {
     if (testSQLDBType.dbaConnectionConfig != null) {
         SQLDBMManager(testSQLDBType.dbaConnectionConfig).connection.use {
-            it.prepareStatement("DROP INDEX IF EXISTS \"$EMPLOYEE_VIEW_NAME$CONVENTIONAL_INDEX_SUFFIX\"")
+            it.prepareStatement("DROP INDEX IF EXISTS \"$EMPLOYEE_VIEW_NAME$CONVENTIONAL_INDEX_SUFFIX\"").use { stmt -> stmt.execute() }
         }
     }
 }
@@ -255,10 +264,35 @@ fun createAndPopulateEmployeeView(dbManager: SQLDBMManager?) {
     val metadata = FileMetadata(EMPLOYEE_VIEW_NAME, EMPLOYEE_TABLE_NAME, fields.fieldList(), keys)
     dbManager!!.registerMetadata(metadata, true)
     try {
-        dbManager.execute(listOf(createXEMP2(), createEmployeeIndex()))
+        dbManager.execute(
+            listOf(
+                "DROP INDEX IF EXISTS \"$EMPLOYEE_VIEW_NAME$CONVENTIONAL_INDEX_SUFFIX\"",
+                "DROP VIEW IF EXISTS \"$EMPLOYEE_VIEW_NAME\"",
+                createXEMP2(),
+                createEmployeeIndex()
+            )
+        )
     } catch (e: Exception){
         println(e)
-    }}
+    }
+
+    // Physically reorders the table heap to match the (WORKDEPT, EMPNO) index.
+    // Queries that ORDER BY WORKDEPT only (single registered key) rely on a stable
+    // secondary order by EMPNO; PostgreSQL's ORDER BY is not stable on ties (unlike
+    // HSQLDB, which happens to preserve insertion/PK order), so without clustering the
+    // physical row order, ties on WORKDEPT can come back in a different EMPNO order.
+    // This only affects PostgreSQL: CLUSTER is a one-off physical reorg (not maintained
+    // on later writes), harmless/no-op-equivalent for other dialects since it's guarded here.
+    if (dbManager.connectionConfig.url.startsWith("jdbc:postgresql", ignoreCase = true)) {
+        try {
+            dbManager.connection.createStatement().use {
+                it.execute("CLUSTER \"$EMPLOYEE_TABLE_NAME\" USING \"$EMPLOYEE_VIEW_NAME$CONVENTIONAL_INDEX_SUFFIX\"")
+            }
+        } catch (e: Exception) {
+            println(e)
+        }
+    }
+}
 
 
 
@@ -389,19 +423,48 @@ fun buildNationKey(vararg values: String): List<String> {
 fun createFile(tMetadata: TypedMetadata, dbManager: SQLDBMManager) {
     val metadata: FileMetadata = tMetadata.fileMetadata()
     dbManager.connection.createStatement().use {
-        println(tMetadata.toSQL())
-        it.execute(tMetadata.toSQL())
+        val dropSql = "DROP TABLE IF EXISTS \"${tMetadata.tableName}\" CASCADE"
+        println(dropSql)
+        try {
+            it.execute(dropSql)
+        } catch (e: Exception) {
+            println(e)
+        }
+        val createSql = tMetadata.toSQL(dbManager.connectionConfig.url)
+        println(createSql)
+        it.execute(createSql)
     }
     dbManager.registerMetadata(metadata, true)
 }
 
-fun TypedMetadata.toSQL(): String = "CREATE TABLE IF NOT EXISTS \"${this.tableName}\" (${this.fields.toSQL(this)})"
+/**
+ * On every database except DB2 for i, every table reload touches is expected to declare a `__RNN`
+ * identity column (see SQLDialect.rrnSelectExpression's kdoc) - an unconditional external
+ * contract, not something reload defends against at query time (querying a table without it fails
+ * with "column ... does not exist"). This makes reload's own test tables honor that contract for
+ * real, on whichever database [url] points to. `__RNN` takes over as the table's actual PRIMARY KEY
+ * (a table can only have one); the file's own declared keys, if any, become a UNIQUE constraint
+ * instead - reload only needs them declared to resolve query-by-key access, not to be the literal
+ * DB-level primary key. DB2 for i needs no column (native `RRN()`), so it keeps the plain table.
+ */
+fun TypedMetadata.toSQL(url: String = ""): String {
+    val hasRrnColumn = !url.startsWith("jdbc:as400", ignoreCase = true)
+    val rrnColumn = when {
+        !hasRrnColumn -> ""
+        url.startsWith("jdbc:mysql", ignoreCase = true) -> "\"__RNN\" BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, "
+        // START WITH 1 is explicit because HSQLDB's identity starts at 0 (PostgreSQL and H2 at 1),
+        // and RRN 1 must be the first row, as on IBM i.
+        else -> "\"__RNN\" BIGINT GENERATED ALWAYS AS IDENTITY (START WITH 1) PRIMARY KEY, "
+    }
+    val keyConstraint = if (hasRrnColumn) "UNIQUE" else "PRIMARY KEY"
+    return "CREATE TABLE \"${this.tableName}\" ($rrnColumn${this.fields.toSQL(this, keyConstraint)})"
+}
 
 
-fun Collection<TypedField>.toSQL(tMetadata: TypedMetadata): String {
+fun Collection<TypedField>.toSQL(tMetadata: TypedMetadata, keyConstraint: String = "PRIMARY KEY"): String {
     val primaryKeys = tMetadata.fileKeys.joinToString { "\"$it\"" }
 
-    return joinToString { "\"${it.field.name}\" ${it.type2sql()}" } + (if (primaryKeys.isEmpty()) "" else ", PRIMARY KEY($primaryKeys)")
+    return joinToString { "\"${it.field.name}\" ${it.type2sql()}" } + (if (primaryKeys.isEmpty()) "" else ", $keyConstraint($primaryKeys)")
 }
 
 fun TypedField.type2sql(): String =

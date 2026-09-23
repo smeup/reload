@@ -42,6 +42,7 @@ class SQLReadPreviousTest {
         @AfterClass
         @JvmStatic
         fun tearDown() {
+            dbManager.close()
             destroyDatabase()
         }
     }
