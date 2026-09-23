@@ -1,13 +1,13 @@
 ---
 name: gitflow-release
-description: Cuts a new reload release using git flow (release start/finish) from develop, bumping Maven versions, drafting a CHANGELOG entry, and building the reactor. Use when the user asks to "cut a release", "create a new release", "release version X.Y.Z", "run git flow release", or "bump the version" for the reload project.
-version: 1.0.0
+description: Cuts a new reload release using git flow (release start/finish) from develop, bumping Maven versions, drafting a CHANGELOG entry, building the reactor, then (after user confirmation) pushing and marking the GitHub release as latest via gh. Use when the user asks to "cut a release", "create a new release", "release version X.Y.Z", "run git flow release", or "bump the version" for the reload project.
+version: 1.1.0
 ---
 
 # reload git-flow release
 
 Cuts a `reload` release with real `git flow release start/finish`, following the project's
-Maven versioning convention. Never push anything automatically — see "Stop before pushing" below.
+Maven versioning convention. Never push without explicit user confirmation — see "Push" (section 4) below.
 
 ## 0. Pre-flight
 
@@ -21,6 +21,8 @@ Maven versioning convention. Never push anything automatically — see "Stop bef
    tags are `v1.2.0` … `v1.7.0`, `v2.0.0`, …). If gitflow isn't configured yet:
    `git flow init -d` then `git config gitflow.prefix.versiontag v`.
 4. Return to `develop`, confirm `git status` is clean.
+5. Make sure the tag doesn't already exist locally or remotely (`git ls-remote --tags origin v<version>`)
+   and that `gh auth status` works — section 5 needs it.
 
 ## 1. Get the version number — never guess
 
@@ -98,14 +100,42 @@ mvn -q clean verify -pl '!nosql'                        # everything else, real 
    `mvn versions:set -DnewVersion=develop-SNAPSHOT -DgenerateBackupPoms=false`, then commit as
    `Remove release <version> and return to SNAPSHOT` (matches this repo's historical wording).
 
-## 4. Stop before pushing
+## 4. Push — only after explicit user confirmation
 
-**Never push automatically.** Pushing `master` triggers `.github/workflows/smeup-deploy.yml` and
-`.github/workflows/maven-central-deploy.yml` — a real deploy to the Nexus "releases" repo and
-Maven Central. Report the final state instead and hand the user the exact command:
+Pushing is a real, outward-facing deploy: a push to `master` triggers
+`.github/workflows/smeup-deploy.yml` (Nexus "releases") and `maven-central-deploy.yml` (Maven
+Central); a push to `develop` also triggers both (SNAPSHOT deploy). Neither can be undone.
+**Never push without an explicit yes in the current conversation** — a request to "cut a
+release" is not authorization to push.
+
+1. Show the user a summary and ask for confirmation (use AskUserQuestion):
+   - version and tag (`git describe --tags master`), the commits to be pushed
+     (`git log --oneline origin/master..master` and `origin/develop..develop`)
+   - the exact command: `git push --atomic origin develop master v<version>`
+   - the side effects: Nexus + Maven Central deploys, and the GitHub release that follows.
+2. If they decline or want changes, stop and report the local state. Do not push.
+3. On confirmation, push atomically so a partial failure can't leave the remote inconsistent:
+   `git push --atomic origin develop master v<version>`
+   If it is rejected (remote moved), stop and report — never force-push.
+
+## 5. Publish the GitHub release and mark it latest
+
+The deploy workflows do **not** create a GitHub Release, so do it with `gh` right after the
+push succeeds (the tag must exist on the remote first):
+
+```bash
+gh release create v<version> --verify-tag --latest --title "v<version>" \
+  --notes-file <notes.md>
 ```
-git push origin develop master v<version>
-```
+
+- Build `<notes.md>` (in the scratchpad, not the repo) from the `CHANGELOG.md` section for
+  this version, including `Breaking Changes`.
+- `--latest` explicitly marks it as the latest release (GitHub would otherwise pick by date /
+  semver). If the release already exists (e.g. created as a draft), use
+  `gh release edit v<version> --latest` instead.
+- Confirm: `gh release list --limit 3` shows `v<version>` as `Latest`, and
+  `gh release view v<version> --json isLatest,tagName,url`.
+- Report the release URL to the user.
 
 ## Verification
 
@@ -113,8 +143,9 @@ git push origin develop master v<version>
   `develop`, tag on `master`.
 - `git describe --tags master` → `v<version>`.
 - `grep -n '<version>' pom.xml` on `master` → `<version>`; on `develop` → `develop-SNAPSHOT`.
-- `git status` clean; `git log origin/master..master` / `origin/develop..develop` show the new
-  local-only commits (nothing pushed yet).
+- `git status` clean; before section 4, `git log origin/master..master` / `origin/develop..develop`
+  show the new local-only commits (nothing pushed yet).
+- After section 5: `gh release list --limit 3` shows `v<version>` as `Latest`.
 
 ## Helper script
 
