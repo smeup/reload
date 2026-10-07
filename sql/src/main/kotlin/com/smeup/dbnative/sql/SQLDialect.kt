@@ -1,6 +1,7 @@
 package com.smeup.dbnative.sql
 
 import java.sql.Connection
+import java.sql.SQLException
 
 interface SQLDialect {
 
@@ -72,6 +73,22 @@ interface SQLDialect {
      * missing, instead of letting every query fail with "column ... does not exist".
      */
     fun requiresRrnColumn(): Boolean = true
+
+    /**
+     * Whether [e], thrown by a positioned `ResultSet.deleteRow()`/`updateRow()`, means the engine
+     * made the cursor read-only despite `CONCUR_UPDATABLE` having been requested (e.g. because the
+     * positioning query contains a UNION). [SQLDBFile] then falls back to a searched
+     * DELETE/UPDATE by RRN. Default: false, the original error is rethrown.
+     */
+    fun isReadOnlyCursorError(e: SQLException): Boolean = false
+
+    /**
+     * Whether the cursor opened for [sql] can be modified through `ResultSet.deleteRow()`/
+     * `updateRow()`. When false, [SQLDBFile] skips the positioned operation altogether and uses a
+     * searched DELETE/UPDATE by RRN: attempting it on an engine that rejects it can leave the cursor
+     * in an error state, failing every later operation on it. Default: true.
+     */
+    fun isResultSetUpdatable(sql: String): Boolean = true
 
     /**
      * Called once, right after a new physical [Connection] is obtained (opened or borrowed
@@ -193,6 +210,14 @@ class DB2400Dialect(pageSize: Int? = null) : SQLDialect {
     override fun rrnSelectExpression(tableAlias: String): String = "RRN($tableAlias)"
 
     override fun requiresRrnColumn(): Boolean = false
+
+    // SQL0510 (SQLSTATE 42828): DB2 for i makes a cursor read-only when its query contains a
+    // UNION - as the multi-key positioning queries do - regardless of CONCUR_UPDATABLE.
+    override fun isReadOnlyCursorError(e: SQLException): Boolean =
+        e.sqlState == "42828" || e.message?.contains("SQL0510") == true || e.message?.contains("SQL0906") == true
+
+    // Same reason as above: the multi-key positioning queries are UNIONs.
+    override fun isResultSetUpdatable(sql: String): Boolean = !sql.contains(" UNION ", ignoreCase = true)
 }
 
 class PostgreSQLDialect(pageSize: Int? = null) : SQLDialect {

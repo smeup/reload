@@ -29,6 +29,7 @@ import com.smeup.dbnative.model.FileMetadata
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.ResultSet
+import java.sql.SQLException
 import kotlin.system.measureTimeMillis
 
 class SQLDBFile(
@@ -40,6 +41,9 @@ class SQLDBFile(
 
     private var preparedStatements: MutableMap<String, PreparedStatement> = mutableMapOf()
     private var resultSet: ResultSet? = null
+    /** False when the current [resultSet] is known not to support positioned delete/update, see
+     *  [SQLDialect.isResultSetUpdatable]; reset on every [executeQuery]. */
+    private var resultSetUpdatable: Boolean = true
     private var actualRecord: Record? = null
 
     private var lastNativeMethod: NativeMethod? = null
@@ -294,6 +298,7 @@ class SQLDBFile(
             // record before update is "actualRecord"
             // record post update will be "record"
             var atLeastOneFieldChanged = false
+            val changedFields = linkedMapOf<String, String>()
             actualRecord?.forEach {
                 // actualRecord carries RRN_COLUMN (kept for getResumeSqlStatement/lastReadMatchRecord
                 // on the *next* read - see readNextFromResultSet) even for a keyed file, on dialects
@@ -303,11 +308,21 @@ class SQLDBFile(
                 val fieldValue = record.getValue(it.key)
                 if (fieldValue != it.value) {
                     atLeastOneFieldChanged = true
-                    this.getResultSet()?.updateObject(it.key, fieldValue)
+                    changedFields[it.key] = fieldValue
                 }
             } ?: logEvent(LoggingKey.native_access_method, "No previous read executed, nothing to update")
             if (atLeastOneFieldChanged) {
-                this.getResultSet()?.updateRow()
+                if (!resultSetUpdatable) {
+                    updateByRrn(changedFields)
+                } else try {
+                    val rs = this.getResultSet()
+                    changedFields.forEach { (column, value) -> rs?.updateObject(column, value) }
+                    rs?.updateRow()
+                } catch (e: SQLException) {
+                    if (!dialect.isReadOnlyCursorError(e)) throw e
+                    resultSetUpdatable = false
+                    updateByRrn(changedFields, e)
+                }
             }
         }.apply {
             logEvent(LoggingKey.native_access_method, "update executed", this)
@@ -328,7 +343,15 @@ class SQLDBFile(
         )
         measureTimeMillis {
             if (actualRecord != null) {
-                this.getResultSet()?.deleteRow()
+                if (!resultSetUpdatable) {
+                    deleteByRrn()
+                } else try {
+                    this.getResultSet()?.deleteRow()
+                } catch (e: SQLException) {
+                    if (!dialect.isReadOnlyCursorError(e)) throw e
+                    resultSetUpdatable = false
+                    deleteByRrn(e)
+                }
             } else {
                 logEvent(LoggingKey.native_access_method, "No previous read executed, nothing to delete")
             }
@@ -341,6 +364,33 @@ class SQLDBFile(
         return Result(record)
     }
 
+    private fun currentRrn(cause: SQLException?): Long =
+        actualRecord?.get(RRN_COLUMN)?.trim()?.toLongOrNull()
+            ?: throw cause ?: IllegalStateException("Current record has no RRN, cannot delete/update it on a read-only cursor")
+
+    /** Fallback for a read-only cursor: searched DELETE of the current row, identified by its RRN
+     *  (always projected by the read query when [hasRrnColumn]; otherwise the original error is rethrown). */
+    private fun deleteByRrn(cause: SQLException? = null) {
+        val rrn = currentRrn(cause)
+        val sql = "DELETE FROM \"${fileMetadata.tableName}\" WHERE ${dialect.rrnSelectExpression("\"${fileMetadata.tableName}\"")} = ?"
+        logEvent(LoggingKey.native_access_method, "Cursor is read-only, falling back to: $sql with RRN $rrn")
+        connection.prepareStatement(sql).use { it.setLong(1, rrn); it.executeUpdate() }
+    }
+
+    /** Same as [deleteByRrn], for UPDATE of the changed columns. */
+    private fun updateByRrn(changedFields: Map<String, String>, cause: SQLException? = null) {
+        val rrn = currentRrn(cause)
+        val table = "\"${fileMetadata.tableName}\""
+        val sql = "UPDATE $table SET " + changedFields.keys.joinToString(", ") { "\"$it\" = ?" } +
+                " WHERE ${dialect.rrnSelectExpression(table)} = ?"
+        logEvent(LoggingKey.native_access_method, "Cursor is read-only, falling back to: $sql with RRN $rrn")
+        connection.prepareStatement(sql).use { ps ->
+            changedFields.values.forEachIndexed { i, v -> ps.setObject(i + 1, v) }
+            ps.setLong(changedFields.size + 1, rrn)
+            ps.executeUpdate()
+        }
+    }
+
     private fun executeQuery(sqlAndValues: Pair<String, List<String>>) {
         executeQuery(sqlAndValues.first, sqlAndValues.second)
     }
@@ -348,6 +398,7 @@ class SQLDBFile(
     private fun executeQuery(sql: String, values: List<String>) {
         eof = false
         rowsInCurrentPage = 0
+        resultSetUpdatable = dialect.isResultSetUpdatable(sql)
         closeResultSet()
         logEvent(LoggingKey.execute_inquiry, "Preparing statement for query: $sql with bingings: $values")
         val stm: PreparedStatement
