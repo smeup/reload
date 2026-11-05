@@ -1,6 +1,7 @@
 package com.smeup.dbnative.sql
 
 import org.junit.Test
+import java.sql.SQLException
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
@@ -27,6 +28,14 @@ class PostgreSQLDialectTest {
     fun `pageSize is disabled when configured as zero or negative`() {
         assertNull(PostgreSQLDialect(pageSize = 0).pageSize())
         assertNull(PostgreSQLDialect(pageSize = -1).pageSize())
+    }
+
+    @Test
+    fun `positioned delete on a file without declared keys is treated as a read-only cursor`() {
+        // pgjdbc: "No eligible primary or unique key found for table ..." -> INVALID_CURSOR_STATE
+        assertTrue(dialect.isReadOnlyCursorError(SQLException("No eligible primary or unique key found for table \"T\".", "24000")))
+        assertFalse(dialect.isReadOnlyCursorError(SQLException("relation \"T\" does not exist", "42P01")))
+        assertFalse(dialect.isReadOnlyCursorError(SQLException("no state")))
     }
 
     @Test
