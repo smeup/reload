@@ -254,6 +254,15 @@ class PostgreSQLDialect(pageSize: Int? = null) : SQLDialect {
 
     // rrnSelectExpression: inherits the convention `__RNN` column from SQLDialect.
 
+    // pgjdbc only allows ResultSet.deleteRow()/updateRow() when a primary/unique key of the table is
+    // selected under its own name. A file with no declared keys has only __RNN as primary key, and
+    // reload projects it aliased (`AS "RRN__"`), so the driver rejects the positioned operation with
+    // "No eligible primary or unique key found for table ..." (SQLSTATE 24000, INVALID_CURSOR_STATE;
+    // the message is localised, so only the state is matched). This is not a real read-only cursor:
+    // the row is still addressable by RRN, which is how RPG identifies the record to delete/update.
+    // SQLDBFile then falls back to a searched DELETE/UPDATE by __RNN (and rethrows if no RRN is known).
+    override fun isReadOnlyCursorError(e: SQLException): Boolean = e.sqlState == "24000"
+
     // __RNN is a real bigint column, and reload's whole binding pipeline sends every parameter as
     // a string (see rrnParameterPlaceholder's kdoc) - without this cast PostgreSQL rejects the
     // comparison outright ("operator does not exist: bigint = character varying").
