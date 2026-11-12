@@ -54,7 +54,7 @@ class SQLDBFile(
      *  opportunistic RRN projection is skipped, never that a query fails. The failure itself is
      *  still logged so a broken probe doesn't masquerade as "no __RNN column". */
     private val hasRrnColumn: Boolean = try {
-        !dialect.requiresRrnColumn() || connection.hasColumn(fileMetadata.tableName, "__RNN")
+        !dialect.requiresRrnColumn() || connection.hasColumnCached(fileMetadata.tableName, "__RNN")
     } catch (e: Exception) {
         logEvent(LoggingKey.connection, "Failed to probe __RNN column on ${fileMetadata.tableName}, assuming absent: ${e.message}")
         false
