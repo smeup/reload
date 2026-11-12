@@ -20,6 +20,7 @@ package com.smeup.dbnative.metadata.file
 import com.smeup.dbnative.metadata.MetadataRegister
 import com.smeup.dbnative.model.FileMetadata
 import java.io.File
+import java.util.concurrent.ConcurrentHashMap
 
 object FSMetadataRegisterImpl: MetadataRegister{
 
@@ -36,12 +37,35 @@ object FSMetadataRegisterImpl: MetadataRegister{
         }
     }
 
+    /**
+     * What this JVM last wrote and last read for each metadata file, keyed like the file name (uppercase).
+     * Programs register the metadata of their files at every open: without these caches every open deleted
+     * and rewrote the json file, then parsed it back. Callers always get a copy, because FileMetadata is
+     * mutable. A file changed on disk by another process is seen again only after this JVM registers or
+     * removes it.
+     */
+    private val written = ConcurrentHashMap<String, FileMetadata>()
+    private val read = ConcurrentHashMap<String, FileMetadata>()
+
+    private fun FileMetadata.snapshot() = copy(fields = fields.toList(), fileKeys = fileKeys.toList())
+
+    private fun jsonFile(fileName: String) = File(propertiesDirPath, fileName.uppercase() + ".json")
+
     override fun registerMetadata(metadata: FileMetadata, overwrite: Boolean) {
+        val key = metadata.name.uppercase()
+        read.remove(key)
         MetadataSerializer.metadataToJson(propertiesDirPath, metadata, true)
+        written[key] = metadata.snapshot()
     }
 
+    override fun isRegistered(metadata: FileMetadata): Boolean =
+        written[metadata.name.uppercase()] == metadata && contains(metadata.name)
+
     override fun getMetadata(filename: String): FileMetadata {
-        return MetadataSerializer.jsonToMetadata(propertiesDirPath, filename)
+        val key = filename.uppercase()
+        val cached = read[key]
+        if (cached != null && jsonFile(filename).exists()) return cached.snapshot()
+        return MetadataSerializer.jsonToMetadata(propertiesDirPath, filename).also { read[key] = it.snapshot() }
     }
 
     override fun contains(fileName: String): Boolean {
@@ -49,6 +73,8 @@ object FSMetadataRegisterImpl: MetadataRegister{
     }
 
     override fun remove(fileName: String) {
+        written.remove(fileName.uppercase())
+        read.remove(fileName.uppercase())
         var propertiesFile = File("${propertiesDirPath}${File.separatorChar}${fileName}.json")
         if (propertiesFile.exists()) propertiesFile.delete()
     }
