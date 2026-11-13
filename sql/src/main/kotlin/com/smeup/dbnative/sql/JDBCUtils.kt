@@ -113,6 +113,18 @@ fun PreparedStatement.bind(values: List<Any>) {
 fun Connection.hasColumn(tableName: String, columnName: String): Boolean =
     this.metaData.getColumns(null, null, tableName, columnName).use { it.next() }
 
+/** Probe results of [hasColumnCached], keyed by database url, user, table and column. */
+private val columnPresenceCache = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
+
+/** Like [hasColumn], but probes each (database, user, table, column) only once per JVM: the
+ *  `getColumns` metadata query costs a round trip plus a catalog scan, and it ran at every file open.
+ *  A table's columns are not expected to change while the application is running. */
+fun Connection.hasColumnCached(tableName: String, columnName: String): Boolean {
+    val metaData = this.metaData
+    val key = "${metaData.url}|${metaData.userName}|$tableName|$columnName"
+    return columnPresenceCache[key] ?: hasColumn(tableName, columnName).also { columnPresenceCache[key] = it }
+}
+
 fun Connection.recordFormatName(tableName: String): String? =
     this.metaData.getTables(null, null, tableName, null).use {
         if (it.next()) {

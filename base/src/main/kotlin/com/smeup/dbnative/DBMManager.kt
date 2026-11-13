@@ -35,7 +35,20 @@ interface DBMManager<Q, RS> : AutoCloseable {
     fun existFile(name: String): Boolean
     fun registerMetadata(metadata: FileMetadata, overwrite: Boolean)
     fun metadataOf(name: String): FileMetadata
+    /** Opens [name] with the metadata registered for it (see [registerMetadata]). */
     fun openFile(name: String): DBFile
+
+    /**
+     * Opens [name] with the given [metadata], without registering it: the metadata belongs to this open only,
+     * so concurrent opens of the same file with different metadata (e.g. one per tenant) do not interfere.
+     * The default implementation, kept for implementations that do not override it, registers the metadata
+     * and opens the file by name.
+     */
+    fun openFile(name: String, metadata: FileMetadata): DBFile {
+        registerMetadata(metadata, true)
+        return openFile(name)
+    }
+
     fun closeFile(name: String)
     fun unregisterMetadata(name: String)
     /**

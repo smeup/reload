@@ -21,6 +21,8 @@ import com.smeup.dbnative.ConnectionConfig
 import com.smeup.dbnative.DBManagerBaseImpl
 import com.smeup.dbnative.log.LoggingKey
 import com.smeup.dbnative.log.TelemetrySpan
+import com.smeup.dbnative.model.FileMetadata
+import com.smeup.dbnative.model.copyForOpen
 import java.sql.Connection
 import java.sql.DriverManager
 import java.sql.PreparedStatement
@@ -87,9 +89,14 @@ open class SQLDBMManager(override val connectionConfig: ConnectionConfig) : DBMa
 
     override fun openFile(name: String): SQLDBFile {
         require(this.existFile(name))
-        return SQLDBFile(name = name, fileMetadata = metadataOf(name), connection = connection, logger, dialect)
-            .also { openedFiles.add(it) }
+        return newFile(name, metadataOf(name))
     }
+
+    override fun openFile(name: String, metadata: FileMetadata): SQLDBFile = newFile(name, metadata.copyForOpen(name))
+
+    private fun newFile(name: String, metadata: FileMetadata) =
+        SQLDBFile(name = name, fileMetadata = metadata, connection = connection, logger, dialect)
+            .also { openedFiles.add(it) }
 
     override fun closeFile(name: String) {
         val toClose = openedFiles.filter { it.name == name }

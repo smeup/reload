@@ -21,6 +21,12 @@ import com.smeup.dbnative.metadata.MetadataRegister
 import com.smeup.dbnative.model.FileMetadata
 import java.io.File
 
+/**
+ * Metadata register persisted as json files in `DBNATIVE_DDS_DIR` (default `~/etc/dbnativeaccess/dds`).
+ * No longer the default: the directory is shared by every JVM on the host and keyed only by file name,
+ * so different metadata for the same file name (e.g. one per tenant) overwrite each other.
+ */
+@Deprecated("Metadata is kept in memory by default (InMemoryMetadataRegister); pass it to DBMManager.openFile(name, metadata) instead of persisting it")
 object FSMetadataRegisterImpl: MetadataRegister{
 
     var propertiesDirPath: String

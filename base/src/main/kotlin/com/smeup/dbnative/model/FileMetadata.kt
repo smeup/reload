@@ -18,3 +18,10 @@
 package com.smeup.dbnative.model
 
 data class FileMetadata(var name: String, var tableName:String, var fields: List<Field>, var fileKeys:List<String>)
+
+/**
+ * The metadata a file opened as [fileName] works with: a copy, so the file does not share a mutable
+ * instance with the caller, where an empty [FileMetadata.tableName] defaults to the file name.
+ */
+fun FileMetadata.copyForOpen(fileName: String): FileMetadata =
+    copy(tableName = tableName.ifEmpty { fileName.uppercase() }, fields = fields.toList(), fileKeys = fileKeys.toList())
