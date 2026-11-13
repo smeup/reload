@@ -1,8 +1,9 @@
 name: Deploy to maven central
 on:
-  push:
-    branches: [master, develop]
   workflow_dispatch:
+### disable automatic execution: it always fails at GPG signing (gpg: signing failed: No secret key)
+#  push:
+#    branches: [master, develop]
 
 env:
   JAVA_DISTRIBUTION: zulu
