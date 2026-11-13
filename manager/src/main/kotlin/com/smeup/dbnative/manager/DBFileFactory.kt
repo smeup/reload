@@ -50,13 +50,13 @@ class DBFileFactory(
     private val managers = mutableMapOf<ConnectionConfig, DBMManager<*, *>>()
 
     /**
-     * Open the file named fileName. A file can only be opened after registration of its metadata.
-     * Registering a metadata can be done by passing the metadata into the open request or by calling the registerMetadata function
-     * before opening invocation. The file metadata recording is persistent, so after a first recording you can call the opening of the file
-     * without further registration.
+     * Open the file named fileName.
+     * If fileMetadata is passed, the file is opened with it and nothing is registered: the metadata belongs to this open only.
+     * Otherwise the file is opened with the metadata registered for it by the registerMetadata function; that registration
+     * is kept in memory, it does not outlive the JVM.
      *
      * @param fileName file to open
-     * @param fileMetadata metadata to register. If passed, file metadata is registered before file opening
+     * @param fileMetadata metadata of the file. If null, the metadata registered for fileName is used
      * */
     fun open(fileName: String, fileMetadata: FileMetadata?) : DBFile {
         val fileNameNormalized = fileNameNormalizer(fileName)
@@ -72,10 +72,8 @@ class DBFileFactory(
                 managers.getOrPut(configMatch) { createDBManager(configMatch, config.logger).apply { validateConfig() } }
             }
 
-        if (fileMetadata != null) {
-            dbmManager.registerMetadata(fileMetadata, true)
-        }
-        val dbFile = dbmManager.openFile(fileNameNormalized)
+        val dbFile = if (fileMetadata != null) dbmManager.openFile(fileNameNormalized, fileMetadata)
+                     else dbmManager.openFile(fileNameNormalized)
         return DBFileWrapper(dbFile = dbFile, dbmManager = dbmManager)
     }
 

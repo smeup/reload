@@ -20,7 +20,7 @@ package com.smeup.dbnative
 
 import com.smeup.dbnative.log.Logger
 import com.smeup.dbnative.metadata.MetadataRegister
-import com.smeup.dbnative.metadata.file.FSMetadataRegisterImpl
+import com.smeup.dbnative.metadata.InMemoryMetadataRegister
 import com.smeup.dbnative.model.FileMetadata
 import java.util.*
 
@@ -63,10 +63,13 @@ abstract class DBManagerBaseImpl<Q, RS> : DBMManager<Q, RS> {
 
     companion object {
 
-        val register: MetadataRegister
-            get() {
-                return FSMetadataRegisterImpl
-            }
+        /**
+         * The register of the metadata used by files opened without metadata. In memory by default;
+         * [com.smeup.dbnative.metadata.file.FSMetadataRegisterImpl] can still be set here to persist it on disk.
+         */
+        @JvmStatic
+        @Volatile
+        var register: MetadataRegister = InMemoryMetadataRegister()
 
         fun getMetadataRegister(): MetadataRegister {
             return register
