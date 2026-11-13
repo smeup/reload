@@ -15,6 +15,12 @@ updates:
       - "/sql"
     schedule:
       interval: "weekly"
+    # reload is consumed by jariko, which is on Kotlin 2.2.x (gradle.properties, kotlinVersion).
+    # A Kotlin compiler reads metadata of at most one minor version newer, so reload must not
+    # get ahead of jariko: ignore Kotlin 2.3+ until jariko moves (then raise or remove this rule).
+    ignore:
+      - dependency-name: "org.jetbrains.kotlin:*"
+        versions: [">= 2.3"]
     # group dependencies that will be updated together in one pull request
     groups:
       test-db-drivers:
