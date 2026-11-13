@@ -39,7 +39,6 @@ abstract class DBManagerBaseImpl<Q, RS> : DBMManager<Q, RS> {
     }
 
     override fun registerMetadata(metadata: FileMetadata, overwrite: Boolean) {
-        if (overwrite && getMetadataRegister().isRegistered(metadata)) return
         if (getMetadataRegister().contains(metadata.name)) {
             if (overwrite) getMetadataRegister().remove(metadata.name)
             else return
@@ -74,7 +73,6 @@ abstract class DBManagerBaseImpl<Q, RS> : DBMManager<Q, RS> {
         }
 
         fun staticRegisterMetadata(metadata: FileMetadata, overwrite: Boolean) {
-            if (overwrite && getMetadataRegister().isRegistered(metadata)) return
             if (getMetadataRegister().contains(metadata.name)) {
                 if (overwrite) getMetadataRegister().remove(metadata.name)
                 else return

@@ -25,7 +25,4 @@ interface MetadataRegister {
     fun getMetadata(filename:String): FileMetadata
     fun contains(fileName:String): Boolean
     fun remove(fileName:String)
-
-    /** Whether exactly this [metadata] is already registered, so registering it again would change nothing. */
-    fun isRegistered(metadata: FileMetadata): Boolean = false
 }
