@@ -52,6 +52,12 @@ open class Logger(val level:LoggingLevel = LoggingLevel.OFF,
         }
     }
 
+    /**
+     * True when an event with this key would be delivered. Lets callers skip building an expensive message
+     * (string templates are evaluated before [logEvent] runs, whatever the level).
+     */
+    fun isEnabled(eventKey: LoggingKey): Boolean = eventKey.level.ordinal <= level.ordinal
+
     fun logEvent(eventKey: LoggingKey,
                  message: String,
                  elapsedTime: Long? = null,

@@ -67,6 +67,11 @@ class SQLDBFile(
     private fun logEvent(loggingKey: LoggingKey, message: String, elapsedTime: Long? = null) =
         logger?.logEvent(loggingKey, message, elapsedTime, lastNativeMethod, fileMetadata.name)
 
+    /** Same as above, but the message is built only when the event is going to be delivered. */
+    private inline fun logEvent(loggingKey: LoggingKey, message: () -> String) {
+        logger?.let { if (it.isEnabled(loggingKey)) it.logEvent(loggingKey, message(), null, lastNativeMethod, fileMetadata.name) }
+    }
+
 
     override fun setll(key: String): Boolean {
         return setll(mutableListOf(key))
@@ -74,7 +79,7 @@ class SQLDBFile(
 
     override fun setll(keys: List<String>): Boolean {
         lastNativeMethod = NativeMethod.setll
-        logEvent(LoggingKey.native_access_method, "Executing setll on keys $keys")
+        logEvent(LoggingKey.native_access_method) { "Executing setll on keys $keys" }
 
         adapter.setPositioning(PositioningMethod.SETLL, keys)
         return true
@@ -86,7 +91,7 @@ class SQLDBFile(
 
     override fun setgt(keys: List<String>): Boolean {
         lastNativeMethod = NativeMethod.setgt
-        logEvent(LoggingKey.native_access_method, "Executing setgt on keys $keys")
+        logEvent(LoggingKey.native_access_method) { "Executing setgt on keys $keys" }
 
         adapter.setPositioning(PositioningMethod.SETGT, keys)
         return true
@@ -99,7 +104,7 @@ class SQLDBFile(
     override fun chain(keys: List<String>): Result {
         val telemetrySpan = TelemetrySpan("CHAIN Execution")
         lastNativeMethod = NativeMethod.chain
-        logEvent(LoggingKey.native_access_method, "Executing chain on keys $keys")
+        logEvent(LoggingKey.native_access_method) { "Executing chain on keys $keys" }
         adapter.setRead(ReadMethod.CHAIN, keys)
         val result: Result
         measureTimeMillis {
@@ -187,7 +192,7 @@ class SQLDBFile(
 
     override fun readEqual(keys: List<String>): Result {
         lastNativeMethod = NativeMethod.readEqual
-        logEvent(LoggingKey.native_access_method, "Executing readEqual on keys $keys")
+        logEvent(LoggingKey.native_access_method) { "Executing readEqual on keys $keys" }
         val read: Result
         var queryError = false
         measureTimeMillis {
@@ -220,7 +225,7 @@ class SQLDBFile(
     override fun readPreviousEqual(keys: List<String>): Result {
         lastNativeMethod = NativeMethod.readPreviousEqual
         val telemetrySpan = TelemetrySpan("READPE Execution")
-        logEvent(LoggingKey.native_access_method, "Executing readPreviousEqual on keys $keys")
+        logEvent(LoggingKey.native_access_method) { "Executing readPreviousEqual on keys $keys" }
         val read: Result
         var queryError = false
         measureTimeMillis {
@@ -245,10 +250,9 @@ class SQLDBFile(
     override fun write(record: Record): Result {
         lastNativeMethod = NativeMethod.write
         val telemetrySpan = TelemetrySpan("WRITE Execution")
-        logEvent(
-            LoggingKey.native_access_method,
+        logEvent(LoggingKey.native_access_method) {
             "Executing write for record $record: with autocommit=${connection.autoCommit}"
-        )
+        }
         measureTimeMillis {
             // TODO: manage errors
             val sql = fileMetadata.tableName.insertSQL(record)
@@ -290,10 +294,9 @@ class SQLDBFile(
         }
         val telemetrySpan = TelemetrySpan("UPDATE Execution")
         lastNativeMethod = NativeMethod.update
-        logEvent(
-            LoggingKey.native_access_method,
+        logEvent(LoggingKey.native_access_method) {
             "Executing update record $actualRecord to $record with autocommit=${connection.autoCommit}"
-        )
+        }
         measureTimeMillis {
             // record before update is "actualRecord"
             // record post update will be "record"
@@ -337,10 +340,9 @@ class SQLDBFile(
     override fun delete(record: Record): Result {
         lastNativeMethod = NativeMethod.delete
         val telemetrySpan = TelemetrySpan("DELETE Execution")
-        logEvent(
-            LoggingKey.native_access_method,
+        logEvent(LoggingKey.native_access_method) {
             "Executing delete for current record $actualRecord with autocommit=${connection.autoCommit}"
-        )
+        }
         measureTimeMillis {
             if (actualRecord != null) {
                 if (!resultSetUpdatable) {
@@ -373,7 +375,7 @@ class SQLDBFile(
     private fun deleteByRrn(cause: SQLException? = null) {
         val rrn = currentRrn(cause)
         val sql = "DELETE FROM \"${fileMetadata.tableName}\" WHERE ${dialect.rrnSelectExpression("\"${fileMetadata.tableName}\"")} = ?"
-        logEvent(LoggingKey.native_access_method, "Cursor is read-only, falling back to: $sql with RRN $rrn")
+        logEvent(LoggingKey.native_access_method) { "Cursor is read-only, falling back to: $sql with RRN $rrn" }
         connection.prepareStatement(sql).use { it.setLong(1, rrn); it.executeUpdate() }
     }
 
@@ -383,7 +385,7 @@ class SQLDBFile(
         val table = "\"${fileMetadata.tableName}\""
         val sql = "UPDATE $table SET " + changedFields.keys.joinToString(", ") { "\"$it\" = ?" } +
                 " WHERE ${dialect.rrnSelectExpression(table)} = ?"
-        logEvent(LoggingKey.native_access_method, "Cursor is read-only, falling back to: $sql with RRN $rrn")
+        logEvent(LoggingKey.native_access_method) { "Cursor is read-only, falling back to: $sql with RRN $rrn" }
         connection.prepareStatement(sql).use { ps ->
             changedFields.values.forEachIndexed { i, v -> ps.setObject(i + 1, v) }
             ps.setLong(changedFields.size + 1, rrn)
@@ -400,7 +402,7 @@ class SQLDBFile(
         rowsInCurrentPage = 0
         resultSetUpdatable = dialect.isResultSetUpdatable(sql)
         closeResultSet()
-        logEvent(LoggingKey.execute_inquiry, "Preparing statement for query: $sql with bingings: $values")
+        logEvent(LoggingKey.execute_inquiry) { "Preparing statement for query: $sql with bingings: $values" }
         val stm: PreparedStatement
         measureTimeMillis {
             stm = preparedStatements.getOrPut(sql) {
@@ -433,7 +435,7 @@ class SQLDBFile(
                 val canResumeNextPage = adapter.hasPositioning() && actualRecord != null &&
                         pageSize != null && rowsInCurrentPage == pageSize
                 if (canResumeNextPage) {
-                    logEvent(LoggingKey.read_data, "Page of $pageSize rows exhausted, fetching next page")
+                    logEvent(LoggingKey.read_data) { "Page of $pageSize rows exhausted, fetching next page" }
                     executeQuery(adapter.getResumeSqlStatement(actualRecord!!))
                     result = Result(resultSet.toValues())
                 } else {
@@ -444,7 +446,7 @@ class SQLDBFile(
                 }
             }
             else if (adapter.lastReadMatchRecord(result.record)) {
-                logEvent(LoggingKey.read_data, "Record read: ${result.record}")
+                logEvent(LoggingKey.read_data) { "Record read: ${result.record}" }
                 // actualRecord (used by getResumeSqlStatement/lastReadMatchRecord on the *next*
                 // call) must keep RRN_COLUMN - only the Result handed back to the RPG side has it
                 // stripped, so it never leaks into the RPG-visible field set.
@@ -455,7 +457,7 @@ class SQLDBFile(
                 found = true
             } else {
                 rowsInCurrentPage++
-                logEvent(LoggingKey.read_data, "Readed records: ${count}")
+                logEvent(LoggingKey.read_data) { "Readed records: ${count}" }
                 if (exitOnUnmatch) {
                     eof = true
                     found = false
