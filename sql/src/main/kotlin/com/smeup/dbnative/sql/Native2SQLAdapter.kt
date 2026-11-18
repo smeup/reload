@@ -356,18 +356,26 @@ class Native2SQL(
         return buildDialectPositioningSQL(outerColumns(), quotedTableName(), forward)
     }
 
+    /**
+     * SQL behind `%EQUAL` after a SETLL: it only has to tell whether at least one row has the
+     * positioned key, and [SQLDBFile.equal] reads just the first row of the result. Without a cap
+     * the driver may ship every matching row (PostgreSQL does, with no fetch size), which for a
+     * low-selectivity key is thousands of rows per SETLL. Capped to one row with the same
+     * `FETCH FIRST` the dialect already accepts for paging ([SQLDialect.pageSize] non-null), so a
+     * dialect that opted out of `FETCH FIRST` keeps the uncapped statement.
+     */
     fun getReadSqlStatement(): Pair<String, List<String>> {
         checkPositioning()
         val n = lastPositioningInstruction!!.keys.size
-        return Pair(
-            getSQL(
-                outerColumns(),
-                (0 until n).map { keyExpr(it) },
-                (0 until n).map { placeholderFor(it) },
-                Comparison.EQ,
-                quotedTableName()
-            ), lastPositioningInstruction!!.keys
+        var sql = getSQL(
+            outerColumns(),
+            (0 until n).map { keyExpr(it) },
+            (0 until n).map { placeholderFor(it) },
+            Comparison.EQ,
+            quotedTableName()
         )
+        dialect.pageSize()?.let { sql += " FETCH FIRST 1 ROWS ONLY" }
+        return Pair(sql, lastPositioningInstruction!!.keys)
     }
 
     fun getSQLStatement(): Pair<String, List<String>> {
