@@ -57,6 +57,10 @@ class Native2SQL(
     private var lastReadInstruction: ReadInstruction? = null
     private var lastPositioningInstruction: PositioningInstruction? = null
 
+    /** Logical key (see [effectiveKeys]) of the record retrieved by the last successful CHAIN, null otherwise.
+     *  It lets a READ/READP issued right after the CHAIN continue from that record, as on IBM i. */
+    private var lastChainedKeys: List<String>? = null
+
     /** True when this file is unkeyed (arrival-sequence): CHAIN/SETLL/SETGT/READE/READPE
      *  operate by Relative Record Number instead of by key. */
     private val rrnMode: Boolean = fileMetadata.fileKeys.isEmpty()
@@ -166,6 +170,15 @@ class Native2SQL(
         checkKeys(keys)
         lastPositioningInstruction = PositioningInstruction(method, keys)
         lastReadInstruction = null
+        lastChainedKeys = null
+    }
+
+    /**
+     * To be called after a CHAIN that found [record] (the record as read, RRN_COLUMN included).
+     * A following READ (READP) returns the record after (before) it, like on IBM i.
+     */
+    fun setChainedRecord(record: Record) {
+        lastChainedKeys = effectiveKeys.map { record[it].orEmpty() }
     }
 
     /**
@@ -204,6 +217,16 @@ class Native2SQL(
     fun setRead(method: ReadMethod, keys: List<String>? = null): Boolean {
         checkKeys(keys ?: emptyList())
         var executeQuery = false
+        val chainedKeys = lastChainedKeys
+        if (chainedKeys != null && lastReadInstruction?.method == ReadMethod.CHAIN &&
+            (method == ReadMethod.READ || method == ReadMethod.READP)) {
+            // READ/READP right after a successful CHAIN: the chained record is the current one, so continue
+            // from it (READ: strictly after, READP: strictly before), exactly as a SETGT/SETLL on its key would.
+            lastPositioningInstruction = PositioningInstruction(
+                if (method == ReadMethod.READ) PositioningMethod.SETGT else PositioningMethod.SETLL, chainedKeys)
+            lastReadInstruction = null
+        }
+        lastChainedKeys = null
         when (method) {
             ReadMethod.READPE, ReadMethod.READE -> {
                 val coherent = keys?.let { isCoherent(keys) } ?: true
@@ -232,6 +255,7 @@ class Native2SQL(
     fun clear() {
         lastReadInstruction = null
         lastPositioningInstruction = null
+        lastChainedKeys = null
     }
 
     fun getLastKeys() =

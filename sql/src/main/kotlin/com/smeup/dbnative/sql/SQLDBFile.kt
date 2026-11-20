@@ -110,6 +110,9 @@ class SQLDBFile(
         measureTimeMillis {
             executeQuery(adapter.getSQLStatement())
             result = readNextFromResultSet(true)
+            if (result.record.isNotEmpty()) {
+                actualRecord?.let { adapter.setChainedRecord(it) }
+            }
         }.apply {
             logEvent(LoggingKey.native_access_method, "chain executed", this)
         }
@@ -499,6 +502,18 @@ class SQLDBFile(
 
     private fun getResultSet(): ResultSet? {
         return this.resultSet
+    }
+
+    /**
+     * Forgets the position: the next READ starts from the beginning of the file, as after a CLOSE/OPEN.
+     * Prepared statements are kept, they do not depend on the position.
+     */
+    override fun resetPosition() {
+        closeResultSet()
+        adapter.clear()
+        eof = false
+        actualRecord = null
+        rowsInCurrentPage = 0
     }
 
     override fun close() {
