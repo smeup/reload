@@ -138,6 +138,11 @@ class DBFileWrapper (private val dbFile: DBFile, private val dbmManager: DBMMana
         }
     }
 
+    override fun resetPosition() {
+        checkClosed()
+        dbFile.resetPosition()
+    }
+
     override fun close() {
         closed = true
         dbmManager.closeFile(fileMetadata.tableName)

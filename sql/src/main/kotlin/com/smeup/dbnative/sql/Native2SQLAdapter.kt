@@ -57,6 +57,26 @@ class Native2SQL(
     private var lastReadInstruction: ReadInstruction? = null
     private var lastPositioningInstruction: PositioningInstruction? = null
 
+    /** Logical key (see [effectiveKeys]) of the record retrieved by the last successful CHAIN, null otherwise.
+     *  It lets a READ/READP issued right after the CHAIN continue from that record, as on IBM i. */
+    private var lastChainedKeys: List<String>? = null
+
+    /** RRN of the record of [lastChainedKeys] (null for unkeyed files, or when the table has no `__RNN`). */
+    private var lastChainedRrn: String? = null
+
+    /** Set by the READ/READP... issued right after a CHAIN: RRN of the chained record. While set, the positioning
+     *  query also returns the records with the SAME key as the chained one that follow (precede) it by RRN, so
+     *  duplicate keys are not skipped. Cleared by any new positioning, by CHAIN and by the page resume. */
+    private var continuationRrn: String? = null
+
+    /** State before the last CHAIN, to put it back when the CHAIN finds nothing (see [chainNotFound]). */
+    private class StateBeforeChain(
+        val read: ReadInstruction?,
+        val positioning: PositioningInstruction?,
+        val continuationRrn: String?
+    )
+    private var stateBeforeChain: StateBeforeChain? = null
+
     /** True when this file is unkeyed (arrival-sequence): CHAIN/SETLL/SETGT/READE/READPE
      *  operate by Relative Record Number instead of by key. */
     private val rrnMode: Boolean = fileMetadata.fileKeys.isEmpty()
@@ -166,6 +186,46 @@ class Native2SQL(
         checkKeys(keys)
         lastPositioningInstruction = PositioningInstruction(method, keys)
         lastReadInstruction = null
+        lastChainedKeys = null
+        lastChainedRrn = null
+        continuationRrn = null
+    }
+
+    /**
+     * To be called after a CHAIN that found [record] (the record as read, RRN_COLUMN included).
+     * A following READ/READE (READP/READPE) returns the record after (before) it, like on IBM i.
+     */
+    fun setChainedRecord(record: Record) {
+        lastChainedKeys = effectiveKeys.map { record[it].orEmpty() }
+        lastChainedRrn = if (rrnMode || !hasRrnColumn) null else record[RRN_COLUMN]?.trim()?.takeIf { it.isNotEmpty() }
+        stateBeforeChain = null
+    }
+
+    /**
+     * To be called after a CHAIN that found nothing: on IBM i the file position is left as it was before the CHAIN.
+     * [previousRecord] is the last record read before the CHAIN (null if none).
+     */
+    fun chainNotFound(previousRecord: Record?) {
+        val before = stateBeforeChain
+        stateBeforeChain = null
+        lastChainedKeys = null
+        lastChainedRrn = null
+        continuationRrn = null
+        when {
+            before == null || (before.read == null && before.positioning == null) -> clear()
+            before.read == null -> {
+                // SETLL/SETGT still waiting for its read
+                lastPositioningInstruction = before.positioning
+                lastReadInstruction = null
+                continuationRrn = before.continuationRrn
+            }
+            previousRecord != null -> {
+                // something was read: continue from the last record read, as after a successful CHAIN of it
+                lastReadInstruction = ReadInstruction(ReadMethod.CHAIN, emptyList())
+                setChainedRecord(previousRecord)
+            }
+            else -> clear()
+        }
     }
 
     /**
@@ -204,6 +264,23 @@ class Native2SQL(
     fun setRead(method: ReadMethod, keys: List<String>? = null): Boolean {
         checkKeys(keys ?: emptyList())
         var executeQuery = false
+        val chainedKeys = lastChainedKeys
+        if (method == ReadMethod.CHAIN) {
+            stateBeforeChain = StateBeforeChain(lastReadInstruction, lastPositioningInstruction, continuationRrn)
+        } else {
+            stateBeforeChain = null
+        }
+        if (chainedKeys != null && lastReadInstruction?.method == ReadMethod.CHAIN && method != ReadMethod.CHAIN) {
+            // READ/READE/READP/READPE right after a successful CHAIN: the chained record is the current one, so
+            // continue from it (forward: strictly after, backward: strictly before), as a SETGT/SETLL on its key
+            // would, and (keyed file with __RNN) following the duplicates of that key by RRN.
+            lastPositioningInstruction = PositioningInstruction(
+                if (method.forward) PositioningMethod.SETGT else PositioningMethod.SETLL, chainedKeys)
+            continuationRrn = lastChainedRrn
+            lastReadInstruction = null
+        }
+        lastChainedKeys = null
+        lastChainedRrn = null
         when (method) {
             ReadMethod.READPE, ReadMethod.READE -> {
                 val coherent = keys?.let { isCoherent(keys) } ?: true
@@ -216,6 +293,7 @@ class Native2SQL(
             ReadMethod.READP -> checkPositioning()
             ReadMethod.CHAIN -> {
                 lastPositioningInstruction = null
+                continuationRrn = null
                 executeQuery = true
             }
         }
@@ -232,6 +310,10 @@ class Native2SQL(
     fun clear() {
         lastReadInstruction = null
         lastPositioningInstruction = null
+        lastChainedKeys = null
+        lastChainedRrn = null
+        continuationRrn = null
+        stateBeforeChain = null
     }
 
     fun getLastKeys() =
@@ -317,6 +399,14 @@ class Native2SQL(
         return listOf(Pair("$expr ${cmp.symbol} ${dialect.rrnParameterPlaceholder()}", buildReplacements(listOf(positioningKey))))
     }
 
+    /** Records with exactly the key [keys] that come after ([forward]) / before the record with RRN [rrn]. */
+    private fun sameKeyByRrn(keys: List<String>, rrn: String, forward: Boolean): Pair<String, List<String>> {
+        val sameKey = effectiveKeys.joinToString(" AND ") { "\"$it\" = ?" }
+        val cmp = if (forward) Comparison.GT else Comparison.LT
+        val where = "$sameKey AND ${dialect.rrnSelectExpression(quotedTableName())} ${cmp.symbol} ${dialect.rrnParameterPlaceholder()}"
+        return Pair(where, buildReplacements(keys) + rrn)
+    }
+
     private fun buildDialectPositioningSQL(columns: String, tableName: String, forward: Boolean): Pair<String, List<String>> {
         val inst = lastPositioningInstruction!!
         val conditions = directRrnExpr()?.let { expr ->
@@ -324,11 +414,17 @@ class Native2SQL(
         } ?: dialect.buildPositioningConditions(
             effectiveKeys, inst.keys, inst.method, forward, ::buildReplacements
         )
-        var sql = conditions.joinToString(" UNION ") { (where, _) ->
+        val tieBreakRrn = continuationRrn?.takeIf { !rrnMode && hasRrnColumn }
+        val allConditions = if (tieBreakRrn == null) conditions else conditions + sameKeyByRrn(inst.keys, tieBreakRrn, forward)
+        var sql = allConditions.joinToString(" UNION ") { (where, _) ->
             "SELECT $columns FROM $tableName WHERE $where"
         } + " ${getSQLOrderByClause()}"
+        if (tieBreakRrn != null) {
+            // duplicates of the chained key are read in RRN order (arrival order)
+            sql += ", \"$RRN_COLUMN\" ${getSortOrder().symbol}"
+        }
         dialect.pageSize()?.let { sql += " FETCH FIRST $it ROWS ONLY" }
-        return Pair(sql, conditions.flatMap { it.second })
+        return Pair(sql, allConditions.flatMap { it.second })
     }
 
     /**
@@ -353,6 +449,7 @@ class Native2SQL(
         val resumeMethod = if (forward) PositioningMethod.SETGT else PositioningMethod.SETLL
         val resumeKeys = effectiveKeys.map { lastRecord[it].orEmpty() }
         lastPositioningInstruction = PositioningInstruction(resumeMethod, resumeKeys)
+        continuationRrn = null
         return buildDialectPositioningSQL(outerColumns(), quotedTableName(), forward)
     }
 

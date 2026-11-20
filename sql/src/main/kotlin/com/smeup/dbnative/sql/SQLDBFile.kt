@@ -105,11 +105,19 @@ class SQLDBFile(
         val telemetrySpan = TelemetrySpan("CHAIN Execution")
         lastNativeMethod = NativeMethod.chain
         logEvent(LoggingKey.native_access_method) { "Executing chain on keys $keys" }
+        val recordBeforeChain = actualRecord
         adapter.setRead(ReadMethod.CHAIN, keys)
         val result: Result
         measureTimeMillis {
             executeQuery(adapter.getSQLStatement())
             result = readNextFromResultSet(true)
+            if (result.record.isNotEmpty()) {
+                actualRecord?.let { adapter.setChainedRecord(it) }
+            } else {
+                // not found: the file position stays where it was (IBM i), the next READ continues from there
+                // (eof stays true for the caller of the CHAIN; the next read runs its query and resets it)
+                adapter.chainNotFound(recordBeforeChain)
+            }
         }.apply {
             logEvent(LoggingKey.native_access_method, "chain executed", this)
         }
@@ -499,6 +507,18 @@ class SQLDBFile(
 
     private fun getResultSet(): ResultSet? {
         return this.resultSet
+    }
+
+    /**
+     * Forgets the position: the next READ starts from the beginning of the file, as after a CLOSE/OPEN.
+     * Prepared statements are kept, they do not depend on the position.
+     */
+    override fun resetPosition() {
+        closeResultSet()
+        adapter.clear()
+        eof = false
+        actualRecord = null
+        rowsInCurrentPage = 0
     }
 
     override fun close() {

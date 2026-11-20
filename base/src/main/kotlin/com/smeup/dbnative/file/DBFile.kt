@@ -63,5 +63,12 @@ interface DBFile: AutoCloseable {
     // Delete functions
     fun delete(record: Record): Result
 
+    /**
+     * Forgets the current position and the state of the last operation, so the next sequential read starts from the
+     * beginning of the file, as after a CLOSE followed by an OPEN. Unlike [close] the file stays usable and its
+     * resources (e.g. prepared statements) are kept: it is cheap. Default: nothing to forget.
+     */
+    fun resetPosition() {}
+
     override fun close() {}
 }
