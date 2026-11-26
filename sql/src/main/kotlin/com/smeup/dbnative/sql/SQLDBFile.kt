@@ -70,21 +70,18 @@ class SQLDBFile(
      *  file before the table exists and create it afterwards (a work file created on demand, e.g. QTEMP
      *  emulation); deciding at open time would leave such a file unfiltered for good.
      *
-     *  Unlike the `__RNN` probe it fails closed: when a session is active and the probe fails, or when
-     *  the table is a session table but no session is active, the operation fails, because carrying on
-     *  would read (or write) the rows of every session. */
+     *  Unlike the `__RNN` probe it fails closed: when the probe fails, or when the table is a session table but no
+     *  session is active, the operation fails, because carrying on would read (or write) the rows of every session.
+     *  A failing probe cannot be told from "an ordinary table" and `lazy` would remember the wrong answer for the
+     *  life of the file, so it is an error whether or not a session is bound. */
     private val sessionId: String? by lazy {
         val currentSessionId = ConnectionProvider.currentSessionIdOrNull()
         val isSessionTable = try {
             connection.hasSessionColumnCached(fileMetadata.tableName, SESSION_ID_COLUMN)
         } catch (e: Exception) {
-            if (currentSessionId != null) {
-                throw IllegalStateException(
-                    "Failed to probe $SESSION_ID_COLUMN column on ${fileMetadata.tableName}: ${e.message}", e
-                )
-            }
-            logEvent(LoggingKey.connection, "Failed to probe $SESSION_ID_COLUMN column on ${fileMetadata.tableName}, assuming absent: ${e.message}")
-            false
+            throw IllegalStateException(
+                "Failed to probe $SESSION_ID_COLUMN column on ${fileMetadata.tableName}: ${e.message}", e
+            )
         }
         when {
             !isSessionTable -> null

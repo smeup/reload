@@ -128,9 +128,12 @@ object ConnectionProvider {
     fun currentContextOrNull(): ReloadContext? = threadLocal.get()?.context
 
     /**
-     * Shortcut for `currentContextOrNull()?.sessionId`.
+     * Shortcut for `currentContextOrNull()?.sessionId`, except that a blank session id is no session: it is
+     * returned as `null`. A blank id would otherwise be a valid session shared by everybody who has it (e.g. the
+     * user of a custom authentication that is still logging in), and the rows of a session table stamped with it
+     * would be visible to all of them.
      */
-    fun currentSessionIdOrNull(): String? = currentContextOrNull()?.sessionId
+    fun currentSessionIdOrNull(): String? = currentContextOrNull()?.sessionId?.takeIf { it.isNotBlank() }
 
     /**
      * Returns the current scope manager for [fileName], creating it on first use.

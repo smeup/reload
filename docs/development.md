@@ -113,8 +113,11 @@ when it is opened, and cached per (database, user, table) like the `__RNN` probe
 may open a file before the table exists and create it afterwards (jariko opens the files when the program starts, a
 work file may be created later in the same call). The answer "no `__SID`" is cached only when the table exists, so a
 table created later is still recognised. It fails closed: an operation on a session table with no session bound to
-the scope is an error, and so is a failing probe while a session is active, because carrying on would read, or
-write, the rows of every session. Tables without `__SID` are not affected.
+the scope is an error, and so is a failing probe (whether or not a session is bound: a failed probe cannot be told
+from "an ordinary table", and the wrong answer would be kept for the life of the file), because carrying on would
+read, or write, the rows of every session. A blank session id is not a session (`ReloadContext("")` binds none).
+The table name is matched exactly: JDBC takes it as a LIKE pattern, where `_` is a wildcard, so the rows returned
+are checked. Tables without `__SID` are not affected.
 
 ```sql
 -- PostgreSQL, HSQLDB (Db2 for i: TIMESTAMP DEFAULT CURRENT TIMESTAMP)
