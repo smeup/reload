@@ -18,6 +18,7 @@
 package com.smeup.dbnative.sql
 
 
+import com.smeup.dbnative.ConnectionProvider
 import com.smeup.dbnative.file.DBFile
 import com.smeup.dbnative.file.Record
 import com.smeup.dbnative.file.Result
@@ -60,7 +61,40 @@ class SQLDBFile(
         false
     }
 
-    private var adapter: Native2SQL = Native2SQL(this.fileMetadata, dialect, hasRrnColumn)
+    /** Id of the session this file is bound to when its table is a *session table* (it has the
+     *  [SESSION_ID_COLUMN] column, see [hasSessionColumnCached]), null for an ordinary table.
+     *  The id comes from the active [ConnectionProvider] scope ([ReloadContext.sessionId]). Every
+     *  statement of a session file is restricted to the rows of that session, WRITE stamps it.
+     *
+     *  Resolved lazily, at the first operation, not when the file is opened: an application may open a
+     *  file before the table exists and create it afterwards (a work file created on demand, e.g. QTEMP
+     *  emulation); deciding at open time would leave such a file unfiltered for good.
+     *
+     *  Unlike the `__RNN` probe it fails closed: when the probe fails, or when the table is a session table but no
+     *  session is active, the operation fails, because carrying on would read (or write) the rows of every session.
+     *  A failing probe cannot be told from "an ordinary table" and `lazy` would remember the wrong answer for the
+     *  life of the file, so it is an error whether or not a session is bound. */
+    private val sessionId: String? by lazy {
+        val currentSessionId = ConnectionProvider.currentSessionIdOrNull()
+        val isSessionTable = try {
+            connection.hasSessionColumnCached(fileMetadata.tableName, SESSION_ID_COLUMN)
+        } catch (e: Exception) {
+            throw IllegalStateException(
+                "Failed to probe $SESSION_ID_COLUMN column on ${fileMetadata.tableName}: ${e.message}", e
+            )
+        }
+        when {
+            !isSessionTable -> null
+            currentSessionId == null -> throw IllegalStateException(
+                "Table \"${fileMetadata.tableName}\" is a session table (it has the $SESSION_ID_COLUMN column) " +
+                    "but no session id is bound to the current scope: use it inside ConnectionProvider.withScope " +
+                    "passing a ReloadContext with the sessionId"
+            )
+            else -> currentSessionId
+        }
+    }
+
+    private val adapter: Native2SQL by lazy { Native2SQL(this.fileMetadata, dialect, hasRrnColumn, sessionId) }
     private var eof: Boolean = false
     private var rowsInCurrentPage: Int = 0
 
@@ -263,9 +297,11 @@ class SQLDBFile(
         }
         measureTimeMillis {
             // TODO: manage errors
-            val sql = fileMetadata.tableName.insertSQL(record)
+            // a session table row is always stamped with the id of the current session, whatever the caller sent
+            val toInsert = sessionId?.let { sid -> record.duplicate().also { it[SESSION_ID_COLUMN] = sid } } ?: record
+            val sql = fileMetadata.tableName.insertSQL(toInsert)
             connection.prepareStatement(sql).use { it ->
-                it.bind(record.values.map { it })
+                it.bind(toInsert.values.map { it })
                 it.execute()
             }
         }.apply {
@@ -382,21 +418,30 @@ class SQLDBFile(
      *  (always projected by the read query when [hasRrnColumn]; otherwise the original error is rethrown). */
     private fun deleteByRrn(cause: SQLException? = null) {
         val rrn = currentRrn(cause)
-        val sql = "DELETE FROM \"${fileMetadata.tableName}\" WHERE ${dialect.rrnSelectExpression("\"${fileMetadata.tableName}\"")} = ?"
+        val sql = "DELETE FROM \"${fileMetadata.tableName}\" WHERE ${dialect.rrnSelectExpression("\"${fileMetadata.tableName}\"")} = ?" +
+                sessionFilterSql()
         logEvent(LoggingKey.native_access_method) { "Cursor is read-only, falling back to: $sql with RRN $rrn" }
-        connection.prepareStatement(sql).use { it.setLong(1, rrn); it.executeUpdate() }
+        connection.prepareStatement(sql).use {
+            it.setLong(1, rrn)
+            sessionId?.let { sid -> it.setObject(2, sid) }
+            it.executeUpdate()
+        }
     }
+
+    /** ` AND "__SID" = ?` for a session table (to be bound last), empty otherwise. */
+    private fun sessionFilterSql(): String = if (sessionId == null) "" else " AND \"$SESSION_ID_COLUMN\" = ?"
 
     /** Same as [deleteByRrn], for UPDATE of the changed columns. */
     private fun updateByRrn(changedFields: Map<String, String>, cause: SQLException? = null) {
         val rrn = currentRrn(cause)
         val table = "\"${fileMetadata.tableName}\""
         val sql = "UPDATE $table SET " + changedFields.keys.joinToString(", ") { "\"$it\" = ?" } +
-                " WHERE ${dialect.rrnSelectExpression(table)} = ?"
+                " WHERE ${dialect.rrnSelectExpression(table)} = ?" + sessionFilterSql()
         logEvent(LoggingKey.native_access_method) { "Cursor is read-only, falling back to: $sql with RRN $rrn" }
         connection.prepareStatement(sql).use { ps ->
             changedFields.values.forEachIndexed { i, v -> ps.setObject(i + 1, v) }
             ps.setLong(changedFields.size + 1, rrn)
+            sessionId?.let { sid -> ps.setObject(changedFields.size + 2, sid) }
             ps.executeUpdate()
         }
     }

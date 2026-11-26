@@ -125,6 +125,40 @@ fun Connection.hasColumnCached(tableName: String, columnName: String): Boolean {
     return columnPresenceCache[key] ?: hasColumn(tableName, columnName).also { columnPresenceCache[key] = it }
 }
 
+/** Whether [tableName] has the session column [columnName]. Cached like [hasColumnCached], with one difference
+ *  that matters here: a negative answer is cached only when the table exists. A table that is not there yet may
+ *  be created later in the same JVM (a session table created on demand), and remembering "no [columnName]" for a
+ *  table that did not exist would leave it unfiltered for the life of the process.
+ *
+ *  The names are passed to JDBC as LIKE patterns, where `_` and `%` are wildcards: `AB_C` also matches `ABXC`. So
+ *  the rows returned are checked, and only the table (and the column) with exactly that name, case-insensitive,
+ *  count; otherwise an ordinary table could be taken for a session table, or a table that does not exist yet be
+ *  cached as ordinary because of a similarly named one. */
+fun Connection.hasSessionColumnCached(tableName: String, columnName: String): Boolean {
+    val metaData = this.metaData
+    val key = "${metaData.url}|${metaData.userName}|$tableName|$columnName"
+    columnPresenceCache[key]?.let { return it }
+    val present = metaData.getColumns(null, null, tableName, columnName).use { rs ->
+        var found = false
+        while (!found && rs.next()) {
+            found = tableName.equals(rs.getString("TABLE_NAME"), ignoreCase = true) &&
+                columnName.equals(rs.getString("COLUMN_NAME"), ignoreCase = true)
+        }
+        found
+    }
+    if (present) {
+        columnPresenceCache[key] = true
+    } else {
+        val tableExists = metaData.getTables(null, null, tableName, null).use { rs ->
+            var found = false
+            while (!found && rs.next()) found = tableName.equals(rs.getString("TABLE_NAME"), ignoreCase = true)
+            found
+        }
+        if (tableExists) columnPresenceCache[key] = false
+    }
+    return present
+}
+
 fun Connection.recordFormatName(tableName: String): String? =
     this.metaData.getTables(null, null, tableName, null).use {
         if (it.next()) {

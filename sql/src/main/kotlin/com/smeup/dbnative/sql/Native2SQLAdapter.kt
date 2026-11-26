@@ -44,6 +44,12 @@ class ReadInstruction(var method: ReadMethod, var keys: List<String>) {
  *  into [com.smeup.dbnative.file.Result.rrn] instead. */
 internal const val RRN_COLUMN = "RRN__"
 
+/** Name of the column that makes a table a *session table*: it holds the id of the session that owns
+ *  each row (see `ConnectionProvider.currentSessionIdOrNull`). Like `__RNN` it is a convention column
+ *  that is not part of the RPG-visible [FileMetadata.fields]: reload fills it on WRITE and restricts
+ *  every read, update and delete to the current session. */
+internal const val SESSION_ID_COLUMN = "__SID"
+
 class Native2SQL(
     val fileMetadata: FileMetadata,
     private val dialect: SQLDialect = DefaultSQLDialect(),
@@ -52,8 +58,24 @@ class Native2SQL(
      *  RRN projection entirely (so [com.smeup.dbnative.file.Result.rrn] just stays null) and
      *  [checkKeys] fails fast, rather than than letting a query fail with "column ... does not
      *  exist", if the caller actually tries to address a row by RRN. */
-    private val hasRrnColumn: Boolean = true
+    private val hasRrnColumn: Boolean = true,
+    /** Session id of a session table (a table with the [SESSION_ID_COLUMN] column, see [SQLDBFile]),
+     *  null for an ordinary table. When not null every statement built here is restricted to the
+     *  rows of that session: `"__SID" = ?` is added to its `WHERE`, with the value bound first. */
+    private val sessionId: String? = null
 ) {
+    /** `"__SID" = ?` for a session table, null otherwise. */
+    private val sessionPredicate: String? = sessionId?.let { "\"$SESSION_ID_COLUMN\" = ?" }
+
+    /** [where] restricted to the rows of the session (a no-op for an ordinary table). [where] is wrapped in
+     *  parentheses because the dialects may produce `OR` conditions. */
+    private fun restrictedToSession(where: String): String =
+        if (sessionPredicate == null) where else "$sessionPredicate AND ($where)"
+
+    /** [params] preceded by the session id, matching [restrictedToSession] / [sessionPredicate]. */
+    private fun withSessionParam(params: List<String>): List<String> =
+        if (sessionId == null) params else listOf(sessionId) + params
+
     private var lastReadInstruction: ReadInstruction? = null
     private var lastPositioningInstruction: PositioningInstruction? = null
 
@@ -417,14 +439,14 @@ class Native2SQL(
         val tieBreakRrn = continuationRrn?.takeIf { !rrnMode && hasRrnColumn }
         val allConditions = if (tieBreakRrn == null) conditions else conditions + sameKeyByRrn(inst.keys, tieBreakRrn, forward)
         var sql = allConditions.joinToString(" UNION ") { (where, _) ->
-            "SELECT $columns FROM $tableName WHERE $where"
+            "SELECT $columns FROM $tableName WHERE ${restrictedToSession(where)}"
         } + " ${getSQLOrderByClause()}"
         if (tieBreakRrn != null) {
             // duplicates of the chained key are read in RRN order (arrival order)
             sql += ", \"$RRN_COLUMN\" ${getSortOrder().symbol}"
         }
         dialect.pageSize()?.let { sql += " FETCH FIRST $it ROWS ONLY" }
-        return Pair(sql, allConditions.flatMap { it.second })
+        return Pair(sql, allConditions.flatMap { withSessionParam(it.second) })
     }
 
     /**
@@ -469,10 +491,11 @@ class Native2SQL(
             (0 until n).map { keyExpr(it) },
             (0 until n).map { placeholderFor(it) },
             Comparison.EQ,
-            quotedTableName()
+            quotedTableName(),
+            sessionPredicate
         )
         dialect.pageSize()?.let { sql += " FETCH FIRST 1 ROWS ONLY" }
-        return Pair(sql, lastPositioningInstruction!!.keys)
+        return Pair(sql, withSessionParam(lastPositioningInstruction!!.keys))
     }
 
     fun getSQLStatement(): Pair<String, List<String>> {
@@ -486,8 +509,9 @@ class Native2SQL(
                         (0 until n).map { keyExpr(it) },
                         (0 until n).map { placeholderFor(it) },
                         Comparison.EQ,
-                        quotedTableName()
-                    ), lastReadInstruction!!.keys
+                        quotedTableName(),
+                        sessionPredicate
+                    ), withSessionParam(lastReadInstruction!!.keys)
                 )
             }
 
@@ -522,7 +546,8 @@ class Native2SQL(
             // out when the column is missing (directRrnExpr() is rrnMode-only, hasRrnColumn-blind)
             // or for a keyed file, whose plain-READ order was never guaranteed either way.
             val orderBy = directRrnExpr()?.takeIf { hasRrnColumn }?.let { " ORDER BY $it ASC" }.orEmpty()
-            return Pair("SELECT $columns FROM $tableName$orderBy", emptyList())
+            val where = sessionPredicate?.let { " WHERE $it" }.orEmpty()
+            return Pair("SELECT $columns FROM $tableName$where$orderBy", withSessionParam(emptyList()))
         }
         return buildDialectPositioningSQL(columns, tableName, lastReadInstruction!!.method.forward)
     }
@@ -539,7 +564,9 @@ class Native2SQL(
             replacements.addAll(buildReplacements(lastReadInstruction!!.keys))
 
             return Pair(
-                "SELECT $columns FROM ${quotedTableName()} WHERE " + value.removeSuffix(" AND "), replacements
+                "SELECT $columns FROM ${quotedTableName()} WHERE " +
+                    restrictedToSession(value.removeSuffix(" AND ")),
+                withSessionParam(replacements)
             )
         } else {
             return buildDialectPositioningSQL(outerColumns(), quotedTableName(), lastReadInstruction!!.method.forward)
@@ -551,11 +578,20 @@ class Native2SQL(
  *  see [Native2SQL.keyExpr]), not bare column names, so no further quoting happens here.
  *  [placeholders] pairs a bound-parameter placeholder with each [keyExprs] entry at the same
  *  index - see [Native2SQL.placeholderFor]. */
-private fun getSQL(columns: String, keyExprs: List<String>, placeholders: List<String>, comparison: Comparison, fromClause: String): String {
+private fun getSQL(
+    columns: String,
+    keyExprs: List<String>,
+    placeholders: List<String>,
+    comparison: Comparison,
+    fromClause: String,
+    sessionPredicate: String? = null
+): String {
 
-    val conditions = keyExprs.mapIndexed { index, keyExpr ->
+    val keyConditions = keyExprs.mapIndexed { index, keyExpr ->
         "$keyExpr ${if (index < keyExprs.size - 1) Comparison.EQ.symbol else comparison.symbol} ${placeholders[index]}"
-    }.joinToString(" AND ")
+    }
+    // the session predicate comes first, so its value is the first bound parameter (see Native2SQL.withSessionParam)
+    val conditions = (listOfNotNull(sessionPredicate) + keyConditions).joinToString(" AND ")
 
     return "SELECT $columns FROM $fromClause WHERE $conditions"
 }
