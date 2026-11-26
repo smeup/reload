@@ -12,7 +12,13 @@ import com.smeup.dbnative.log.LoggingKey
  */
 object ConnectionProvider {
 
-    private val threadLocal = ThreadLocal<Pair<String, MutableMap<ConnectionConfig, DBMManager<*, *>>>>()
+    private class Scope(
+        val app: String,
+        val context: ReloadContext,
+        val managers: MutableMap<ConnectionConfig, DBMManager<*, *>> = mutableMapOf()
+    )
+
+    private val threadLocal = ThreadLocal<Scope>()
 
     @Volatile private var configMap: Map<String, DBNativeAccessConfig>? = null
     @Volatile private var factoryMap: Map<String, (ConnectionConfig) -> DBMManager<*, *>>? = null
@@ -85,17 +91,28 @@ object ConnectionProvider {
      * @throws IllegalArgumentException if [app] has no entry in the config map.
      */
     @Throws(Exception::class)
-    fun withScope(app: String, block: ScopedBlock) {
+    fun withScope(app: String, block: ScopedBlock) = withScope(app, ReloadContext.EMPTY, block)
+
+    /**
+     * Runs [block] in a thread-local scope bound to [app] and carrying [context], then closes all
+     * managers created during that scope. The context is readable inside the scope through
+     * [currentContextOrNull].
+     *
+     * @throws IllegalStateException if [configure] has not been called.
+     * @throws IllegalArgumentException if [app] has no entry in the config map.
+     */
+    @Throws(Exception::class)
+    fun withScope(app: String, context: ReloadContext, block: ScopedBlock) {
         requireNotNull(configMap) { "ConnectionProvider not configured" }
         val logger = loggerFor(app)
         logger?.logEvent(LoggingKey.provider, "Scope opened for app '$app'")
-        threadLocal.set(app to mutableMapOf())
+        threadLocal.set(Scope(app, context))
         var completedNormally = false
         try {
             block.execute()
             completedNormally = true
         } finally {
-            val (_, managers) = threadLocal.get()
+            val managers = threadLocal.get().managers
             threadLocal.remove()
             logger?.logEvent(
                 LoggingKey.provider,
@@ -106,6 +123,16 @@ object ConnectionProvider {
     }
 
     /**
+     * Returns the [ReloadContext] of the scope active on this thread, or `null` if there is none.
+     */
+    fun currentContextOrNull(): ReloadContext? = threadLocal.get()?.context
+
+    /**
+     * Shortcut for `currentContextOrNull()?.sessionId`.
+     */
+    fun currentSessionIdOrNull(): String? = currentContextOrNull()?.sessionId
+
+    /**
      * Returns the current scope manager for [fileName], creating it on first use.
      *
      * @throws IllegalStateException if there is no active scope on this thread.
@@ -113,7 +140,9 @@ object ConnectionProvider {
      *   matches no [ConnectionConfig].
      */
     fun currentManager(fileName: String): DBMManager<*, *> {
-        val (app, managers) = requireNotNull(threadLocal.get()) { "No active scope on this thread" }
+        val scope = requireNotNull(threadLocal.get()) { "No active scope on this thread" }
+        val app = scope.app
+        val managers = scope.managers
         val cfg = requireNotNull(configMap?.get(app)) { "No configuration for app '$app'" }
         val factory = requireNotNull(factoryMap?.get(app)) { "No factory for app '$app'" }
         val connectionConfig = findConnectionConfigFor(fileName, cfg.connectionsConfig)
@@ -128,8 +157,9 @@ object ConnectionProvider {
      * the active app, or no matching [ConnectionConfig] for [fileName].
      */
     fun currentManagerOrNull(fileName: String): DBMManager<*, *>? {
-        val pair = threadLocal.get() ?: return null
-        val (app, managers) = pair
+        val scope = threadLocal.get() ?: return null
+        val app = scope.app
+        val managers = scope.managers
         val cfg = configMap?.get(app) ?: return null
         val factory = factoryMap?.get(app) ?: return null
         return try {
